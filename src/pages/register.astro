@@ -1,6 +1,7 @@
 ---
 import { actions, isInputError } from "astro:actions";
 import AuthShell from "~/components/AuthShell.astro";
+import SubmitButton from "~/components/SubmitButton.astro";
 import { devBypassEnabled } from "~/lib/session";
 
 if (Astro.locals.user) {
@@ -119,7 +120,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     }
 
     <div class="mt-14 flex justify-center">
-      <button type="submit" class="btn-primary">Register</button>
+      <SubmitButton label="Register" busy="Creating account..." />
     </div>
 
     <p class="caption">

@@ -1,32 +1,31 @@
 ---
+/** Icons from Lucide (ISC license), the set shadcn/ui ships with.
+    @license lucide-static v1.52.0 - ISC */
 interface Props {
-  name: "shield" | "user" | "pin" | "google";
+  name: "shield" | "key" | "pin";
   class?: string;
 }
 
-const { name, class: className = "size-4" } = Astro.props;
+const { name, class: className = "size-5" } = Astro.props;
 
 const paths: Record<Props["name"], string> = {
   shield:
-    "M12 3 5 6v5c0 4.2 2.9 8.1 7 9 4.1-.9 7-4.8 7-9V6l-7-3Zm0 5v6m0 3h.01",
-  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0",
-  pin: "M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Zm0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z",
-  google:
-    "M21.35 11.1H12v2.98h5.35c-.23 1.4-1.66 4.1-5.35 4.1a5.95 5.95 0 0 1 0-11.9c1.7 0 2.84.73 3.49 1.35l2.38-2.29C16.3 3.6 14.36 2.6 12 2.6a9.4 9.4 0 1 0 0 18.8c5.43 0 9.02-3.8 9.02-9.16 0-.62-.07-1.09-.16-1.56Z",
+    '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  key:
+    '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
+  pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
 };
-const filled = name === "google";
 ---
 
 <svg
   class={className}
   viewBox="0 0 24 24"
-  fill={filled ? "currentColor" : "none"}
-  stroke={filled ? "none" : "currentColor"}
-  stroke-width="1.6"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
   stroke-linecap="round"
   stroke-linejoin="round"
   aria-hidden="true"
   focusable="false"
->
-  <path d={paths[name]} />
-</svg>
+  set:html={paths[name]}
+/>

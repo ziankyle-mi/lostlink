@@ -1,0 +1,64 @@
+---
+/** Primary submit button with a built-in busy state (AGENTS.md rule 5). */
+interface Props {
+  label: string;
+  busy: string;
+  class?: string;
+}
+
+const { label, busy, class: className = "btn-primary" } = Astro.props;
+---
+
+<button type="submit" class={className} data-busy-label={busy} disabled:cursor-wait>
+  <span
+    data-spinner
+    class="hidden size-4 shrink-0 animate-spin rounded-full border-2 border-white/40 border-t-white"
+    aria-hidden="true"></span>
+  <span data-label>{label}</span>
+</button>
+
+<script>
+  // One delegated listener covers every form on the page. The POST itself is
+  // still a plain server round trip, so this works with JavaScript disabled
+  // (the browser just falls back to its own navigation feedback).
+  document.addEventListener(
+    "submit",
+    (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+
+      const button = form.querySelector<HTMLButtonElement>("button[data-busy-label]");
+      if (!button || button.disabled) return;
+
+      const label = button.querySelector<HTMLElement>("[data-label]");
+      if (label && !label.dataset.original) {
+        label.dataset.original = label.textContent ?? "";
+        label.textContent = button.dataset.busyLabel ?? "Processing...";
+      }
+
+      const spinner = button.querySelector<HTMLElement>("[data-spinner]");
+      spinner?.classList.remove("hidden");
+
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    },
+    true,
+  );
+
+  // If the user navigates back from an error page, the browser restores this
+  // page from cache with the button still disabled. Put it back.
+  window.addEventListener("pageshow", () => {
+    document
+      .querySelectorAll<HTMLButtonElement>("button[data-busy-label][disabled]")
+      .forEach((button) => {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+        button.querySelector<HTMLElement>("[data-spinner]")?.classList.add("hidden");
+        const label = button.querySelector<HTMLElement>("[data-label]");
+        if (label?.dataset.original) {
+          label.textContent = label.dataset.original;
+          delete label.dataset.original;
+        }
+      });
+  });
+</script>

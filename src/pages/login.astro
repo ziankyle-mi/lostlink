@@ -1,6 +1,7 @@
 ---
 import { actions, isInputError } from "astro:actions";
 import AuthShell from "~/components/AuthShell.astro";
+import SubmitButton from "~/components/SubmitButton.astro";
 import { safeNextPath } from "~/lib/auth";
 import { devBypassEnabled } from "~/lib/session";
 
@@ -120,7 +121,7 @@ const devOpen = devBypassEnabled(env);
     </div>
 
     <div class="mt-16 flex justify-center">
-      <button type="submit" class="btn-primary">LOGIN</button>
+      <SubmitButton label="LOGIN" busy="Signing in..." />
     </div>
 
     <p class="caption">

@@ -36,6 +36,13 @@ Blocked on the owner for: Supabase keys (URL, anon key) and Google OAuth client.
 - Design tokens live once in `src/styles/global.css`.
 - Astro 5.18 + @astrojs/cloudflare 12.6 (docs specify Astro 5).
 - 404 page and navbar removed: they belong to steps 10 and 5, not phase 1.
+- Badge icons are inlined Lucide SVGs (ISC license): shield-check, key-round,
+  map-pin. Hand-drawn paths removed; matches the shadcn/ui stack.
+- Loading treatment is an in-button spinner: `SubmitButton.astro` disables the
+  button and swaps the label on submit (login, register, forgot, reset).
+- "Web-based" removed from all copy: title is "DLSAU Lost and Found System".
+- Brand lockup refined to the mockup: seal larger than tile, flat images,
+  wordmark `forest-900`, tight wordmark/subtitle stack, taller divider.
 
 ## Blockers and questions for the owner
 
@@ -46,6 +53,11 @@ Blocked on the owner for: Supabase keys (URL, anon key) and Google OAuth client.
 
 - `npm test`: 42 passed, 0 failed (auth + schema tests).
 - `astro check`: 0 errors, 0 warnings.
+- Manual check on `npm run dev` (port 4321), latest round:
+  - `/login`, `/register`, `/forgot-password`, `/reset-password` all render
+    `data-busy-label` + spinner markup (loading state wired)
+  - `/login` header shows "DLSAU Lost and Found System" (no "Web-based"),
+    Lucide badge icons present
 - `npm run build`: success.
 - Manual flow on `npm run dev` (port 4321):
   - `/login` shows seal, mark, wordmark, Email/Password, Remember me,

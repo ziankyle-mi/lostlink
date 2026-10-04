@@ -2,9 +2,21 @@
 import Icon from "./Icon.astro";
 
 const badges = [
-  { icon: "shield", title: "Secure Access", text: "For DLSAU students and staff" },
-  { icon: "user", title: "Easy Recovery", text: "Reset your password in a few steps" },
-  { icon: "pin", title: "Always Here", text: "Find what's lost. Return what's found." },
+  {
+    icon: "shield",
+    title: "Secure Access",
+    text: "For DLSAU students and staff",
+  },
+  {
+    icon: "key",
+    title: "Easy Recovery",
+    text: "Reset your password in a few steps",
+  },
+  {
+    icon: "pin",
+    title: "Always Here",
+    text: "Find what's lost. Return what's found.",
+  },
 ] as const;
 ---
 
@@ -12,7 +24,7 @@ const badges = [
   {
     badges.map((badge) => (
       <li class="flex items-start gap-4">
-        <span class="grid size-12 shrink-0 place-items-center rounded-full border border-line/70 bg-surface/70 text-forest-700">
+        <span class="grid size-12 shrink-0 place-items-center rounded-full border border-line/60 bg-forest-700/[0.04] text-forest-700">
           <Icon name={badge.icon} class="size-5" />
         </span>
         <span class="min-w-0">

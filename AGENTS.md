@@ -1,4 +1,4 @@
-# LostLink: DLSAU Web-based Lost and Found System
+# LostLink: DLSAU Lost and Found System
 
 School demo for Group 3. DLSAU students, faculty, and staff report lost or found items. Admins (security office) approve reports, verify claims, and mark items claimed. Found items are physically dropped at the security office.
 

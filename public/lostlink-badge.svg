@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <style>
+      .stroke-main {
+        fill: none;
+        stroke: #ffffff;
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    </style>
+  </defs>
+
+  <!-- Forest Green App Tile -->
+  <rect x="5" y="5" width="90" height="90" rx="22" ry="22" fill="#14342a" />
+
+  <!-- Monogram Logo Artwork -->
+  <g class="stroke-main">
+    <!-- Left 'L' vertical stem and foot -->
+    <path d="M 32 25 L 32 58 L 46 58" />
+
+    <!-- Center Interlocking Chain Link / Pin Loop -->
+    <path d="M 28 48 C 24 38, 38 30, 48 38 C 54 44, 48 54, 40 50 Z" />
+
+    <!-- Chain arching over to Right 'L' -->
+    <path d="M 46 36 C 52 24, 68 24, 68 36 L 68 58 L 76 58" />
+
+    <!-- Downward Pin Pointer Tip -->
+    <path d="M 43 60 L 50 75 L 57 60" />
+  </g>
+</svg>

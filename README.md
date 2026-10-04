@@ -1,6 +1,6 @@
 # LostLink
 
-A web-based lost and found system for De La Salle Araneta University designed to streamline item reporting, tracking, and claims verification.
+A lost and found system for De La Salle Araneta University designed to streamline item reporting, tracking, and claims verification.
 
 ## Team (Group 3)
 
