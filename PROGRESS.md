@@ -34,7 +34,6 @@ Blocked on the owner for: `ALLOWED_EMAIL_DOMAIN`, Supabase keys.
 
 ## Blockers and questions for the owner
 
-- What is the exact DLSAU email domain for `ALLOWED_EMAIL_DOMAIN`?
 - Supabase URL + anon key, and the Google OAuth client, are still empty in `.env`.
   Needed before the Google button can be tested for real and before step 3.
 
