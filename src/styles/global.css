@@ -86,32 +86,38 @@
     box-shadow: 0 4px 12px -2px rgba(20, 52, 42, 0.12);
   }
 
-  /* Primary pill button shared by every auth screen. */
+  /* Primary button: flat brand green, quiet darken on hover. No lift, no sheen. */
   .btn-primary {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
     max-width: 15rem;
-    min-height: 3rem;
+    min-height: 3.125rem;
     border-radius: var(--radius-control);
     background-color: var(--color-forest-700);
     color: #ffffff;
     font-size: 0.9375rem;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.1em;
     padding: 0.75rem 1.5rem;
+    box-shadow: 0 4px 12px -2px rgba(20, 52, 42, 0.25);
+    cursor: pointer;
     transition:
       background-color 0.15s ease,
-      transform 0.15s ease;
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
   }
 
   .btn-primary:hover {
     background-color: var(--color-forest-900);
+    box-shadow: 0 6px 16px -6px rgba(20, 52, 42, 0.3);
   }
 
   .btn-primary:active {
-    transform: translateY(1px);
+    transform: scale(0.985);
+    box-shadow: 0 2px 6px -2px rgba(20, 52, 42, 0.2);
   }
 
   /* Small centered caption under a card action. */
