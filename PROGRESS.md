@@ -43,6 +43,8 @@ Blocked on the owner for: Supabase keys (URL, anon key) and Google OAuth client.
 - "Web-based" removed from all copy: title is "DLSAU Lost and Found System".
 - Brand lockup refined to the mockup: seal larger than tile, flat images,
   wordmark `forest-900`, tight wordmark/subtitle stack, taller divider.
+- The DLSAU seal links to `https://www.dlsau.edu.ph/#gsc.tab=0` in a new tab
+  (owner's URL); the LostLink badge/wordmark is not a link.
 
 ## Blockers and questions for the owner
 
