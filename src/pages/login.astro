@@ -102,31 +102,31 @@ const devOpen = devBypassEnabled(env);
       )
     }
 
-    <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
-      <label class="flex cursor-pointer items-center gap-2.5 text-[0.8125rem] text-ink/80">
+    <div class="mt-5 flex flex-wrap items-center justify-between gap-4">
+      <label class="flex cursor-pointer items-center gap-2.5 text-[0.9375rem] font-medium text-forest-900">
         <input
           type="checkbox"
           name="remember"
           value="on"
-          class="size-4 shrink-0 accent-forest-700"
+          class="size-4.5 shrink-0 rounded accent-forest-700 cursor-pointer"
         />
         Remember me
       </label>
       <a
         href="/forgot-password"
-        class="text-[0.8125rem] text-ink/80 hover:text-forest-700"
+        class="text-[0.9375rem] font-semibold text-forest-700 hover:text-forest-900 underline underline-offset-4 decoration-forest-700/40 hover:decoration-forest-900"
       >
-        Forget Password
+        Forgot Password?
       </a>
     </div>
 
-    <div class="mt-16 flex justify-center">
+    <div class="mt-14 flex justify-center">
       <SubmitButton label="LOGIN" busy="Signing in..." />
     </div>
 
-    <p class="caption">
+    <p class="caption text-[0.9375rem] text-forest-900/80">
       Don't have an account?
-      <a href="/register">Register Here</a>
+      <a href="/register" class="font-bold text-forest-700 underline underline-offset-4 decoration-forest-700/50 hover:text-forest-900">Register Here</a>
     </p>
   </form>
 
