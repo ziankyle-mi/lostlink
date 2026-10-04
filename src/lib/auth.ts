@@ -2,7 +2,6 @@ export const ACCESS_COOKIE = "ll_access_token";
 export const REFRESH_COOKIE = "ll_refresh_token";
 export const OAUTH_STATE_COOKIE = "ll_oauth_state";
 export const PKCE_VERIFIER_COOKIE = "ll_pkce_verifier";
-export const NEXT_PATH_COOKIE = "ll_next_path";
 export const DEV_SESSION_COOKIE = "ll_dev_session";
 
 export type Role = "user" | "admin";

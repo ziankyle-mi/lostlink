@@ -33,8 +33,10 @@ export function sessionCookieOptions(maxAge = 60 * 60) {
 export function setSessionCookies(
   cookies: AstroCookies,
   session: { access_token: string; refresh_token: string },
+  remember = false,
 ): void {
-  cookies.set(ACCESS_COOKIE, session.access_token, sessionCookieOptions());
+  const accessMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60;
+  cookies.set(ACCESS_COOKIE, session.access_token, sessionCookieOptions(accessMaxAge));
   cookies.set(REFRESH_COOKIE, session.refresh_token, sessionCookieOptions(60 * 60 * 24 * 30));
 }
 

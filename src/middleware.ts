@@ -10,11 +10,27 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Cross-Origin-Opener-Policy": "same-origin",
 };
 
-const PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/404", "/500"]);
-const PUBLIC_PREFIXES = ["/_astro", "/_image", "/favicon", "/robots.txt"];
+const PUBLIC_PATHS = new Set([
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/recovery",
+  "/404",
+  "/500",
+]);
+const PUBLIC_PREFIXES = [
+  "/_astro",
+  "/_image",
+  "/favicon",
+  "/robots.txt",
+  "/dlsau-logo",
+  "/lostlink-logo",
+];
 const ACTION_PREFIX = "/_actions";
-// Signing in has to work while logged out. Every other action needs a session.
-const PUBLIC_ACTIONS = new Set(["devLogin", "googleSignIn"]);
+// Signing in and registering have to work while logged out. Every other
+// action needs a session.
+const PUBLIC_ACTIONS = new Set(["login", "register", "forgotPassword", "devLogin"]);
 
 function actionName(pathname: string): string {
   return pathname.slice(ACTION_PREFIX.length + 1);
