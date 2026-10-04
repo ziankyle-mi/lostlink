@@ -1,0 +1,21 @@
+---
+import BrandMark from "./BrandMark.astro";
+import SealMark from "./SealMark.astro";
+
+interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+---
+
+<header class="flex items-center gap-3">
+  <SealMark />
+  <BrandMark />
+  <div class={compact ? "" : "hidden sm:block"}>
+    <p class="font-serif text-lg font-bold leading-none text-forest-900">LostLink</p>
+    <p class="mt-1 text-[0.625rem] leading-none text-sage-600">
+      DLSAU Web-based Lost and Found System
+    </p>
+  </div>
+</header>

@@ -1,0 +1,27 @@
+---
+import Icon from "./Icon.astro";
+
+const badges = [
+  { icon: "shield", title: "Secure Access", text: "For DLSAU students and staff" },
+  { icon: "user", title: "Easy Recovery", text: "Report and claim items in a few steps" },
+  { icon: "pin", title: "Always Here", text: "Find what was lost. Report what you found." },
+] as const;
+---
+
+<ul class="mx-auto grid w-full max-w-3xl gap-6 px-6 sm:grid-cols-3 sm:gap-4">
+  {
+    badges.map((badge) => (
+      <li class="flex items-start gap-3">
+        <span class="grid size-9 shrink-0 place-items-center rounded-full border border-sage-200 bg-surface/80 text-forest-700">
+          <Icon name={badge.icon} class="size-4" />
+        </span>
+        <span>
+          <span class="block text-xs font-semibold text-forest-900">{badge.title}</span>
+          <span class="mt-0.5 block text-[0.6875rem] leading-snug text-sage-600">
+            {badge.text}
+          </span>
+        </span>
+      </li>
+    ))
+  }
+</ul>

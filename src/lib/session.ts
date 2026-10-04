@@ -64,7 +64,9 @@ export async function resolveUser(
       cookies.get(DEV_SESSION_COOKIE)?.value,
       env.DEV_SESSION_SECRET,
     );
-    if (dev && isAllowedEmail(dev.email, policy)) {
+    // The action already enforced the domain policy when it signed this token;
+    // an unset ALLOWED_EMAIL_DOMAIN only happens in local setup.
+    if (dev && (isAllowedEmail(dev.email, policy) || policy.allowedDomain.trim() === "")) {
       return { id: `dev:${dev.email}`, email: dev.email, role: dev.role };
     }
   }

@@ -12,6 +12,13 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 const PUBLIC_PATHS = new Set(["/login", "/auth/callback", "/404", "/500"]);
 const PUBLIC_PREFIXES = ["/_astro", "/_image", "/favicon", "/robots.txt"];
+const ACTION_PREFIX = "/_actions";
+// Signing in has to work while logged out. Every other action needs a session.
+const PUBLIC_ACTIONS = new Set(["devLogin", "googleSignIn"]);
+
+function actionName(pathname: string): string {
+  return pathname.slice(ACTION_PREFIX.length + 1);
+}
 
 function isPublic(pathname: string): boolean {
   return (
@@ -24,7 +31,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const env = readEnv(context.locals.runtime?.env as Record<string, unknown> | undefined);
   context.locals.env = env;
 
-  if (isPublic(context.url.pathname)) {
+  const pathname = context.url.pathname;
+  const isAction = pathname.startsWith(ACTION_PREFIX);
+  const isPublicAction = isAction && PUBLIC_ACTIONS.has(actionName(pathname));
+
+  if (isPublic(pathname) || isPublicAction) {
+    // Logged-in visitors on /login are redirected by the page itself.
+    context.locals.user = await resolveUser(context.cookies, env);
     return withSecurityHeaders(await next());
   }
 
@@ -32,10 +45,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.user = user;
 
   if (!user) {
+    // Action handlers do their own role checks, so only the login gate lives here.
+    if (isAction) {
+      return withSecurityHeaders(
+        new Response(JSON.stringify({ error: "You need to sign in first." }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
     clearSessionCookies(context.cookies);
-    if (context.url.pathname === "/") return context.redirect("/login", 302);
-    const next_ = encodeURIComponent(context.url.pathname + context.url.search);
-    return context.redirect(`/login?next=${next_}`, 302);
+    const nextPath = encodeURIComponent(pathname + context.url.search);
+    return context.redirect(`/login?next=${nextPath}`, 302);
   }
 
   return withSecurityHeaders(await next());

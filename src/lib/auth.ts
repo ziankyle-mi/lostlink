@@ -52,8 +52,8 @@ export function isAllowedEmail(
   email: string | undefined | null,
   policy: DomainPolicy,
 ): boolean {
-  if (!isValidEmail(email)) return false;
-  const normalized = email.trim().toLowerCase();
+  const normalized = (email ?? "").trim().toLowerCase();
+  if (!isValidEmail(normalized)) return false;
   const domain = emailDomain(normalized);
   if (domain === "") return false;
 
@@ -64,7 +64,7 @@ export function isAllowedEmail(
 }
 
 /** Blocks open redirects. Only same-origin paths starting with a single slash pass. */
-export function safeNextPath(raw: string | string[] | undefined): string {
+export function safeNextPath(raw: string | string[] | null | undefined): string {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (typeof value !== "string" || value === "") return "/";
   if (!value.startsWith("/") || value.startsWith("//")) return "/";

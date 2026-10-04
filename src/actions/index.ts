@@ -41,7 +41,7 @@ export const server = {
       context.cookies.set(PKCE_VERIFIER_COOKIE, verifier, cookieOptions);
       context.cookies.set(NEXT_PATH_COOKIE, safeNextPath(next), cookieOptions);
 
-      return context.redirect(url);
+      return { redirect: url };
     },
   }),
 
@@ -86,7 +86,7 @@ export const server = {
       );
       context.cookies.set(DEV_SESSION_COOKIE, token, sessionCookieOptions());
 
-      return context.redirect(safeNextPath(next));
+      return { redirect: safeNextPath(next) };
     },
   }),
 
@@ -95,7 +95,7 @@ export const server = {
     input: emptySchema,
     handler: async (_input, context) => {
       clearSessionCookies(context.cookies);
-      return context.redirect("/login");
+      return { redirect: "/login" };
     },
   }),
 };

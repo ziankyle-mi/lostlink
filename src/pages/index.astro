@@ -1,0 +1,54 @@
+---
+import { actions } from "astro:actions";
+import Background from "~/components/Background.astro";
+import BrandHeader from "~/components/BrandHeader.astro";
+import TrustBadges from "~/components/TrustBadges.astro";
+import Base from "~/layouts/Base.astro";
+
+// The middleware already redirects logged-out visitors to /login.
+const user = Astro.locals.user;
+
+const logoutResult = Astro.getActionResult(actions.logout);
+if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
+  return Astro.redirect(logoutResult.data.redirect, 302);
+}
+---
+
+<Base title="Dashboard | LostLink">
+  <main class="relative flex min-h-dvh flex-col">
+    <Background />
+
+    <div class="relative flex flex-1 flex-col px-6 py-8 sm:px-10 sm:py-10">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <BrandHeader />
+
+        <div class="flex items-center gap-3">
+          <p class="text-[0.6875rem] text-sage-600">Signed in as {user?.email}</p>
+          <form method="POST" action={actions.logout}>
+            <button
+              type="submit"
+              class="min-h-11 rounded-control border border-forest-700 px-4 py-2 text-xs font-medium text-forest-700 transition-colors hover:bg-surface"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="flex flex-1 items-center justify-center py-10">
+        <section
+          class="w-full max-w-sm rounded-card bg-surface p-8 text-center shadow-card sm:p-10"
+          aria-labelledby="dashboard-title"
+        >
+          <h1 id="dashboard-title" class="eyebrow text-forest-900">Dashboard</h1>
+          <p class="mt-6 font-serif text-xl text-forest-900">No items to show yet.</p>
+          <p class="mt-2 text-xs leading-relaxed text-sage-600">
+            Approved lost and found reports will appear here once the database step is done.
+          </p>
+        </section>
+      </div>
+
+      <TrustBadges />
+    </div>
+  </main>
+</Base>

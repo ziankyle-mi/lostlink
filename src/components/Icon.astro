@@ -1,0 +1,32 @@
+---
+interface Props {
+  name: "shield" | "user" | "pin" | "google";
+  class?: string;
+}
+
+const { name, class: className = "size-4" } = Astro.props;
+
+const paths: Record<Props["name"], string> = {
+  shield:
+    "M12 3 5 6v5c0 4.2 2.9 8.1 7 9 4.1-.9 7-4.8 7-9V6l-7-3Zm0 5v6m0 3h.01",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0",
+  pin: "M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Zm0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z",
+  google:
+    "M21.35 11.1H12v2.98h5.35c-.23 1.4-1.66 4.1-5.35 4.1a5.95 5.95 0 0 1 0-11.9c1.7 0 2.84.73 3.49 1.35l2.38-2.29C16.3 3.6 14.36 2.6 12 2.6a9.4 9.4 0 1 0 0 18.8c5.43 0 9.02-3.8 9.02-9.16 0-.62-.07-1.09-.16-1.56Z",
+};
+const filled = name === "google";
+---
+
+<svg
+  class={className}
+  viewBox="0 0 24 24"
+  fill={filled ? "currentColor" : "none"}
+  stroke={filled ? "none" : "currentColor"}
+  stroke-width="1.6"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"
+>
+  <path d={paths[name]} />
+</svg>
