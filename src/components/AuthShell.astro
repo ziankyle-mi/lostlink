@@ -19,28 +19,30 @@ const { title, heading, description } = Astro.props;
     <Background />
 
     <div
-      class="relative mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-5 py-6 sm:px-8 sm:py-8"
+      class="relative flex w-full flex-1 flex-col px-6 py-6 sm:px-12 sm:py-8 lg:px-16"
     >
-      <BrandHeader />
+      <div class="w-full">
+        <BrandHeader />
+      </div>
 
       <div
-        class="flex flex-1 flex-col items-center justify-center gap-10 py-8 lg:grid lg:grid-cols-12 lg:items-center lg:gap-6 lg:py-6"
+        class="flex flex-1 flex-col items-center justify-center gap-12 py-10 md:grid md:grid-cols-2 md:items-center md:gap-8 md:py-6"
       >
-        <div class="hidden lg:col-span-5 lg:block lg:self-center">
-          <p class="font-serif text-[3.8rem] leading-[1.12] tracking-[-0.02em] text-forest-900 xl:text-[4.4rem]">
+        <div class="hidden max-w-xl md:block md:self-end md:pb-20">
+          <p class="font-serif text-[3.4rem] leading-[1.15] tracking-[-0.015em] text-forest-900 sm:text-[3.8rem]">
             <span class="text-forest-700">&ldquo;</span><span class="font-bold">Lost <span
               class="text-forest-600 font-normal italic">things</span></span><br />
             their way<br />
             <span class="font-bold">back</span> <span class="text-forest-700">&rdquo;</span>
           </p>
-          <p class="mt-8 flex items-center gap-3.5 text-sage-700">
-            <span class="h-0.5 w-16 bg-sage-400"></span>
-            <span class="text-lg font-semibold tracking-wide text-forest-900/90">LostLink &middot; DLSAU</span>
+          <p class="mt-7 flex items-center gap-3.5 text-sage-700">
+            <span class="h-px w-14 bg-sage-400"></span>
+            <span class="text-base font-medium tracking-wide text-forest-900/90">LostLink &middot; DLSAU</span>
           </p>
         </div>
 
         <section
-          class="w-full max-w-[34rem] rounded-[2rem] bg-card-tint px-8 py-10 shadow-card sm:px-12 sm:py-12 lg:col-span-7 lg:justify-self-start xl:col-span-6 xl:max-w-[36rem]"
+          class="w-full max-w-[40rem] justify-self-center rounded-[1.75rem] bg-card-tint px-7 py-11 shadow-card sm:px-14 sm:py-14"
           aria-labelledby="auth-title"
         >
           <h1
