@@ -1,11 +1,8 @@
 ---
 import { actions, isInputError } from "astro:actions";
-import Background from "~/components/Background.astro";
-import BrandHeader from "~/components/BrandHeader.astro";
-import TrustBadges from "~/components/TrustBadges.astro";
+import AuthShell from "~/components/AuthShell.astro";
 import { safeNextPath } from "~/lib/auth";
 import { devBypassEnabled } from "~/lib/session";
-import Base from "~/layouts/Base.astro";
 
 const env = Astro.locals.env;
 const nextPath = safeNextPath(Astro.url.searchParams.get("next"));
@@ -38,8 +35,7 @@ const loginError =
     ? loginResult.error.message
     : undefined;
 const loginFields = isInputError(loginResult?.error) ? loginResult.error.fields : undefined;
-const fieldError = (name: "email" | "password" | "next") =>
-  loginFields?.[name]?.[0] ?? undefined;
+const fieldError = (name: "email" | "password") => loginFields?.[name]?.[0] ?? undefined;
 
 const devError =
   devResult?.error && !isInputError(devResult.error) ? devResult.error.message : undefined;
@@ -47,150 +43,110 @@ const devError =
 const devOpen = devBypassEnabled(env);
 ---
 
-<Base title="Login | LostLink" description="Sign in to LostLink with your DLSAU account.">
-  <main class="relative flex min-h-dvh flex-col">
-    <Background />
+<AuthShell
+  title="Login | LostLink"
+  heading="LOGIN"
+  description="Sign in to LostLink with your DLSAU account."
+>
+  {
+    (notice || loginError) && (
+      <p role={loginError ? "alert" : "status"} class="notice">
+        {loginError ?? notice}
+      </p>
+    )
+  }
 
-    <div class="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-5 py-6 sm:px-9 sm:py-8">
-      <BrandHeader />
+  <form method="POST" action={actions.login} class="mt-11">
+    <input type="hidden" name="next" value={nextPath} />
 
-      <div class="flex flex-1 flex-col items-center justify-center gap-12 py-10 md:grid md:grid-cols-2 md:items-center md:gap-8 md:py-6">
-        <div class="hidden max-w-md md:block md:self-end md:pb-16">
-          <p class="font-serif text-[2.6rem] leading-[1.22] text-forest-900">
-            <span class="text-forest-700">&ldquo;</span><span class="font-bold">Lost <span
-              class="text-forest-600">things</span></span><br />
-            their way<br />
-            <span class="font-bold">back</span> <span class="text-forest-700">&ldquo;</span>
-          </p>
-          <p class="mt-6 flex items-center gap-3 text-sage-700">
-            <span class="h-px w-12 bg-sage-400"></span>
-            <span class="text-[0.9rem]">LostLink &middot; DLSAU</span>
-          </p>
-        </div>
+    <label class="block">
+      <span class="sr-only">Email</span>
+      <input
+        type="email"
+        name="email"
+        class="field"
+        placeholder="Email"
+        autocomplete="email"
+        required
+        aria-invalid={fieldError("email") ? true : undefined}
+        aria-describedby={fieldError("email") ? "email-error" : undefined}
+      />
+    </label>
+    {
+      fieldError("email") && (
+        <p id="email-error" role="alert" class="field-error">
+          {fieldError("email")}
+        </p>
+      )
+    }
 
-        <section
-          class="w-full max-w-[34rem] justify-self-center rounded-[1.5rem] bg-card-tint px-7 py-10 shadow-card sm:px-12 sm:py-12"
-          aria-labelledby="login-title"
-        >
-          <h1
-            id="login-title"
-            class="text-center text-[1.35rem] font-medium tracking-[0.06em] text-ink"
-          >
-            LOGIN
-          </h1>
+    <label class="mt-9 block">
+      <span class="sr-only">Password</span>
+      <input
+        type="password"
+        name="password"
+        class="field"
+        placeholder="Password"
+        autocomplete="current-password"
+        required
+        aria-invalid={fieldError("password") ? true : undefined}
+        aria-describedby={fieldError("password") ? "password-error" : undefined}
+      />
+    </label>
+    {
+      fieldError("password") && (
+        <p id="password-error" role="alert" class="field-error">
+          {fieldError("password")}
+        </p>
+      )
+    }
 
-          {
-            (notice || loginError) && (
-              <p
-                role={loginError ? "alert" : "status"}
-                class="mt-6 rounded-control border border-line/60 bg-surface/70 px-4 py-3 text-xs leading-snug text-sage-700"
-              >
-                {loginError ?? notice}
-              </p>
-            )
-          }
-
-          <form method="POST" action={actions.login} class="mt-9">
-            <input type="hidden" name="next" value={nextPath} />
-
-            <label class="block">
-              <span class="sr-only">Email</span>
-              <input
-                type="email"
-                name="email"
-                class="field"
-                placeholder="Email"
-                autocomplete="email"
-                required
-                aria-invalid={fieldError("email") ? true : undefined}
-                aria-describedby={fieldError("email") ? "email-error" : undefined}
-              />
-            </label>
-            {
-              fieldError("email") && (
-                <p id="email-error" role="alert" class="mt-1.5 text-[0.7rem] text-sage-700">
-                  {fieldError("email")}
-                </p>
-              )
-            }
-
-            <label class="mt-8 block">
-              <span class="sr-only">Password</span>
-              <input
-                type="password"
-                name="password"
-                class="field"
-                placeholder="Password"
-                autocomplete="current-password"
-                required
-                aria-invalid={fieldError("password") ? true : undefined}
-                aria-describedby={fieldError("password") ? "password-error" : undefined}
-              />
-            </label>
-            {
-              fieldError("password") && (
-                <p id="password-error" role="alert" class="mt-1.5 text-[0.7rem] text-sage-700">
-                  {fieldError("password")}
-                </p>
-              )
-            }
-
-            <div class="mt-3.5 flex items-center justify-between gap-4">
-              <label class="flex cursor-pointer items-center gap-2 text-[0.7rem] text-ink/80">
-                <input
-                  type="checkbox"
-                  name="remember"
-                  value="on"
-                  class="size-3.5 shrink-0 accent-forest-700"
-                />
-                Remember me
-              </label>
-              <a href="/forgot-password" class="text-[0.7rem] text-ink/80 hover:text-forest-700">
-                Forget Password
-              </a>
-            </div>
-
-            <div class="mt-14 flex justify-center">
-              <button
-                type="submit"
-                class="min-h-11 w-full max-w-[11.5rem] rounded-control bg-forest-700 px-6 py-2.5 text-[0.8rem] font-medium tracking-[0.1em] text-white transition-colors hover:bg-forest-900"
-              >
-                LOGIN
-              </button>
-            </div>
-
-            <p class="mt-4 text-center text-[0.7rem] text-sage-700">
-              Don't have an account?
-              <a href="/register" class="font-semibold text-ink hover:text-forest-700">
-                Register Here
-              </a>
-            </p>
-          </form>
-
-          {
-            devOpen && (
-              <div class="mt-7 flex flex-col items-center gap-2 border-t border-line/50 pt-5">
-                <form method="POST" action={actions.devLogin}>
-                  <input type="hidden" name="next" value={nextPath} />
-                  <button
-                    type="submit"
-                    class="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-sage-600 underline-offset-4 hover:text-forest-700 hover:underline"
-                  >
-                    Test login (dev)
-                  </button>
-                </form>
-                {devError && (
-                  <p role="alert" class="text-[0.68rem] text-sage-700">
-                    {devError}
-                  </p>
-                )}
-              </div>
-            )
-          }
-        </section>
-      </div>
-
-      <TrustBadges />
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
+      <label class="flex cursor-pointer items-center gap-2.5 text-[0.8125rem] text-ink/80">
+        <input
+          type="checkbox"
+          name="remember"
+          value="on"
+          class="size-4 shrink-0 accent-forest-700"
+        />
+        Remember me
+      </label>
+      <a
+        href="/forgot-password"
+        class="text-[0.8125rem] text-ink/80 hover:text-forest-700"
+      >
+        Forget Password
+      </a>
     </div>
-  </main>
-</Base>
+
+    <div class="mt-16 flex justify-center">
+      <button type="submit" class="btn-primary">LOGIN</button>
+    </div>
+
+    <p class="caption">
+      Don't have an account?
+      <a href="/register">Register Here</a>
+    </p>
+  </form>
+
+  {
+    devOpen && (
+      <div class="mt-8 flex flex-col items-center gap-2 border-t border-line/50 pt-6">
+        <form method="POST" action={actions.devLogin}>
+          <input type="hidden" name="next" value={nextPath} />
+          <button
+            type="submit"
+            class="text-[0.72rem] font-medium uppercase tracking-[0.16em] text-sage-600 underline-offset-4 hover:text-forest-700 hover:underline"
+          >
+            Test login (dev)
+          </button>
+        </form>
+        {devError && (
+          <p role="alert" class="text-[0.75rem] text-sage-700">
+            {devError}
+          </p>
+        )}
+      </div>
+    )
+  }
+</AuthShell>

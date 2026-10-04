@@ -1,10 +1,7 @@
 ---
 import { actions, isInputError } from "astro:actions";
-import Background from "~/components/Background.astro";
-import BrandHeader from "~/components/BrandHeader.astro";
-import TrustBadges from "~/components/TrustBadges.astro";
+import AuthShell from "~/components/AuthShell.astro";
 import { devBypassEnabled } from "~/lib/session";
-import Base from "~/layouts/Base.astro";
 
 if (Astro.locals.user) {
   return Astro.redirect("/");
@@ -26,165 +23,124 @@ const fieldError = (name: "name" | "email" | "password" | "agree") =>
 const devOpen = devBypassEnabled(Astro.locals.env);
 ---
 
-<Base title="Register | LostLink" description="Create your LostLink account with a DLSAU email.">
-  <main class="relative flex min-h-dvh flex-col">
-    <Background />
+<AuthShell
+  title="Register | LostLink"
+  heading="REGISTER"
+  description="Create your LostLink account with a DLSAU email."
+>
+  {
+    registerError && (
+      <p role="alert" class="notice">
+        {registerError}
+      </p>
+    )
+  }
 
-    <div class="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col px-5 py-6 sm:px-9 sm:py-8">
-      <BrandHeader />
+  <form method="POST" action={actions.register} class="mt-11">
+    <label class="block">
+      <span class="sr-only">Name</span>
+      <input
+        type="text"
+        name="name"
+        class="field"
+        placeholder="Name"
+        autocomplete="name"
+        required
+        aria-invalid={fieldError("name") ? true : undefined}
+        aria-describedby={fieldError("name") ? "name-error" : undefined}
+      />
+    </label>
+    {
+      fieldError("name") && (
+        <p id="name-error" role="alert" class="field-error">
+          {fieldError("name")}
+        </p>
+      )
+    }
 
-      <div class="flex flex-1 flex-col items-center justify-center gap-12 py-10 md:grid md:grid-cols-2 md:items-center md:gap-8 md:py-6">
-        <div class="hidden max-w-md md:block md:self-end md:pb-16">
-          <p class="font-serif text-[2.6rem] leading-[1.22] text-forest-900">
-            <span class="text-forest-700">&ldquo;</span><span class="font-bold">Lost <span
-              class="text-forest-600">things</span></span><br />
-            their way<br />
-            <span class="font-bold">back</span> <span class="text-forest-700">&ldquo;</span>
-          </p>
-          <p class="mt-6 flex items-center gap-3 text-sage-700">
-            <span class="h-px w-12 bg-sage-400"></span>
-            <span class="text-[0.9rem]">LostLink &middot; DLSAU</span>
-          </p>
-        </div>
+    <label class="mt-9 block">
+      <span class="sr-only">Email</span>
+      <input
+        type="email"
+        name="email"
+        class="field"
+        placeholder="Email"
+        autocomplete="email"
+        required
+        aria-invalid={fieldError("email") ? true : undefined}
+        aria-describedby={fieldError("email") ? "email-error" : undefined}
+      />
+    </label>
+    {
+      fieldError("email") && (
+        <p id="email-error" role="alert" class="field-error">
+          {fieldError("email")}
+        </p>
+      )
+    }
 
-        <section
-          class="w-full max-w-[34rem] justify-self-center rounded-[1.5rem] bg-card-tint px-7 py-10 shadow-card sm:px-12 sm:py-12"
-          aria-labelledby="register-title"
-        >
-          <h1
-            id="register-title"
-            class="text-center text-[1.35rem] font-medium tracking-[0.06em] text-ink"
-          >
-            REGISTER
-          </h1>
+    <label class="mt-9 block">
+      <span class="sr-only">Password</span>
+      <input
+        type="password"
+        name="password"
+        class="field"
+        placeholder="Password"
+        autocomplete="new-password"
+        required
+        aria-invalid={fieldError("password") ? true : undefined}
+        aria-describedby={fieldError("password") ? "password-error" : undefined}
+      />
+    </label>
+    {
+      fieldError("password") && (
+        <p id="password-error" role="alert" class="field-error">
+          {fieldError("password")}
+        </p>
+      )
+    }
 
-          {
-            registerError && (
-              <p
-                role="alert"
-                class="mt-6 rounded-control border border-line/60 bg-surface/70 px-4 py-3 text-xs leading-snug text-sage-700"
-              >
-                {registerError}
-              </p>
-            )
-          }
+    <label class="mt-5 flex cursor-pointer items-center gap-2.5 text-[0.8125rem] text-ink/80">
+      <input
+        type="checkbox"
+        name="agree"
+        value="on"
+        class="size-4 shrink-0 accent-forest-700"
+        aria-describedby={fieldError("agree") ? "agree-error" : undefined}
+      />
+      I agree to the terms and conditions
+    </label>
+    {
+      fieldError("agree") && (
+        <p id="agree-error" role="alert" class="field-error">
+          {fieldError("agree")}
+        </p>
+      )
+    }
 
-          <form method="POST" action={actions.register} class="mt-9">
-            <label class="block">
-              <span class="sr-only">Name</span>
-              <input
-                type="text"
-                name="name"
-                class="field"
-                placeholder="Name"
-                autocomplete="name"
-                required
-                aria-invalid={fieldError("name") ? true : undefined}
-                aria-describedby={fieldError("name") ? "name-error" : undefined}
-              />
-            </label>
-            {
-              fieldError("name") && (
-                <p id="name-error" role="alert" class="mt-1.5 text-[0.7rem] text-sage-700">
-                  {fieldError("name")}
-                </p>
-              )
-            }
-
-            <label class="mt-8 block">
-              <span class="sr-only">Email</span>
-              <input
-                type="email"
-                name="email"
-                class="field"
-                placeholder="Email"
-                autocomplete="email"
-                required
-                aria-invalid={fieldError("email") ? true : undefined}
-                aria-describedby={fieldError("email") ? "email-error" : undefined}
-              />
-            </label>
-            {
-              fieldError("email") && (
-                <p id="email-error" role="alert" class="mt-1.5 text-[0.7rem] text-sage-700">
-                  {fieldError("email")}
-                </p>
-              )
-            }
-
-            <label class="mt-8 block">
-              <span class="sr-only">Password</span>
-              <input
-                type="password"
-                name="password"
-                class="field"
-                placeholder="Password"
-                autocomplete="new-password"
-                required
-                aria-invalid={fieldError("password") ? true : undefined}
-                aria-describedby={fieldError("password") ? "password-error" : undefined}
-              />
-            </label>
-            {
-              fieldError("password") && (
-                <p id="password-error" role="alert" class="mt-1.5 text-[0.7rem] text-sage-700">
-                  {fieldError("password")}
-                </p>
-              )
-            }
-
-            <label class="mt-4 flex cursor-pointer items-center gap-2 text-[0.7rem] text-ink/80">
-              <input
-                type="checkbox"
-                name="agree"
-                value="on"
-                class="size-3.5 shrink-0 accent-forest-700"
-                aria-describedby={fieldError("agree") ? "agree-error" : undefined}
-              />
-              I agree to the terms and conditions
-            </label>
-            {
-              fieldError("agree") && (
-                <p id="agree-error" role="alert" class="mt-1.5 text-[0.7rem] text-sage-700">
-                  {fieldError("agree")}
-                </p>
-              )
-            }
-
-            <div class="mt-12 flex justify-center">
-              <button
-                type="submit"
-                class="min-h-11 w-full max-w-[11.5rem] rounded-control bg-forest-700 px-6 py-2.5 text-[0.8rem] font-medium tracking-[0.1em] text-white transition-colors hover:bg-forest-900"
-              >
-                Register
-              </button>
-            </div>
-
-            <p class="mt-4 text-center text-[0.7rem] text-sage-700">
-              Already have an account?
-              <a href="/login" class="font-semibold text-ink hover:text-forest-700">Log in here</a>
-            </p>
-          </form>
-
-          {
-            devOpen && (
-              <div class="mt-7 border-t border-line/50 pt-5 text-center">
-                <form method="POST" action={actions.devLogin}>
-                  <input type="hidden" name="next" value="/" />
-                  <button
-                    type="submit"
-                    class="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-sage-600 underline-offset-4 hover:text-forest-700 hover:underline"
-                  >
-                    Test login (dev)
-                  </button>
-                </form>
-              </div>
-            )
-          }
-        </section>
-      </div>
-
-      <TrustBadges />
+    <div class="mt-14 flex justify-center">
+      <button type="submit" class="btn-primary">Register</button>
     </div>
-  </main>
-</Base>
+
+    <p class="caption">
+      Already have an account?
+      <a href="/login">Log in here</a>
+    </p>
+  </form>
+
+  {
+    devOpen && (
+      <div class="mt-8 border-t border-line/50 pt-6 text-center">
+        <form method="POST" action={actions.devLogin}>
+          <input type="hidden" name="next" value="/" />
+          <button
+            type="submit"
+            class="text-[0.72rem] font-medium uppercase tracking-[0.16em] text-sage-600 underline-offset-4 hover:text-forest-700 hover:underline"
+          >
+            Test login (dev)
+          </button>
+        </form>
+      </div>
+    )
+  }
+</AuthShell>
