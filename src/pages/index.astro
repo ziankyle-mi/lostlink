@@ -8,6 +8,8 @@ import DashboardGrid from "~/components/DashboardGrid.astro";
 import DashboardFooter from "~/components/DashboardFooter.astro";
 import ItemClaimModal from "~/components/ItemClaimModal.astro";
 import ReportModal from "~/components/ReportModal.astro";
+import { createClient } from "@supabase/supabase-js";
+import { ALL_ITEMS, type DashboardItem } from "~/data/mockItems";
 
 // The middleware redirects unauthenticated visitors to /login.
 const user = Astro.locals.user;
@@ -16,6 +18,78 @@ const logoutResult = Astro.getActionResult(actions.logout);
 if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
   return Astro.redirect(logoutResult.data.redirect, 302);
 }
+
+const env = Astro.locals.env;
+let liveItems: DashboardItem[] = [];
+
+if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+  try {
+    const supabase = createClient(
+      env.PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false } }
+    );
+    const { data: dbItems } = await supabase
+      .from("items")
+      .select("*")
+      .or("status.eq.approved,status.eq.in_custody,status.eq.pending,status.is.null")
+      .order("created_at", { ascending: false });
+
+    if (dbItems && dbItems.length > 0) {
+      liveItems = dbItems.map((row) => {
+        let images: string[] = [];
+        if (row.photo_path) {
+          try {
+            if (typeof row.photo_path === "string" && row.photo_path.startsWith("[")) {
+              images = JSON.parse(row.photo_path);
+            } else {
+              images = [row.photo_path];
+            }
+          } catch {
+            images = [row.photo_path];
+          }
+        }
+
+        const d = row.event_date ? new Date(row.event_date) : new Date(row.created_at);
+        const formattedDate = !isNaN(d.getTime())
+          ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          : "Recently";
+
+        const iconMap: Record<string, DashboardItem["icon"]> = {
+          "Wallets & IDs": "wallet",
+          "Bottles": "bottle",
+          "Keys": "keys",
+          "Electronics": "laptop",
+          "Bags": "backpack",
+          "Accessories": "umbrella",
+        };
+
+        return {
+          id: row.id,
+          type: (row.type === "found" || row.type === "lost") ? row.type : "found",
+          name: row.name,
+          category: (row.category || "Accessories") as DashboardItem["category"],
+          location: row.location || "Campus",
+          locationPrefix: row.type === "found" ? "Found at" : "Last seen at",
+          date: formattedDate,
+          eventDate: row.event_date || (row.created_at ? row.created_at.split("T")[0] : ""),
+          icon: iconMap[row.category] || "wallet",
+          tint: row.type === "found" ? "#e4ecd6" : "#dee8e0",
+          actionLabel: row.type === "found" ? "Claim this item" : "I found this",
+          referenceCode: row.reference_code ?? undefined,
+          description: row.description || "",
+          images,
+        };
+      });
+    }
+  } catch (err) {
+    console.error("[index] Error loading live items:", err);
+  }
+}
+
+const allFeedItems: DashboardItem[] = [...liveItems, ...ALL_ITEMS];
+const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
+const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 ---
 
 <Base title="LostLink | DLSAU Lost & Found System" description="Campus lost and found system for De La Salle Araneta University.">
@@ -26,14 +100,14 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
 
       <!-- Filter Controls Toolbar -->
       <div class="mt-4">
-        <FilterBar />
+        <FilterBar totalCount={allFeedItems.length} />
       </div>
 
       <!-- Campus Feed Headline & Two CTA Action Cards -->
-      <HeroFeed />
+      <HeroFeed foundCount={feedFoundCount} lostCount={feedLostCount} />
 
       <!-- 8-Card Campus Feed Grid -->
-      <DashboardGrid />
+      <DashboardGrid items={allFeedItems} />
     </div>
 
     <!-- Campus Footer -->

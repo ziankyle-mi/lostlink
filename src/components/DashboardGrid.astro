@@ -1,6 +1,17 @@
 ---
-import { INITIAL_ITEMS, EXTRA_ITEMS, INITIAL_COUNT, TOTAL } from "~/data/mockItems";
+import { INITIAL_ITEMS, EXTRA_ITEMS, type DashboardItem } from "~/data/mockItems";
 import ItemCard from "./ItemCard.astro";
+
+interface Props {
+  items?: DashboardItem[];
+}
+
+const { items } = Astro.props;
+const displayItems = items && items.length > 0 ? items : [...INITIAL_ITEMS, ...EXTRA_ITEMS];
+const initialDisplay = displayItems.slice(0, 8);
+const extraDisplay = displayItems.slice(8);
+const totalCount = displayItems.length;
+const showingCount = Math.min(8, totalCount);
 ---
 
 <section id="feed" class="mx-auto w-full max-w-7xl px-4 sm:px-10 lg:px-14 py-6 sm:py-10" aria-labelledby="latest-heading">
@@ -11,7 +22,7 @@ import ItemCard from "./ItemCard.astro";
         Latest on campus
       </h2>
       <p id="feed-subtitle" class="mt-1 text-sm sm:text-base text-forest-900/75">
-        Showing {INITIAL_COUNT} of {TOTAL} items, newest first.
+        Showing {showingCount} of {totalCount} items, newest first.
       </p>
     </div>
 
@@ -30,13 +41,13 @@ import ItemCard from "./ItemCard.astro";
     id="items-grid"
     class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-6 lg:gap-7"
   >
-    <!-- Initial 8 Mockup Cards -->
-    {INITIAL_ITEMS.map((item) => (
+    <!-- Initial Cards -->
+    {initialDisplay.map((item) => (
       <ItemCard item={item} />
     ))}
 
     <!-- Additional items loaded on click -->
-    {EXTRA_ITEMS.map((item) => (
+    {extraDisplay.map((item) => (
       <div class="extra-item hidden">
         <ItemCard item={item} />
       </div>
