@@ -167,9 +167,15 @@ const presets = LOCATIONS.filter((l) => l !== "All Locations");
         </div>
 
         <!-- Status & Compression Info -->
+        <!-- Status & Compression Info -->
         <div id="photos-status-bar" class="hidden flex items-center justify-between text-xs text-sage-600">
           <span id="photos-count-indicator">0 of 3 photos attached</span>
-          <span id="photos-compression-tag" class="text-emerald-700 font-semibold">✓ Auto-compressed & crisp</span>
+          <span id="photos-compression-tag" class="text-emerald-700 font-semibold flex items-center gap-1">
+            <svg class="size-3.5 inline text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Auto-compressed &bull; Cloud Storage connected</span>
+          </span>
         </div>
 
         <!-- Validation Error Alert -->
@@ -207,18 +213,27 @@ const presets = LOCATIONS.filter((l) => l !== "All Locations");
         </button>
         <button
           type="submit"
-          class="btn-primary w-auto min-h-10 rounded-control px-7 py-2 text-sm"
+          id="report-submit-btn"
+          class="btn-primary w-auto min-h-10 rounded-control px-7 py-2 text-sm flex items-center justify-center gap-2"
         >
-          Submit Report
+          <span id="report-submit-btn-spinner" class="hidden size-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+          <span id="report-submit-btn-text">Submit Report</span>
         </button>
       </div>
     </form>
 
     <div
       id="report-success-msg"
-      class="hidden mt-4 rounded-control border border-line bg-canvas p-3.5 text-center text-sm font-semibold text-forest-900"
+      class="hidden mt-4 rounded-control border border-emerald-600/30 bg-emerald-50/80 p-3.5 text-center text-sm font-semibold text-forest-900"
     >
-      Your report has been submitted! It will appear on the campus feed once verified.
+      <div class="flex items-center justify-center gap-2">
+        <svg class="size-4.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="report-success-msg-text">
+          Report and photos uploaded to secure storage! Live on campus feed.
+        </span>
+      </div>
     </div>
   </div>
 </div>

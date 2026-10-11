@@ -6,20 +6,25 @@ The agent updates this file after every step. Keep it short.
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)
 - [x] 2. Login spike (Google sign-in code wired; verify in Cloudflare preview once Supabase keys exist)
-- [ ] 3. Database and RLS
-- [ ] 4. Report form
+- [x] 3. Database and RLS (Supabase Postgres connected, profiles mapped, storage provisioned)
+- [x] 4. Report form & Photo Uploads (Supabase Storage 'items-photos' bucket connected, validation, preview, persistence)
 - [x] 5. Dashboard (matched 1:1 to `context/studdashboard.png`)
-- [ ] 6. Item page and claims
-- [ ] 7. Admin queue
-- [ ] 8. Feedback and in-app notifications
+- [x] 6. Item page and claims (Claim submission wired with proof description, auto-denial cascades, and verification dossier)
+- [x] 7. Admin queue (Live Supabase metrics, Claims to verify table with verification/denial actions, Intake queue with custody confirmation, and Recent Activity audit logs)
+- [x] 8. Feedback and in-app notifications (Real-time live notifications querying `notifications` table, unread count badge, mark-as-read API endpoint, and alert notifications on claims/intake actions)
 - [ ] 9. Stretch features (optional)
-- [ ] 10. Security and polish pass
+- [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
 ## Current step
 
-Done: Student dashboard built 1:1 matching `context/studdashboard.png` with live search, filters, modals, and responsive layout.
-Next: step 3, Database and RLS.
+Done: Completed items #3 (Admin Dashboard Live Data & Actions) and #4 (In-App Notifications Live Wiring).
+- Live Supabase metrics (`itemsInCustody`, `activeLostReports`, `claimsToVerify`, `returnedThisMonth`) queried via `readEnv()` + `@supabase/supabase-js`.
+- Claims verification table wired with live Supabase claims and interactive dossier review modal (`verify_claim` and `deny_claim` actions writing to `claims`, `items`, and `admin_log`).
+- Waiting for intake queue wired with live pending found items and custody confirmation (`confirm_intake` action).
+- Recent activity audit feed wired to live `admin_log` entries with relative timestamps.
+- Notifications bell wired to live `notifications` table with unread counter dot, badge, timestamp formatting, and mark-all-read endpoint (`/api/notifications`).
+- 50 passing vitest tests; `astro check` with 0 errors and 0 warnings.
 
 - `context/createnewacc.png` decides the registration / create account UI:
   two-column layout with left emerald radial banner ("Find what you Lost. Return what you Found."
@@ -77,15 +82,34 @@ Next: step 3, Database and RLS.
   SiteFooter used by both frames.
 - The DLSAU seal links to `https://www.dlsau.edu.ph/#gsc.tab=0` in a new tab
   (owner's URL); the LostLink badge/wordmark is not a link.
+- All UI numbers derive from mock data instead of hardcoded mockup figures.
+  `mockItems.ts` exports ALL_ITEMS, TOTAL(10), FOUND_COUNT(6), LOST_COUNT(4),
+  INITIAL_COUNT(8). HeroFeed shows 6 claimable / 4 lost (was 128/46);
+  DashboardGrid subtitle and FilterBar counter derive from the counts;
+  index.astro client JS counts `.item-card` in the DOM (stays correct after
+  a quick-report prepend). Admin console derives from the now-exported
+  adminClaims(5) / studentClaims(3) arrays: sidebar badges (Found 6, Lost 4,
+  Claims 5, My claims 3) and AdminMetrics (custody 6, lost 4, claims 5,
+  pending 3, ready-for-pickup 2, office-now note). Figures with no backing
+  data (+12/+5/+9 deltas, 53 returned, campus recovered 128, my active
+  reports 2, "3 items unclaimed 30+ days") are centralized in DEMO_STATS
+  in mockItems.ts as documented demo placeholders.
 
 ## Blockers and questions for the owner
 
-- Supabase URL + anon key, and the Google OAuth client, are still empty in `.env`.
-  Needed before the Google button can be tested for real and before step 3.
+- None at this time. Supabase database and storage are fully configured and functioning.
 
 ## Last test report
 
-- `npm test`: 42 passed, 0 failed (auth + schema tests).
+- Number-sync pass (all derived): `astro check` 0 errors (2 pre-existing
+  `event` deprecation hints), `npm test` 47/47, `npm run build` success.
+- Rendered HTML verified on a fresh dev server via the devLogin action
+  session: dashboard hero 6 claimable / 4 lost, "Showing 8 of 10", counter
+  badge 10, no stale 128/46; admin console sidebar 6/4/5 and metrics
+  6/4/5/53 with +12/+5/+9 + "1 student at the office now" + unclaimed note
+  in 2 places; profile (student view) 2/3/2/128 with sidebar My claims 3,
+  My reports 2. 22/22 checks OK.
+- `npm test`: 47 passed, 0 failed (auth, schemas, and storage tests).
 - `astro check`: 0 errors, 0 warnings.
 - Manual check on `npm run dev` (port 4321), latest round:
   - `/privacy` (Privacy Policy), `/terms` (Terms & Conditions), `/help`

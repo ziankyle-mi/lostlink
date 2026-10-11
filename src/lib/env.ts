@@ -15,11 +15,57 @@ export interface Env {
   DEV_SESSION_SECRET: string;
 }
 
+let fileEnvCache: Record<string, string> | null = null;
+
+function getLocalFileEnv(): Record<string, string> {
+  if (fileEnvCache) return fileEnvCache;
+  fileEnvCache = {};
+  try {
+    if (typeof process !== "undefined" && typeof (process as unknown as { cwd?: () => string }).cwd === "function") {
+      const fs = (globalThis as unknown as { process?: { getBuiltinModule?: (m: string) => { existsSync: (p: string) => boolean; readFileSync: (p: string, e: string) => string } } }).process?.getBuiltinModule?.("fs");
+      if (fs && fs.existsSync(".env")) {
+        const content = fs.readFileSync(".env", "utf-8");
+        for (const line of content.split("\n")) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+            const eqIdx = trimmed.indexOf("=");
+            const key = trimmed.slice(0, eqIdx).trim();
+            const val = trimmed.slice(eqIdx + 1).split("#")[0].trim();
+            fileEnvCache[key] = val;
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-Node environments or sandboxes
+  }
+  return fileEnvCache;
+}
+
 export function readEnv(runtimeEnv?: Record<string, unknown>): Env {
   const source = (runtimeEnv ?? {}) as Record<string, unknown>;
   const pick = (key: keyof Env): string => {
-    const value = source[key];
-    return typeof value === "string" ? value : "";
+    const fromRuntime = source[key];
+    if (typeof fromRuntime === "string" && fromRuntime.trim() !== "") {
+      return fromRuntime.trim();
+    }
+    const fromImportMeta =
+      typeof import.meta !== "undefined" && import.meta.env
+        ? (import.meta.env as unknown as Record<string, unknown>)[key]
+        : undefined;
+    if (typeof fromImportMeta === "string" && fromImportMeta.trim() !== "") {
+      return fromImportMeta.trim();
+    }
+    const fromProcess =
+      typeof process !== "undefined" && process.env ? process.env[key] : undefined;
+    if (typeof fromProcess === "string" && fromProcess.trim() !== "") {
+      return fromProcess.trim();
+    }
+    const fromFile = getLocalFileEnv()[key];
+    if (typeof fromFile === "string" && fromFile.trim() !== "") {
+      return fromFile.trim();
+    }
+    return "";
   };
   return {
     PUBLIC_SUPABASE_URL: pick("PUBLIC_SUPABASE_URL"),

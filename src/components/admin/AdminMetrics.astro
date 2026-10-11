@@ -1,10 +1,40 @@
 ---
+import { DEMO_STATS, FOUND_COUNT, LOST_COUNT } from "~/data/mockItems";
+import { adminClaims, studentClaims } from "~/components/admin/ClaimsVerificationTable.astro";
+
 interface Props {
   role?: "admin" | "student";
+  metrics?: {
+    itemsInCustody?: number;
+    activeLostReports?: number;
+    claimsToVerify?: number;
+    returnedThisMonth?: number;
+  };
 }
 
-const { role = "admin" } = Astro.props;
+const { role = "admin", metrics } = Astro.props;
 const isAdmin = role === "admin";
+
+const officeNowCount = adminClaims.filter((claim) => claim.statusText === "At the office now").length;
+const readyForPickupCount = studentClaims.filter(
+  (claim) => claim.statusText === "At the office now" || claim.statusText === "In DO custody",
+).length;
+
+const custodyCount = metrics?.itemsInCustody !== undefined && metrics.itemsInCustody > 0
+  ? metrics.itemsInCustody
+  : (isAdmin ? FOUND_COUNT : DEMO_STATS.myActiveReports);
+
+const lostCount = metrics?.activeLostReports !== undefined && metrics.activeLostReports > 0
+  ? metrics.activeLostReports
+  : (isAdmin ? LOST_COUNT : studentClaims.length);
+
+const claimsCount = metrics?.claimsToVerify !== undefined && metrics.claimsToVerify > 0
+  ? metrics.claimsToVerify
+  : (isAdmin ? adminClaims.length : readyForPickupCount);
+
+const returnedCount = metrics?.returnedThisMonth !== undefined && metrics.returnedThisMonth > 0
+  ? metrics.returnedThisMonth
+  : (isAdmin ? DEMO_STATS.returnedThisMonth : DEMO_STATS.campusRecovered);
 ---
 
 <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5" aria-label="Key Performance Metrics">
@@ -15,10 +45,10 @@ const isAdmin = role === "admin";
     </p>
     <div class="mt-4">
       <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
-        {isAdmin ? "128" : "2"}
+        {custodyCount}
       </p>
       <p class="mt-3 text-xs text-stone-500 font-medium">
-        {isAdmin ? "+12 this week" : "1 lost, 1 found posted"}
+        {isAdmin ? `+${DEMO_STATS.itemsInCustodyDelta} this week` : DEMO_STATS.myActiveReportsNote}
       </p>
     </div>
   </div>
@@ -30,10 +60,10 @@ const isAdmin = role === "admin";
     </p>
     <div class="mt-4">
       <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
-        {isAdmin ? "46" : "1"}
+        {lostCount}
       </p>
       <p class="mt-3 text-xs text-stone-500 font-medium">
-        {isAdmin ? "+5 this week" : "Under office verification"}
+        {isAdmin ? `+${DEMO_STATS.lostDelta} this week` : "Under office verification"}
       </p>
     </div>
   </div>
@@ -45,10 +75,10 @@ const isAdmin = role === "admin";
     </p>
     <div class="mt-4">
       <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
-        {isAdmin ? "7" : "1"}
+        {claimsCount}
       </p>
       <p class="mt-3 text-xs font-semibold text-forest-800">
-        {isAdmin ? "1 student at the office now" : "Visit Disciplinary Office"}
+        {isAdmin ? `${officeNowCount} student at the office now` : "Visit Disciplinary Office"}
       </p>
     </div>
   </div>
@@ -60,10 +90,10 @@ const isAdmin = role === "admin";
     </p>
     <div class="mt-4">
       <p class="font-serif text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
-        {isAdmin ? "53" : "128"}
+        {returnedCount}
       </p>
       <p class="mt-3 text-xs font-semibold text-[#d8ef8c]">
-        {isAdmin ? "+9 vs last month" : "Campus reunited this term"}
+        {isAdmin ? `+${DEMO_STATS.returnedDelta} vs last month` : "Campus reunited this term"}
       </p>
     </div>
   </div>

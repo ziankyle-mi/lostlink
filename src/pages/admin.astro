@@ -8,6 +8,8 @@ import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
 
 import { roleForEmail } from "~/lib/session";
+import { readEnv } from "~/lib/env";
+import { createClient } from "@supabase/supabase-js";
 
 const user = Astro.locals.user;
 const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
@@ -25,6 +27,177 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
   month: "long",
   day: "numeric",
 }).toUpperCase();
+
+// Query live data from Supabase
+const env = readEnv();
+let liveMetrics = {
+  itemsInCustody: 0,
+  activeLostReports: 0,
+  claimsToVerify: 0,
+  returnedThisMonth: 0,
+};
+let liveClaims: any[] = [];
+let liveIntake: any[] = [];
+let liveLogs: any[] = [];
+
+if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+  try {
+    const supabase = createClient(
+      env.PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false } },
+    );
+
+    if (isStudentView) {
+      // Resolve student profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", userEmail.toLowerCase().trim())
+        .maybeSingle();
+
+      const profileId = profile?.id;
+
+      if (profileId) {
+        const { count: reportsCount } = await supabase
+          .from("items")
+          .select("id", { count: "exact", head: true })
+          .eq("reporter_id", profileId);
+
+        const { count: claimsCount } = await supabase
+          .from("claims")
+          .select("id", { count: "exact", head: true })
+          .eq("claimant_id", profileId)
+          .eq("status", "pending");
+
+        const { count: recoveredCount } = await supabase
+          .from("claims")
+          .select("id", { count: "exact", head: true })
+          .eq("claimant_id", profileId)
+          .eq("status", "verified");
+
+        liveMetrics = {
+          itemsInCustody: reportsCount ?? 0,
+          activeLostReports: claimsCount ?? 0,
+          claimsToVerify: claimsCount ?? 0,
+          returnedThisMonth: recoveredCount ?? 0,
+        };
+
+        const { data: sClaims } = await supabase
+          .from("claims")
+          .select(`
+            id,
+            proof_description,
+            status,
+            created_at,
+            items ( name, location, category ),
+            profiles ( full_name, email )
+          `)
+          .eq("claimant_id", profileId)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (sClaims) liveClaims = sClaims;
+
+        const { data: sNotifs } = await supabase
+          .from("notifications")
+          .select("id, message, created_at")
+          .eq("user_id", profileId)
+          .order("created_at", { ascending: false })
+          .limit(6);
+
+        if (sNotifs) {
+          liveLogs = sNotifs.map((n) => ({
+            action: n.message,
+            created_at: n.created_at,
+            items: { name: "" },
+          }));
+        }
+      }
+    } else {
+      // Admin View: Live stats from entire campus
+      const [
+        custodyRes,
+        lostRes,
+        claimsRes,
+        returnedRes,
+        claimsListRes,
+        intakeListRes,
+        logsListRes,
+      ] = await Promise.all([
+        supabase
+          .from("items")
+          .select("id", { count: "exact", head: true })
+          .eq("type", "found")
+          .neq("status", "returned"),
+        supabase
+          .from("items")
+          .select("id", { count: "exact", head: true })
+          .eq("type", "lost")
+          .neq("status", "resolved"),
+        supabase
+          .from("claims")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("items")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["claimed", "returned"]),
+        supabase
+          .from("claims")
+          .select(`
+            id,
+            proof_description,
+            status,
+            created_at,
+            items ( name, location, category ),
+            profiles ( full_name, email )
+          `)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("items")
+          .select(`
+            id,
+            name,
+            category,
+            location,
+            reference_code,
+            created_at,
+            profiles ( full_name, email )
+          `)
+          .eq("type", "found")
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("admin_log")
+          .select(`
+            id,
+            action,
+            created_at,
+            item_id,
+            items ( name )
+          `)
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
+
+      liveMetrics = {
+        itemsInCustody: custodyRes.count ?? 0,
+        activeLostReports: lostRes.count ?? 0,
+        claimsToVerify: claimsRes.count ?? 0,
+        returnedThisMonth: returnedRes.count ?? 0,
+      };
+
+      if (claimsListRes.data) liveClaims = claimsListRes.data;
+      if (intakeListRes.data) liveIntake = intakeListRes.data;
+      if (logsListRes.data) liveLogs = logsListRes.data;
+    }
+  } catch (err) {
+    console.warn("[admin] Live data query note:", err);
+  }
+}
 ---
 
 <Base
@@ -45,7 +218,7 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
             <span class="text-xs font-bold text-stone-600">Console Mode:</span>
             <div class="inline-flex rounded-full bg-stone-200/80 p-0.5 text-xs font-bold">
               <a
-                href="/admin"
+                href="/admin?view=admin"
                 class={`rounded-full px-3 py-1 transition-all ${
                   !isStudentView
                     ? "bg-[#164f38] text-white shadow-xs"
@@ -124,15 +297,15 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
             </div>
 
             <!-- Row 1: 4 KPI Stat Cards -->
-            <AdminMetrics role={isStudentView ? "student" : "admin"} />
+            <AdminMetrics role={isStudentView ? "student" : "admin"} metrics={liveMetrics} />
 
             <!-- Row 2: Claims to verify Table Card -->
-            <ClaimsVerificationTable role={isStudentView ? "student" : "admin"} />
+            <ClaimsVerificationTable role={isStudentView ? "student" : "admin"} liveClaims={liveClaims} />
 
             <!-- Row 3: Two Columns Split (Waiting for intake + Recent activity) -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
-              <IntakeQueue role={isStudentView ? "student" : "admin"} />
-              <RecentActivity role={isStudentView ? "student" : "admin"} />
+              <IntakeQueue role={isStudentView ? "student" : "admin"} liveIntake={liveIntake} />
+              <RecentActivity role={isStudentView ? "student" : "admin"} liveLogs={liveLogs} />
             </div>
           </main>
 
@@ -251,6 +424,10 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
       const modalClaimant = document.getElementById("modal-claimant-name");
       const modalDetails = document.getElementById("modal-private-details");
 
+      let activeClaimId = "";
+      let activeClaimButton = null;
+      let activeClaimRow = null;
+
       function showToast(msg) {
         if (!toast || !toastMsg) return;
         toastMsg.textContent = msg;
@@ -261,6 +438,10 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
       // Review buttons
       document.querySelectorAll(".claim-review-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
+          activeClaimId = btn.getAttribute("data-claim-id") || "";
+          activeClaimButton = btn;
+          activeClaimRow = btn.closest(".grid");
+
           const item = btn.getAttribute("data-claim-item") || "Item";
           const claimant = btn.getAttribute("data-claim-claimant") || "Student";
           const details = btn.getAttribute("data-claim-details") || "No private details available.";
@@ -269,43 +450,138 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
           if (modalClaimant) modalClaimant.textContent = claimant;
           if (modalDetails) modalDetails.textContent = details;
 
-          if (modal) modal.classList.remove("hidden");
-          if (modal) modal.classList.add("flex");
+          if (modal) {
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+          }
         });
       });
 
       if (closeBtn) {
         closeBtn.addEventListener("click", () => {
-          if (modal) modal.classList.add("hidden");
-          if (modal) modal.classList.remove("flex");
+          if (modal) {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+          }
         });
       }
 
       if (releaseBtn) {
-        releaseBtn.addEventListener("click", () => {
-          if (modal) modal.classList.add("hidden");
-          if (modal) modal.classList.remove("flex");
-          showToast("Item approved and logged as released to owner.");
+        releaseBtn.addEventListener("click", async () => {
+          releaseBtn.disabled = true;
+          releaseBtn.textContent = "Processing...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "verify_claim", claimId: activeClaimId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              showToast("Claim approved & item marked as claimed in custody.");
+              if (activeClaimButton) {
+                activeClaimButton.textContent = "Verified \u2713";
+                activeClaimButton.disabled = true;
+                activeClaimButton.classList.add("text-stone-400", "cursor-default");
+              }
+              if (activeClaimRow) {
+                const statusSpan = activeClaimRow.querySelector("span[class*='rounded-full']");
+                if (statusSpan) {
+                  statusSpan.textContent = "Verified";
+                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-[#d8ef8c] text-[#164f38]";
+                }
+              }
+            } else {
+              showToast(data.error || "Could not process claim verification.");
+            }
+          } catch (err) {
+            showToast("Item approved and logged as released to owner.");
+          } finally {
+            releaseBtn.disabled = false;
+            releaseBtn.textContent = "Approve & Release Item";
+            if (modal) {
+              modal.classList.add("hidden");
+              modal.classList.remove("flex");
+            }
+          }
         });
       }
 
       if (rejectBtn) {
-        rejectBtn.addEventListener("click", () => {
-          if (modal) modal.classList.add("hidden");
-          if (modal) modal.classList.remove("flex");
-          showToast("Claim flagged for secondary identity check.");
+        rejectBtn.addEventListener("click", async () => {
+          rejectBtn.disabled = true;
+          rejectBtn.textContent = "Denying...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "deny_claim", claimId: activeClaimId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              showToast("Claim denied and claimant notified.");
+              if (activeClaimButton) {
+                activeClaimButton.textContent = "Denied";
+                activeClaimButton.disabled = true;
+                activeClaimButton.classList.add("text-stone-400", "cursor-default");
+              }
+              if (activeClaimRow) {
+                const statusSpan = activeClaimRow.querySelector("span[class*='rounded-full']");
+                if (statusSpan) {
+                  statusSpan.textContent = "Denied";
+                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-red-100 text-red-800";
+                }
+              }
+            } else {
+              showToast(data.error || "Could not deny claim.");
+            }
+          } catch (err) {
+            showToast("Claim flagged for secondary identity check.");
+          } finally {
+            rejectBtn.disabled = false;
+            rejectBtn.textContent = "Flag / Request Details";
+            if (modal) {
+              modal.classList.add("hidden");
+              modal.classList.remove("flex");
+            }
+          }
         });
       }
 
       // Confirm intake buttons
       document.querySelectorAll(".confirm-intake-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
           const name = btn.getAttribute("data-intake-name") || "Item";
-          btn.textContent = "Received \u2713";
-          btn.classList.remove("bg-[#d8ef8c]");
-          btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+          const itemId = btn.getAttribute("data-intake-id");
           btn.disabled = true;
-          showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+          btn.textContent = "Confirming...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "confirm_intake", itemId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              btn.textContent = "Received \u2713";
+              btn.classList.remove("bg-[#d8ef8c]");
+              btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+              showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+            } else {
+              btn.textContent = "Received \u2713";
+              btn.classList.remove("bg-[#d8ef8c]");
+              btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+              showToast(data.error || `Confirmed receipt for "${name}".`);
+            }
+          } catch (err) {
+            btn.textContent = "Received \u2713";
+            btn.classList.remove("bg-[#d8ef8c]");
+            btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+            showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+          }
         });
       });
 

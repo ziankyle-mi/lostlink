@@ -65,10 +65,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.user = user;
 
   if (!user) {
-    // Action handlers do their own role checks, so only the login gate lives here.
-    if (isAction) {
+    // Action handlers and API routes do their own role checks or return JSON 401
+    if (isAction || pathname.startsWith("/api/")) {
       return withSecurityHeaders(
-        new Response(JSON.stringify({ error: "You need to sign in first." }), {
+        new Response(JSON.stringify({ ok: false, error: "You need to sign in first." }), {
           status: 401,
           headers: { "Content-Type": "application/json" },
         }),

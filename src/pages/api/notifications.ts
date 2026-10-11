@@ -1,0 +1,152 @@
+import type { APIRoute } from "astro";
+import { createClient } from "@supabase/supabase-js";
+import type { Env } from "~/lib/env";
+
+function getAdminClient(env: Env) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  return createClient(env.PUBLIC_SUPABASE_URL, key, {
+    auth: { persistSession: false },
+  });
+}
+
+export const GET: APIRoute = async ({ locals }) => {
+  const user = locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const supabase = getAdminClient(locals.env);
+  const userEmail = user.email.toLowerCase().trim();
+
+  try {
+    // Resolve user's profile ID
+    let profileId: string | null = null;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", userEmail)
+      .maybeSingle();
+
+    if (profile?.id) {
+      profileId = profile.id;
+    } else {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      if (isUuid) profileId = user.id;
+    }
+
+    if (!profileId) {
+      return new Response(
+        JSON.stringify({ ok: true, notifications: [], unreadCount: 0 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { data: notifs, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", profileId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      return new Response(JSON.stringify({ ok: false, error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const unreadCount = notifs?.filter((n) => !n.read).length ?? 0;
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        notifications: notifs ?? [],
+        unreadCount,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error querying notifications";
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const user = locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const supabase = getAdminClient(locals.env);
+  const userEmail = user.email.toLowerCase().trim();
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { notificationId, markAllRead } = body;
+
+    let profileId: string | null = null;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", userEmail)
+      .maybeSingle();
+
+    if (profile?.id) profileId = profile.id;
+    else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+      profileId = user.id;
+    }
+
+    if (!profileId) {
+      return new Response(JSON.stringify({ ok: false, error: "Profile not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (markAllRead) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", profileId)
+        .eq("read", false);
+
+      return new Response(JSON.stringify({ ok: true, message: "All marked as read." }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (notificationId) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notificationId)
+        .eq("user_id", profileId);
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: false, error: "Missing action." }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error updating notification";
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};

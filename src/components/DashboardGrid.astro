@@ -1,5 +1,5 @@
 ---
-import { INITIAL_ITEMS, EXTRA_ITEMS } from "~/data/mockItems";
+import { INITIAL_ITEMS, EXTRA_ITEMS, INITIAL_COUNT, TOTAL } from "~/data/mockItems";
 import ItemCard from "./ItemCard.astro";
 ---
 
@@ -11,7 +11,7 @@ import ItemCard from "./ItemCard.astro";
         Latest on campus
       </h2>
       <p id="feed-subtitle" class="mt-1 text-sm sm:text-base text-forest-900/75">
-        Showing 8 of 10 items, newest first.
+        Showing {INITIAL_COUNT} of {TOTAL} items, newest first.
       </p>
     </div>
 

@@ -196,6 +196,25 @@ export const EXTRA_ITEMS: DashboardItem[] = [
   },
 ];
 
+export const ALL_ITEMS: DashboardItem[] = [...INITIAL_ITEMS, ...EXTRA_ITEMS];
+
+export const INITIAL_COUNT = INITIAL_ITEMS.length;
+export const TOTAL = ALL_ITEMS.length;
+export const FOUND_COUNT = ALL_ITEMS.filter((item) => item.type === "found").length;
+export const LOST_COUNT = ALL_ITEMS.filter((item) => item.type === "lost").length;
+
+// Demo placeholders with no backing data until the database step supplies real stats.
+export const DEMO_STATS = {
+  itemsInCustodyDelta: 12,
+  lostDelta: 5,
+  returnedThisMonth: 53,
+  returnedDelta: 9,
+  campusRecovered: 128,
+  myActiveReports: 2,
+  myActiveReportsNote: "1 lost, 1 found posted",
+  unclaimed30Days: 3,
+} as const;
+
 export const CATEGORIES = [
   "All Categories",
   "Wallets & IDs",

@@ -1,9 +1,10 @@
 ---
 interface Props {
   role?: "admin" | "student";
+  liveIntake?: any[];
 }
 
-const { role = "admin" } = Astro.props;
+const { role = "admin", liveIntake } = Astro.props;
 const isAdmin = role === "admin";
 
 const intakeItems = [
@@ -29,6 +30,30 @@ const intakeItems = [
     iconType: "calculator",
   },
 ];
+
+interface RawIntake {
+  id: string;
+  name: string;
+  category?: string;
+  location?: string;
+  reference_code?: string;
+  created_at?: string;
+  profiles?: { full_name?: string; email?: string };
+}
+
+const mappedLiveIntake = liveIntake && liveIntake.length > 0
+  ? liveIntake.map((item: RawIntake) => ({
+      id: item.id,
+      name: item.name,
+      meta: `Posted by ${item.profiles?.full_name ?? "Student"} \u00b7 ${item.reference_code ?? "Ref LL-Item"}`,
+      iconBg: "bg-[#dde6de]",
+      iconType: item.category === "Bottles" ? "bottle" : (item.category === "Bags" ? "bag" : "calculator"),
+    }))
+  : [];
+
+const queueItems = mappedLiveIntake.length > 0
+  ? [...mappedLiveIntake, ...intakeItems.slice(0, Math.max(0, 3 - mappedLiveIntake.length))]
+  : intakeItems;
 ---
 
 <section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between" id="intake">
@@ -48,7 +73,7 @@ const intakeItems = [
     <!-- Items List -->
     {isAdmin ? (
       <div class="mt-6 divide-y divide-stone-100">
-        {intakeItems.map((item) => (
+        {queueItems.map((item) => (
           <div class="flex items-center justify-between gap-3 py-4 first:pt-2 last:pb-0">
             <div class="flex items-center gap-3.5 min-w-0">
               <div class={`size-11 shrink-0 rounded-2xl flex items-center justify-center ${item.iconBg}`}>

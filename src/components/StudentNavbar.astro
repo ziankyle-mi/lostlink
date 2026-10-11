@@ -2,12 +2,68 @@
 import { actions } from "astro:actions";
 import { roleForEmail } from "~/lib/session";
 
+import { createClient } from "@supabase/supabase-js";
+import { readEnv } from "~/lib/env";
+
 interface Props {
   userEmail?: string;
 }
 
 const { userEmail = "student@dlsau.edu.ph" } = Astro.props;
 const isAdmin = roleForEmail(userEmail) === "admin";
+
+const env = readEnv();
+interface LiveNotif {
+  id: string;
+  message: string;
+  read: boolean;
+  link?: string;
+  created_at: string;
+}
+
+let liveNotifications: LiveNotif[] = [];
+let unreadNotifCount = 0;
+
+if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+  try {
+    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY, {
+      auth: { persistSession: false },
+    });
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", userEmail.toLowerCase().trim())
+      .maybeSingle();
+
+    if (prof?.id) {
+      const { data: nList } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", prof.id)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (nList) {
+        liveNotifications = nList;
+        unreadNotifCount = nList.filter((n) => !n.read).length;
+      }
+    }
+  } catch (err) {
+    console.warn("[navbar] Notifs fetch notice:", err);
+  }
+}
+
+function formatNotifTime(dateStr?: string): string {
+  if (!dateStr) return "Recently";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 // Compute initials from email (e.g. maria.reyes -> MR, or default "MR")
 function getInitials(email: string): string {
@@ -154,7 +210,10 @@ const initials = getInitials(userEmail);
             >
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <span class="absolute top-2 right-2 size-2.5 rounded-full bg-[#9b2c1f]"></span>
+            <span
+              id="notif-unread-dot"
+              class={`absolute top-2 right-2 size-2.5 rounded-full bg-[#9b2c1f] ${unreadNotifCount > 0 ? "" : "hidden"}`}
+            ></span>
           </button>
 
           <!-- Notification Popover -->
@@ -164,24 +223,63 @@ const initials = getInitials(userEmail);
           >
             <div class="flex items-center justify-between border-b border-line pb-2.5">
               <span class="text-sm font-bold text-forest-900">Notifications</span>
-              <span class="rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-semibold text-forest-900">1 new</span>
+              <div class="flex items-center gap-2">
+                <span id="notif-unread-badge" class="rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-semibold text-forest-900">
+                  {unreadNotifCount > 0 ? `${unreadNotifCount} new` : "All caught up"}
+                </span>
+                {unreadNotifCount > 0 && (
+                  <button
+                    type="button"
+                    id="mark-all-notifs-read-btn"
+                    class="text-[11px] font-bold text-forest-700 hover:underline cursor-pointer"
+                  >
+                    Mark read
+                  </button>
+                )}
+              </div>
             </div>
-            <div class="mt-3 space-y-2.5">
-              <div class="rounded-xl bg-[#f5f1e6]/80 p-3 text-xs sm:text-sm border border-line/60">
-                <p class="font-bold text-forest-900">Account Security</p>
-                <p class="mt-0.5 text-stone-600">Your DLSAU account is active. If your password was recently reset, your new credentials are active!</p>
-                <span class="mt-1.5 block text-[10px] text-stone-400">Campus Security Office</span>
-              </div>
-              <div class="rounded-xl p-3 text-xs sm:text-sm hover:bg-stone-50">
-                <p class="font-bold text-forest-900">Report Approved</p>
-                <p class="mt-0.5 text-stone-600">Your report for "Student ID card" is live on the campus feed.</p>
-                <span class="mt-1.5 block text-[10px] text-stone-400">10m ago</span>
-              </div>
-              <div class="rounded-xl p-3 text-xs sm:text-sm hover:bg-stone-50">
-                <p class="font-bold text-forest-900">Item Matched</p>
-                <p class="mt-0.5 text-stone-600">A found item matching "Keys" was dropped at the security office.</p>
-                <span class="mt-1.5 block text-[10px] text-stone-400">2h ago</span>
-              </div>
+
+            <div id="notif-list-container" class="mt-3 space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {liveNotifications.length > 0 ? (
+                liveNotifications.map((notif) => (
+                  <a
+                    href={notif.link || "#"}
+                    class={`block rounded-xl p-3 text-xs sm:text-sm border transition-all ${
+                      !notif.read
+                        ? "bg-[#f5f1e6]/90 border-line/70 font-medium"
+                        : "bg-white border-transparent hover:bg-stone-50"
+                    }`}
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="font-bold text-forest-900 leading-tight">
+                        {notif.message.includes("submitted")
+                          ? "Report Submitted"
+                          : notif.message.includes("approved")
+                          ? "Report Approved"
+                          : notif.message.includes("verified")
+                          ? "Claim Verified"
+                          : notif.message.includes("denied")
+                          ? "Claim Update"
+                          : "Campus Notification"}
+                      </p>
+                      {!notif.read && (
+                        <span class="size-1.5 shrink-0 rounded-full bg-[#164f38] mt-1"></span>
+                      )}
+                    </div>
+                    <p class="mt-1 text-stone-600 leading-relaxed text-xs">
+                      {notif.message}
+                    </p>
+                    <span class="mt-1.5 block text-[10px] text-stone-400">
+                      {formatNotifTime(notif.created_at)}
+                    </span>
+                  </a>
+                ))
+              ) : (
+                <div class="py-6 text-center text-xs text-stone-500">
+                  <p class="font-semibold text-forest-900">No notifications yet</p>
+                  <p class="mt-1">When reports or claims update, they will appear here.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

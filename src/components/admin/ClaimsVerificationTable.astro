@@ -1,12 +1,13 @@
 ---
 interface Props {
   role?: "admin" | "student";
+  liveClaims?: any[];
 }
 
-const { role = "admin" } = Astro.props;
+const { role = "admin", liveClaims } = Astro.props;
 const isAdmin = role === "admin";
 
-const adminClaims = [
+export const adminClaims = [
   {
     id: "claim-1",
     name: "Black bifold wallet",
@@ -74,7 +75,7 @@ const adminClaims = [
   },
 ];
 
-const studentClaims = [
+export const studentClaims = [
   {
     id: "claim-s1",
     name: "Scientific calculator",
@@ -116,7 +117,43 @@ const studentClaims = [
   },
 ];
 
-const items = isAdmin ? adminClaims : studentClaims;
+function formatClaimDate(dateStr?: string): string {
+  if (!dateStr) return "Recently";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return isToday ? `Today, ${timeStr}` : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+interface RawLiveClaim {
+  id: string;
+  proof_description?: string;
+  status?: string;
+  created_at?: string;
+  items?: { name?: string; location?: string; category?: string };
+  profiles?: { full_name?: string; email?: string };
+}
+
+const mappedLiveClaims = liveClaims && liveClaims.length > 0
+  ? liveClaims.map((c: RawLiveClaim) => ({
+      id: c.id,
+      name: c.items?.name ?? "Reported Item",
+      location: c.items?.location ? `Found at ${c.items.location}` : "Campus grounds",
+      iconBg: "bg-[#e5ecdc]",
+      iconType: c.items?.category === "Wallets & IDs" ? "wallet" : "id-card",
+      claimant: c.profiles?.full_name ?? "Student Claimant",
+      studentId: c.profiles?.email ? c.profiles.email.split("@")[0] : "Verified Student",
+      statusText: c.status === "verified" ? "Verified" : (c.status === "denied" ? "Denied" : "Awaiting visit"),
+      statusStyle: c.status === "verified" ? "bg-[#d8ef8c] text-[#164f38]" : (c.status === "denied" ? "bg-red-100 text-red-800" : "bg-stone-200 text-stone-700"),
+      time: formatClaimDate(c.created_at),
+      privateDetails: c.proof_description ?? "Proof details provided during claim verification.",
+    }))
+  : [];
+
+const items = mappedLiveClaims.length > 0
+  ? [...mappedLiveClaims, ...(isAdmin ? adminClaims.slice(0, Math.max(0, 5 - mappedLiveClaims.length)) : studentClaims.slice(0, Math.max(0, 3 - mappedLiveClaims.length)))]
+  : (isAdmin ? adminClaims : studentClaims);
 ---
 
 <section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs" id="claims">

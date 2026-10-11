@@ -1,6 +1,8 @@
 ---
 import { actions } from "astro:actions";
 import BrandMark from "~/components/BrandMark.astro";
+import { DEMO_STATS, FOUND_COUNT, LOST_COUNT } from "~/data/mockItems";
+import { adminClaims, studentClaims } from "~/components/admin/ClaimsVerificationTable.astro";
 
 interface Props {
   role?: "admin" | "student";
@@ -94,7 +96,7 @@ const userName = isAdmin
               Claims
             </span>
             <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-xs font-black text-[#164f38]">
-              7
+              {adminClaims.length}
             </span>
           </a>
 
@@ -112,7 +114,7 @@ const userName = isAdmin
               </svg>
               Found inventory
             </span>
-            <span class="text-xs font-semibold text-stone-300">128</span>
+            <span class="text-xs font-semibold text-stone-300">{FOUND_COUNT}</span>
           </a>
 
           <!-- Lost reports (Admin) -->
@@ -127,7 +129,7 @@ const userName = isAdmin
               </svg>
               Lost reports
             </span>
-            <span class="text-xs font-semibold text-stone-300">46</span>
+            <span class="text-xs font-semibold text-stone-300">{LOST_COUNT}</span>
           </a>
 
           <!-- Users (Admin) -->
@@ -189,7 +191,7 @@ const userName = isAdmin
               My reports
             </span>
             <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-xs font-black text-[#164f38]">
-              2
+              {DEMO_STATS.myActiveReports}
             </span>
           </a>
 
@@ -205,7 +207,7 @@ const userName = isAdmin
               </svg>
               My claims
             </span>
-            <span class="text-xs font-semibold text-stone-300">1</span>
+            <span class="text-xs font-semibold text-stone-300">{studentClaims.length}</span>
           </a>
 
           <!-- Campus feed (Student) -->
@@ -261,7 +263,7 @@ const userName = isAdmin
       {isAdmin ? (
         <>
           <p class="text-sm font-bold leading-snug">
-            3 items unclaimed for 30+ days.
+            {DEMO_STATS.unclaimed30Days} items unclaimed for 30+ days.
           </p>
           <a
             href="/admin#unclaimed"
