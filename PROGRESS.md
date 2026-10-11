@@ -18,6 +18,12 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Core Usability Release (Dedicated Student Profile & Shareable Item Pages).
+- Rebuilt `/profile` as a real Student Activity tracker querying live Supabase data: "Items I Reported" (with status badges, reference codes, drop-off advice) and "My Submitted Claims" (with ownership proof and security review status).
+- Built dedicated `/item/[id]` page: dynamic route with direct shareable links, full photo gallery, location/date badges, reference codes, and standalone claim submission form with instant feedback.
+- Connected `ItemCard.astro` action link directly to `/item/[id]`.
+- Verified: `astro check` with 0 errors and 0 warnings; `npm test` 56/56 passing.
+
 Done: Bulletproof Security Pass (Database RLS, Web Hardening & Login Brute-Force Rate Limiting).
 - Implemented IP and email sliding rate limiter in `src/lib/rateLimit.ts` and `src/actions/index.ts` to neutralize automated password brute-force and credential stuffing attacks (max 5 failed attempts per 5 minutes per IP and email).
 - Added full Row Level Security (RLS) policies and `FORCE ROW LEVEL SECURITY` to `docs/schema.sql` across all tables (`profiles`, `items`, `claims`, `notifications`, `admin_log`) with `is_admin` security definer helper and isolated search_path.
