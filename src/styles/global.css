@@ -230,6 +230,172 @@
   animation-play-state: paused;
 }
 
+/* ── Toast Notification System ─────────────────────────────────── */
+.ll-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.ll-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(22, 79, 56, 0.15);
+  background-color: var(--color-forest-900);
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  box-shadow: 0 20px 40px -15px rgba(8, 46, 26, 0.45);
+  transform: translateY(1rem);
+  opacity: 0;
+  animation: toastSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  max-width: 22rem;
+}
+
+.ll-toast.toast-out {
+  animation: toastSlideOut 0.28s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+.ll-toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 900;
+}
+
+.ll-toast-icon.success {
+  background-color: var(--color-lime);
+  color: var(--color-forest-900);
+}
+
+.ll-toast-icon.error {
+  background-color: #fca5a5;
+  color: #7f1d1d;
+}
+
+.ll-toast-icon.info {
+  background-color: #93c5fd;
+  color: #1e3a5f;
+}
+
+@keyframes toastSlideIn {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  to {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+}
+
+/* ── Skeleton Loading Cards ────────────────────────────────────── */
+.skeleton-card {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line);
+  background: #ffffff;
+}
+
+.skeleton-pulse {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #e8e4d9 0%, #f0ece2 40%, #e8e4d9 80%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-grid-enter {
+  animation: skeletonFadeOut 0.35s ease-out forwards;
+}
+
+@keyframes skeletonFadeOut {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* ── Copy-to-Clipboard Button ──────────────────────────────────── */
+.copy-ref-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.15s ease;
+  border: none;
+  background: transparent;
+  color: var(--color-forest-700);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.copy-ref-btn:hover {
+  background-color: rgba(22, 79, 56, 0.08);
+}
+
+.copy-ref-btn:active {
+  transform: scale(0.96);
+}
+
+.copy-ref-tooltip {
+  position: absolute;
+  bottom: calc(100% + 0.375rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(0.25rem);
+  background: var(--color-forest-900);
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.copy-ref-tooltip.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.copy-ref-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--color-forest-900);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -141,6 +141,25 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       const feedSubtitle = document.getElementById("feed-subtitle");
       const loadMoreBtn = document.getElementById("load-more-btn");
       const searchInput = document.getElementById("global-search-input");
+      const skeletonGrid = document.getElementById("skeleton-grid");
+      const itemsGrid = document.getElementById("items-grid");
+
+      let transitionTimer = null;
+      function applyGridWithTransition(action) {
+        if (skeletonGrid && itemsGrid) {
+          if (transitionTimer) clearTimeout(transitionTimer);
+          skeletonGrid.classList.remove("hidden");
+          itemsGrid.classList.add("hidden");
+          if (emptyState) emptyState.classList.add("hidden");
+          action();
+          transitionTimer = setTimeout(() => {
+            skeletonGrid.classList.add("hidden");
+            itemsGrid.classList.remove("hidden");
+          }, 150);
+        } else {
+          action();
+        }
+      }
 
       // Prune previously removed demo/mock items in this session
       try {
@@ -227,7 +246,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           btn.classList.remove("text-forest-900/80");
 
           currentFilterType = btn.dataset.filterType || "all";
-          updateGrid();
+          applyGridWithTransition(updateGrid);
         });
       });
 
@@ -292,7 +311,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         currentCategory = val;
         const label = document.getElementById("selected-category-label");
         if (label) label.textContent = val === "All Categories" ? "Category" : val;
-        updateGrid();
+        applyGridWithTransition(updateGrid);
       });
 
       setupDropdown("location-dropdown-btn", "location-dropdown-menu", "location-option", (opt) => {
@@ -300,13 +319,13 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         currentLocation = val;
         const label = document.getElementById("selected-location-label");
         if (label) label.textContent = val === "All Locations" ? "Location" : val;
-        updateGrid();
+        applyGridWithTransition(updateGrid);
       });
 
       setupDropdown("date-dropdown-btn", "date-dropdown-menu", "date-option", (opt) => {
         const label = document.getElementById("selected-date-label");
         if (label) label.textContent = opt.textContent.trim();
-        updateGrid();
+        applyGridWithTransition(updateGrid);
       });
 
       // Reset filters
@@ -335,7 +354,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         const dateLabel = document.getElementById("selected-date-label");
         if (dateLabel) dateLabel.textContent = "Date";
 
-        updateGrid();
+        applyGridWithTransition(updateGrid);
       }
 
       const resetBtn = document.getElementById("reset-filters-btn");
@@ -595,6 +614,28 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       if (closeClaimModal) closeClaimModal.addEventListener("click", hideClaimModal);
       if (cancelClaimBtn) cancelClaimBtn.addEventListener("click", hideClaimModal);
 
+      // Copy reference code in claim modal
+      const modalCopyBtn = document.getElementById("modal-copy-ref-btn");
+      if (modalCopyBtn) {
+        modalCopyBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const refEl = document.getElementById("modal-ref-code");
+          const refText = refEl ? refEl.textContent.trim() : "";
+          if (!refText) return;
+          try {
+            await navigator.clipboard.writeText(refText);
+            const tooltip = modalCopyBtn.querySelector(".copy-ref-tooltip");
+            if (tooltip) tooltip.classList.add("visible");
+            showToast(`Reference code ${refText} copied to clipboard!`, "success");
+            setTimeout(() => {
+              if (tooltip) tooltip.classList.remove("visible");
+            }, 2000);
+          } catch (err) {
+            console.warn("Clipboard copy failed:", err);
+          }
+        });
+      }
+
       window.handleClaimSubmit = async function () {
         const form = document.getElementById("claim-submit-form");
         const successMsg = document.getElementById("claim-success-msg");
@@ -629,6 +670,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         }
         if (form) form.classList.add("hidden");
         if (successMsg) successMsg.classList.remove("hidden");
+        showToast("Claim verification submitted to Security Office!", "success");
         setTimeout(hideClaimModal, 2200);
       };
 
@@ -688,27 +730,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         });
       }
 
-      function showToast(msg) {
-        let toast = document.getElementById("admin-action-toast");
-        if (!toast) {
-          toast = document.createElement("div");
-          toast.id = "admin-action-toast";
-          toast.className = "fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-forest-900 px-5 py-3 text-white shadow-xl transition-all duration-300 translate-y-12 opacity-0 text-sm font-bold border border-forest-700 pointer-events-none";
-          document.body.appendChild(toast);
+      function showToast(msg, type) {
+        if (window.llToast) {
+          window.llToast(msg, type || "success");
         }
-        toast.replaceChildren();
-        const badge = document.createElement("span");
-        badge.className = "flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-forest-900 text-xs font-black";
-        badge.textContent = "✓";
-        const textSpan = document.createElement("span");
-        textSpan.textContent = String(msg || "");
-        toast.append(badge, textSpan);
-        requestAnimationFrame(() => {
-          toast.classList.remove("translate-y-12", "opacity-0");
-        });
-        setTimeout(() => {
-          toast.classList.add("translate-y-12", "opacity-0");
-        }, 3200);
       }
 
       if (removeConfirmBtn) {
@@ -736,7 +761,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             });
             const data = await resp.json();
             if (!resp.ok && !data.ok) {
-              alert(data.error || "Failed to remove post.");
+              showToast(data.error || "Failed to remove post.", "error");
               removeConfirmBtn.disabled = false;
               removeConfirmBtn.innerHTML = originalBtnHtml;
               return;
@@ -1085,6 +1110,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         // Show success confirmation
         const successMsg = document.getElementById("report-success-msg");
         if (successMsg) successMsg.classList.remove("hidden");
+        showToast("Report posted to Campus Feed! Ref: " + refCode, "success");
 
         setTimeout(hideReportModal, 1600);
       };

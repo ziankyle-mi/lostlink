@@ -62,7 +62,21 @@ const { isAdmin = false } = Astro.props;
       </div>
       <div id="modal-ref-container">
         <span class="block text-xs text-stone-400 font-medium">Reference Code</span>
-        <span id="modal-ref-code" class="font-mono font-bold text-forest-700 mt-0.5 block">LL-4821</span>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span id="modal-ref-code" class="font-mono font-bold text-forest-700 block">LL-4821</span>
+          <button
+            type="button"
+            id="modal-copy-ref-btn"
+            class="copy-ref-btn"
+            title="Copy reference code"
+            aria-label="Copy reference code"
+          >
+            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span class="copy-ref-tooltip">Copied!</span>
+          </button>
+        </div>
       </div>
       <div>
         <span class="block text-xs text-stone-400 font-medium">Custody</span>

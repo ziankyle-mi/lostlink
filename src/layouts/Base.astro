@@ -1,5 +1,6 @@
 ---
 import "~/styles/global.css";
+import Toast from "~/components/Toast.astro";
 
 interface Props {
   title: string;
@@ -30,6 +31,7 @@ const {
   </head>
   <body>
     <slot />
+    <Toast />
   </body>
   <script>
     // The browser can restore a signed-in page from the back/forward cache

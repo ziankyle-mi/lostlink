@@ -188,8 +188,24 @@ if (!item && id) {
               {item.referenceCode && (
                 <div class="rounded-2xl bg-[#f5f1e6] p-4 border border-stone-200/80 text-center">
                   <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Security Office Tag Code</p>
-                  <p class="mt-1 font-mono text-xl font-black text-forest-900 tracking-wider">{item.referenceCode}</p>
-                  <p class="mt-1 text-[11px] text-stone-500">Bring this code to the campus security office for identification.</p>
+                  <div class="mt-1 flex items-center justify-center gap-2">
+                    <span id="item-detail-ref-code" class="font-mono text-xl font-black text-forest-900 tracking-wider">{item.referenceCode}</span>
+                    <button
+                      type="button"
+                      id="copy-item-ref-btn"
+                      data-ref={item.referenceCode}
+                      class="copy-ref-btn"
+                      aria-label="Copy reference tag code"
+                      title="Copy code"
+                    >
+                      <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span class="copy-label">Copy</span>
+                      <span class="copy-ref-tooltip">Copied!</span>
+                    </button>
+                  </div>
+                  <p class="mt-1.5 text-[11px] text-stone-500">Bring this code to the campus security office for identification.</p>
                 </div>
               )}
             </div>
@@ -310,6 +326,31 @@ if (!item && id) {
   </div>
 
   <script>
+    // Copy reference code to clipboard
+    const copyRefBtn = document.getElementById("copy-item-ref-btn");
+    if (copyRefBtn) {
+      copyRefBtn.addEventListener("click", async () => {
+        const refCode = copyRefBtn.dataset.ref;
+        if (!refCode) return;
+        try {
+          await navigator.clipboard.writeText(refCode);
+          const tooltip = copyRefBtn.querySelector(".copy-ref-tooltip");
+          const copyLabel = copyRefBtn.querySelector(".copy-label");
+          if (tooltip) tooltip.classList.add("visible");
+          if (copyLabel) copyLabel.textContent = "Copied!";
+          if ((window as any).llToast) {
+            (window as any).llToast(`Reference code ${refCode} copied!`, "success");
+          }
+          setTimeout(() => {
+            if (tooltip) tooltip.classList.remove("visible");
+            if (copyLabel) copyLabel.textContent = "Copy";
+          }, 2000);
+        } catch (err) {
+          console.warn("Clipboard copy failed:", err);
+        }
+      });
+    }
+
     const claimForm = document.getElementById("standalone-claim-form");
     const claimSuccess = document.getElementById("standalone-claim-success");
     const submitBtn = document.getElementById("standalone-submit-claim-btn");
@@ -339,8 +380,16 @@ if (!item && id) {
           if (resp.ok && data.ok) {
             claimForm.classList.add("hidden");
             claimSuccess?.classList.remove("hidden");
+            if ((window as any).llToast) {
+              (window as any).llToast("Claim verification submitted to Security Office!", "success");
+            }
           } else {
-            alert(data.error || "Could not submit claim. Please try again.");
+            const errorMsg = data.error || "Could not submit claim. Please try again.";
+            if ((window as any).llToast) {
+              (window as any).llToast(errorMsg, "error");
+            } else {
+              alert(errorMsg);
+            }
             if (submitBtn) {
               submitBtn.removeAttribute("disabled");
               submitBtn.textContent = "Submit Claim to Security Office";
@@ -348,7 +397,11 @@ if (!item && id) {
           }
         } catch (err) {
           console.error("Error submitting claim:", err);
-          alert("Error submitting claim. Please check your connection.");
+          if ((window as any).llToast) {
+            (window as any).llToast("Network error submitting claim. Please check your connection.", "error");
+          } else {
+            alert("Error submitting claim. Please check your connection.");
+          }
           if (submitBtn) {
             submitBtn.removeAttribute("disabled");
             submitBtn.textContent = "Submit Claim to Security Office";
