@@ -1,61 +1,87 @@
 ---
-import Background from "./Background.astro";
 import BrandHeader from "./BrandHeader.astro";
-import TrustBadges from "./TrustBadges.astro";
 import Base from "~/layouts/Base.astro";
 
-/** Shared page frame for every auth screen: header, quote, card. */
+/** Shared page frame for every auth screen: header, green panel, white card, footer. */
 interface Props {
   title: string;
   heading: string;
+  subheading?: string;
   description?: string;
 }
 
-const { title, heading, description } = Astro.props;
+const { title, heading, subheading, description } = Astro.props;
 ---
 
 <Base title={title} description={description}>
-  <main class="relative flex min-h-dvh flex-col">
-    <Background />
-
-    <div
-      class="relative flex w-full flex-1 flex-col px-6 py-6 sm:px-12 sm:py-8 lg:px-16"
-    >
-      <div class="w-full">
-        <BrandHeader />
+  <div class="flex min-h-dvh flex-col bg-canvas px-5 sm:px-10 lg:px-14">
+    <header class="flex items-center justify-between gap-4 border-b border-line py-5 sm:py-6">
+      <BrandHeader />
+      <div class="flex items-center gap-5">
+        <p class="hidden text-[0.8125rem] font-medium tracking-wide text-forest-700 uppercase md:block">
+          DLSAU Campus Community
+        </p>
+        <a href="/forgot-password" class="help-pill">Need Help?</a>
       </div>
+    </header>
 
-      <div
-        class="flex flex-1 flex-col items-center justify-center gap-12 py-10 md:grid md:grid-cols-2 md:items-center md:gap-8 md:py-6"
+    <main class="grid flex-1 gap-5 py-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
+      <aside
+        class="relative hidden flex-col justify-between rounded-card bg-forest-700 p-9 text-white lg:flex xl:p-10"
       >
-        <div class="hidden max-w-xl md:block md:self-end md:pb-20">
-          <p class="font-serif text-[3.4rem] leading-[1.15] tracking-[-0.015em] text-forest-900 sm:text-[3.8rem]">
-            <span class="text-forest-700">&ldquo;</span><span class="font-bold">Lost <span
-              class="text-forest-600 font-normal italic">things</span></span><br />
-            their way<br />
-            <span class="font-bold">back</span> <span class="text-forest-700">&rdquo;</span>
-          </p>
-          <p class="mt-7 flex items-center gap-3.5 text-sage-700">
-            <span class="h-px w-14 bg-sage-400"></span>
-            <span class="text-base font-medium tracking-wide text-forest-900/90">LostLink &middot; DLSAU</span>
-          </p>
+        <div class="flex items-start justify-between">
+          <span class="rounded-full border border-white/70 px-4 py-1.5 text-[0.9375rem]">
+            DLSAU &middot; Lost &amp; Found
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            class="size-7 text-lime"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5"></path>
+          </svg>
         </div>
 
-        <section
-          class="w-full max-w-[40rem] justify-self-center rounded-[1.75rem] bg-card-tint px-7 py-11 shadow-card sm:px-14 sm:py-14"
-          aria-labelledby="auth-title"
-        >
-          <h1
-            id="auth-title"
-            class="text-center text-[1.85rem] font-bold tracking-[0.08em] text-forest-900"
-          >
-            {heading}
-          </h1>
-          <slot />
-        </section>
-      </div>
+        <p class="font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal">
+          Find what<br />
+          <span class="font-bold text-lime">you Lost.</span><br />
+          Return what<br />
+          <span class="font-bold text-lime">you Found.</span>
+        </p>
 
-      <TrustBadges />
-    </div>
-  </main>
+        <div class="rounded-2xl bg-lime px-8 py-7">
+          <p class="text-2xl leading-snug font-semibold text-forest-700 xl:text-[1.75rem]">
+            A little thing,<br />can mean a lot.
+          </p>
+        </div>
+      </aside>
+
+      <section
+        class="flex flex-col justify-center rounded-card border border-line/70 bg-white px-6 py-8 sm:px-10 sm:py-10 xl:px-11"
+        aria-labelledby="auth-title"
+      >
+        <h1
+          id="auth-title"
+          class="font-serif text-[clamp(2rem,3.2vw,2.75rem)] leading-[1.1] font-black text-ink"
+        >
+          {heading}
+        </h1>
+        {subheading && <p class="mt-3 text-[1.0625rem] text-sage-600">{subheading}</p>}
+        <slot />
+      </section>
+    </main>
+
+    <footer class="flex flex-wrap items-center justify-between gap-3 pt-1 pb-6 text-sm text-forest-700">
+      <p>&copy; 2026 LostLink &middot; DLSAU Lost &amp; Found System</p>
+      <p class="flex gap-6">
+        <span>Privacy</span>
+        <span>Terms</span>
+        <span>Help</span>
+      </p>
+    </footer>
+  </div>
 </Base>

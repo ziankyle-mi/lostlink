@@ -4,9 +4,11 @@ interface Props {
   label: string;
   busy: string;
   class?: string;
+  /** Adds the lime arrow after the label (hidden while busy). */
+  arrow?: boolean;
 }
 
-const { label, busy, class: className = "btn-primary" } = Astro.props;
+const { label, busy, class: className = "btn-primary", arrow = false } = Astro.props;
 ---
 
 <button type="submit" class={className} data-busy-label={busy} disabled:cursor-wait>
@@ -15,6 +17,23 @@ const { label, busy, class: className = "btn-primary" } = Astro.props;
     class="hidden size-4 shrink-0 animate-spin rounded-full border-2 border-white/40 border-t-white"
     aria-hidden="true"></span>
   <span data-label>{label}</span>
+  {
+    arrow && (
+      <svg
+        data-arrow
+        viewBox="0 0 24 24"
+        class="size-5 text-lime"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
+    )
+  }
 </button>
 
 <script>

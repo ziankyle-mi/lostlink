@@ -1,6 +1,7 @@
 ---
 import { actions, isInputError } from "astro:actions";
 import AuthShell from "~/components/AuthShell.astro";
+import PasswordField from "~/components/PasswordField.astro";
 import SubmitButton from "~/components/SubmitButton.astro";
 import { devBypassEnabled } from "~/lib/session";
 
@@ -25,8 +26,8 @@ const devOpen = devBypassEnabled(Astro.locals.env);
 ---
 
 <AuthShell
-  title="Register | LostLink"
-  heading="REGISTER"
+  title="Create account | LostLink"
+  heading="Join the community!"
   description="Create your LostLink account with a DLSAU email."
 >
   {
@@ -37,79 +38,69 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     )
   }
 
-  <form method="POST" action={actions.register} class="mt-11">
-    <label class="block">
-      <span class="sr-only">Name</span>
+  <form method="POST" action={actions.register} class="mt-7">
+    <div>
+      <label for="name" class="label">Full Name</label>
       <input
+        id="name"
         type="text"
         name="name"
         class="field"
-        placeholder="Name"
+        placeholder="e.g. Renee De La Cruz"
         autocomplete="name"
         required
         aria-invalid={fieldError("name") ? true : undefined}
         aria-describedby={fieldError("name") ? "name-error" : undefined}
       />
-    </label>
-    {
-      fieldError("name") && (
-        <p id="name-error" role="alert" class="field-error">
-          {fieldError("name")}
-        </p>
-      )
-    }
+      {
+        fieldError("name") && (
+          <p id="name-error" role="alert" class="field-error">
+            {fieldError("name")}
+          </p>
+        )
+      }
+    </div>
 
-    <label class="mt-9 block">
-      <span class="sr-only">Email</span>
+    <div class="mt-5">
+      <label for="email" class="label">University Email</label>
       <input
+        id="email"
         type="email"
         name="email"
         class="field"
-        placeholder="Email"
+        placeholder="you@dlsau.edu.ph"
         autocomplete="email"
         required
         aria-invalid={fieldError("email") ? true : undefined}
         aria-describedby={fieldError("email") ? "email-error" : undefined}
       />
-    </label>
-    {
-      fieldError("email") && (
-        <p id="email-error" role="alert" class="field-error">
-          {fieldError("email")}
-        </p>
-      )
-    }
+      {
+        fieldError("email") && (
+          <p id="email-error" role="alert" class="field-error">
+            {fieldError("email")}
+          </p>
+        )
+      }
+    </div>
 
-    <label class="mt-9 block">
-      <span class="sr-only">Password</span>
-      <input
-        type="password"
-        name="password"
-        class="field"
-        placeholder="Password"
-        autocomplete="new-password"
-        required
-        aria-invalid={fieldError("password") ? true : undefined}
-        aria-describedby={fieldError("password") ? "password-error" : undefined}
-      />
-    </label>
-    {
-      fieldError("password") && (
-        <p id="password-error" role="alert" class="field-error">
-          {fieldError("password")}
-        </p>
-      )
-    }
+    <PasswordField
+      id="password"
+      name="password"
+      label="Password"
+      autocomplete="new-password"
+      error={fieldError("password")}
+      class="mt-5"
+    />
 
-    <label class="mt-5 flex cursor-pointer items-center gap-2.5 text-[0.8125rem] text-ink/80">
+    <label class="mt-5 flex cursor-pointer items-center gap-2.5 text-[0.9375rem] text-sage-700">
       <input
         type="checkbox"
         name="agree"
         value="on"
-        class="size-4 shrink-0 accent-forest-700"
+        class="size-5 shrink-0 cursor-pointer rounded accent-forest-700"
         aria-describedby={fieldError("agree") ? "agree-error" : undefined}
       />
-      I agree to the terms and conditions
+      I have read the terms &amp; conditions
     </label>
     {
       fieldError("agree") && (
@@ -119,24 +110,24 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       )
     }
 
-    <div class="mt-14 flex justify-center">
-      <SubmitButton label="Register" busy="Creating account..." />
+    <div class="mt-6">
+      <SubmitButton label="Create Account" busy="Creating account..." />
     </div>
 
     <p class="caption">
       Already have an account?
-      <a href="/login">Log in here</a>
+      <a href="/login">Sign in</a>
     </p>
   </form>
 
   {
     devOpen && (
-      <div class="mt-8 border-t border-line/50 pt-6 text-center">
+      <div class="mt-6 border-t border-line pt-5 text-center">
         <form method="POST" action={actions.devLogin}>
           <input type="hidden" name="next" value="/" />
           <button
             type="submit"
-            class="text-[0.72rem] font-medium uppercase tracking-[0.16em] text-sage-600 underline-offset-4 hover:text-forest-700 hover:underline"
+            class="text-xs font-medium text-sage-600 underline underline-offset-4 hover:text-forest-700"
           >
             Test login (dev)
           </button>

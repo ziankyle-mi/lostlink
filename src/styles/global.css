@@ -1,33 +1,35 @@
 @import "tailwindcss";
 
-/* Design tokens taken from context/dashboard.jpg. Do not add new colors here
-   without a matching screenshot. */
+/* Design tokens taken from the Figma frames SIGN IN and CREATE.
+   Old token names are kept so the other pages keep working. */
 @theme {
-  --color-canvas: #fbfcf9;
-  --color-card-tint: #e9efe6;
+  --color-canvas: #f5f1e6;
+  --color-card-tint: #ffffff;
   --color-surface: #ffffff;
 
-  --color-ink: #101512;
-  --color-forest-900: #14342a;
-  --color-forest-700: #1c4b33;
-  --color-forest-600: #27624a;
+  --color-ink: #082e1a;
+  --color-forest-900: #082e1a;
+  --color-forest-700: #164f38;
+  --color-forest-600: #17503a;
+  --color-lime: #d8ef8c;
 
-  --color-sage-700: #55705d;
-  --color-sage-600: #6f8f7a;
-  --color-sage-400: #9aa79a;
-  --color-sage-200: #dfe7dc;
+  --color-sage-700: #413e39;
+  --color-sage-600: #818181;
+  --color-sage-400: #dadada;
+  --color-sage-200: #e3e9e0;
 
-  --color-line: #a7b3a6;
-  --color-placeholder: #93a093;
+  --color-line: #dadada;
+  --color-placeholder: #818181;
+  --color-danger: #9b2c1f;
 
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
 
   --radius-card: 1.75rem;
-  --radius-control: 0.5rem;
+  --radius-control: 0.75rem;
 
-  --shadow-card: 0 30px 60px -40px rgba(20, 52, 42, 0.55);
-  --shadow-soft: 0 1px 2px rgba(20, 52, 42, 0.06);
+  --shadow-card: 0 30px 60px -40px rgba(8, 46, 26, 0.35);
+  --shadow-soft: 0 1px 2px rgba(8, 46, 26, 0.06);
 }
 
 @layer base {
@@ -39,7 +41,7 @@
     background-color: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     line-height: 1.5;
     min-height: 100dvh;
   }
@@ -50,112 +52,156 @@
   }
 
   ::selection {
-    background-color: var(--color-sage-200);
+    background-color: var(--color-lime);
   }
 }
 
 @layer components {
-  /* Uppercase micro label used for card titles and buttons in the screenshot. */
   .eyebrow {
     font-size: 0.6875rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;
   }
 
-  /* Underlined field with subtle surface tint, crisp underline, and prominent focus ring */
+  /* Field label above an input. */
+  .label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  /* Boxed input on a white card. */
   .field {
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.45);
-    border-radius: 0.375rem 0.375rem 0 0;
-    border-bottom: 2px solid var(--color-forest-900);
-    padding: 0.85rem 0.75rem;
-    font-size: 1.0625rem;
+    min-height: 3.5rem;
+    background-color: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    padding: 0.8rem 1.1rem;
+    font-size: 1rem;
     color: var(--color-ink);
-    transition: all 0.2s ease;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
   .field::placeholder {
-    color: var(--color-sage-700);
-    font-weight: 400;
+    color: var(--color-sage-600);
   }
 
   .field:focus {
     outline: none;
-    background-color: rgba(255, 255, 255, 0.85);
-    border-bottom-color: var(--color-forest-600);
-    box-shadow: 0 4px 12px -2px rgba(20, 52, 42, 0.12);
+    border-color: var(--color-forest-700);
+    box-shadow: 0 0 0 3px rgba(22, 79, 56, 0.14);
   }
 
-  /* Primary button: flat brand green, quiet darken on hover. No lift, no sheen. */
+  .field[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+
+  /* Primary button: flat brand green, full width of its form. */
   .btn-primary {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.6rem;
     width: 100%;
-    max-width: 15rem;
-    min-height: 3.125rem;
+    min-height: 3.5rem;
     border-radius: var(--radius-control);
     background-color: var(--color-forest-700);
     color: #ffffff;
-    font-size: 0.9375rem;
+    font-size: 1.0625rem;
     font-weight: 600;
-    letter-spacing: 0.1em;
     padding: 0.75rem 1.5rem;
-    box-shadow: 0 4px 12px -2px rgba(20, 52, 42, 0.25);
     cursor: pointer;
     transition:
       background-color 0.15s ease,
-      box-shadow 0.15s ease,
       transform 0.1s ease;
   }
 
   .btn-primary:hover {
     background-color: var(--color-forest-900);
-    box-shadow: 0 6px 16px -6px rgba(20, 52, 42, 0.3);
   }
 
   .btn-primary:active {
-    transform: scale(0.985);
-    box-shadow: 0 2px 6px -2px rgba(20, 52, 42, 0.2);
+    transform: scale(0.99);
   }
 
-  /* Small centered caption under a card action. */
+  .btn-primary:disabled {
+    cursor: wait;
+    opacity: 0.85;
+  }
+
+  .btn-primary[aria-busy="true"] [data-arrow] {
+    display: none;
+  }
+
+  /* Outlined pill in the page header. */
+  .help-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    border: 1px solid var(--color-forest-700);
+    border-radius: 999px;
+    padding: 0.5rem 1.4rem;
+    font-size: 1rem;
+    color: var(--color-forest-700);
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .help-pill:hover {
+    background-color: var(--color-forest-700);
+    color: #ffffff;
+  }
+
+  /* Show/hide password toggle swaps its icon with aria-pressed. */
+  .eye-btn[aria-pressed="true"] .eye-open,
+  .eye-btn[aria-pressed="false"] .eye-off {
+    display: none;
+  }
+
   .caption {
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     text-align: center;
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     color: var(--color-sage-700);
   }
 
   .caption a {
     font-weight: 600;
     color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: rgba(8, 46, 26, 0.3);
   }
 
   .caption a:hover {
     color: var(--color-forest-700);
+    text-decoration-color: currentColor;
   }
 
-  /* Inline error / status strip inside a card. */
   .notice {
-    margin-top: 1.75rem;
+    margin-top: 1.5rem;
     border-radius: var(--radius-control);
-    border: 1px solid color-mix(in srgb, var(--color-line) 60%, transparent);
-    background-color: color-mix(in srgb, var(--color-surface) 70%, transparent);
+    border: 1px solid var(--color-line);
+    background-color: var(--color-canvas);
     padding: 0.85rem 1rem;
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     line-height: 1.45;
     color: var(--color-sage-700);
   }
 
   .field-error {
     margin-top: 0.4rem;
-    font-size: 0.75rem;
-    color: var(--color-sage-700);
+    font-size: 0.8125rem;
+    color: var(--color-danger);
   }
 
-  /* Faint oversized question marks from the reference background. */
   .watermark {
     color: rgba(122, 134, 120, 0.12);
     font-family: var(--font-serif);
