@@ -374,7 +374,7 @@ const presets = LOCATIONS.filter((l) => l !== "All Locations");
     function renderPhotoPreviews() {
       if (!previewGrid || !statusBar || !countIndicator) return;
 
-      previewGrid.innerHTML = "";
+      previewGrid.replaceChildren();
       const count = window.reportUploadedPhotos.length;
 
       if (count > 0) {
@@ -395,7 +395,7 @@ const presets = LOCATIONS.filter((l) => l !== "All Locations");
           removeBtn.type = "button";
           removeBtn.setAttribute("aria-label", `Remove photo ${index + 1}`);
           removeBtn.className = "absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-danger text-white shadow-xs hover:opacity-90 cursor-pointer text-xs font-bold transition-transform active:scale-90";
-          removeBtn.innerHTML = "✕";
+          removeBtn.textContent = "✕";
           removeBtn.onclick = (e) => {
             e.stopPropagation();
             window.reportUploadedPhotos.splice(index, 1);

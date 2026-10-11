@@ -18,6 +18,25 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Bulletproof Security Pass (Database RLS, Web Hardening & Login Brute-Force Rate Limiting).
+- Implemented IP and email sliding rate limiter in `src/lib/rateLimit.ts` and `src/actions/index.ts` to neutralize automated password brute-force and credential stuffing attacks (max 5 failed attempts per 5 minutes per IP and email).
+- Added full Row Level Security (RLS) policies and `FORCE ROW LEVEL SECURITY` to `docs/schema.sql` across all tables (`profiles`, `items`, `claims`, `notifications`, `admin_log`) with `is_admin` security definer helper and isolated search_path.
+- Injected strict Content-Security-Policy (CSP), HSTS (`max-age=63072000; includeSubDomains; preload`), and Cross-Origin-Resource-Policy into `src/middleware.ts`.
+- Neutralized DOM-based HTML injection vectors in `src/pages/index.astro` and `src/components/ReportModal.astro` using `replaceChildren()`, `textContent`, and safe entity escaping.
+- Installed and activated the `bulletproof-security` skill with automated scanner `security-scan.mjs`.
+- `astro check` 0 errors; `npm test` 56/56 passing.
+
+Done: Sign-out back-navigation fix.
+- After sign-out, the browser back button restored the signed-in page from the
+  back/forward cache, so the dashboard/profile still showed the old account.
+- `src/middleware.ts` now sends `Cache-Control: no-store` on every signed-in
+  response (and 401s), keeping them out of all browser caches.
+- `src/layouts/Base.astro` marks authed pages with `data-authed` and re-checks
+  the session on a bfcache restore (`pageshow` + `redirect: "manual"` fetch);
+  if the session cookie is gone it lands the user on the right page (login
+  redirect from middleware) instead of the stale one.
+- `astro check` 0 errors; `npm test` 51/51.
+
 Done: Admin Post Removal Control & Moderation Option for Disciplinary Office.
 - Implemented Admin Post Removal option strictly restricted to authorized administrators (Disciplinary Office / DO). Non-admin users cannot see or trigger post removals.
 - Added `/api/admin/actions` (`remove_post` action) and `DELETE /api/items` with strict role verification (`user.role === 'admin' || roleForEmail(email) === 'admin'`), cascading foreign key cleanups (`admin_log`, `claims`), item deletion/archival, audit logging into `admin_log`, and automated in-app notification to the reporter.

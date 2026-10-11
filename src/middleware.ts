@@ -6,8 +6,12 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
   "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+  "Content-Security-Policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
 };
 
 const PUBLIC_PATHS = new Set([
@@ -72,6 +76,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
           status: 401,
           headers: { "Content-Type": "application/json" },
         }),
+        "no-store",
       );
     }
     clearSessionCookies(context.cookies);
@@ -79,12 +84,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(`/login?next=${nextPath}`, 302);
   }
 
-  return withSecurityHeaders(await next());
+  // Signed-in pages must never be replayed from the browser's back/forward
+  // cache after sign-out, so keep them out of every cache.
+  return withSecurityHeaders(await next(), "no-store");
 });
 
-function withSecurityHeaders(response: Response): Response {
+function withSecurityHeaders(response: Response, cacheControl?: string): Response {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) headers.set(key, value);
+  if (cacheControl) headers.set("Cache-Control", cacheControl);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

@@ -458,7 +458,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         const imagesContainer = document.getElementById("modal-images-container");
         const imagesGallery = document.getElementById("modal-images-gallery");
         if (imagesContainer && imagesGallery) {
-          imagesGallery.innerHTML = "";
+          imagesGallery.replaceChildren();
           if (images.length > 0) {
             imagesContainer.classList.remove("hidden");
             images.forEach((imgSrc, idx) => {
@@ -696,10 +696,13 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           toast.className = "fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-forest-900 px-5 py-3 text-white shadow-xl transition-all duration-300 translate-y-12 opacity-0 text-sm font-bold border border-forest-700 pointer-events-none";
           document.body.appendChild(toast);
         }
-        toast.innerHTML = `
-          <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-forest-900 text-xs font-black">✓</span>
-          <span>${msg}</span>
-        `;
+        toast.replaceChildren();
+        const badge = document.createElement("span");
+        badge.className = "flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-forest-900 text-xs font-black";
+        badge.textContent = "✓";
+        const textSpan = document.createElement("span");
+        textSpan.textContent = String(msg || "");
+        toast.append(badge, textSpan);
         requestAnimationFrame(() => {
           toast.classList.remove("translate-y-12", "opacity-0");
         });
@@ -1024,22 +1027,30 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           `;
         }
 
+        // Escape user text to prevent XSS injection
+        const safeCategory = String(itemCategory || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+        const safeName = String(itemName || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+        const safeLocation = String(itemLocation || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+        const safeLocationPrefix = String(locationPrefix || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+        const safeDate = String(currentDate || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+        const safeActionLabel = String(actionLabel || "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
+
         newCard.innerHTML = `
           ${topGraphicHtml}
           <div class="flex flex-1 flex-col justify-between bg-white p-5 sm:p-6">
             <div>
-              <p class="text-xs font-bold uppercase tracking-wider text-stone-500">${itemCategory}</p>
-              <h3 class="mt-1 text-base sm:text-lg lg:text-xl font-bold tracking-tight text-forest-900 line-clamp-1">${itemName}</h3>
+              <p class="text-xs font-bold uppercase tracking-wider text-stone-500">${safeCategory}</p>
+              <h3 class="mt-1 text-base sm:text-lg lg:text-xl font-bold tracking-tight text-forest-900 line-clamp-1">${safeName}</h3>
             </div>
             <div class="mt-5 flex items-end justify-between gap-3">
               <div>
-                <p class="text-xs font-medium leading-none text-stone-400">${locationPrefix}</p>
-                <p class="mt-1.5 text-sm sm:text-base font-bold text-forest-900 line-clamp-1">${itemLocation}</p>
+                <p class="text-xs font-medium leading-none text-stone-400">${safeLocationPrefix}</p>
+                <p class="mt-1.5 text-sm sm:text-base font-bold text-forest-900 line-clamp-1">${safeLocation}</p>
               </div>
-              <p class="font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">${currentDate}</p>
+              <p class="font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">${safeDate}</p>
             </div>
             <div class="mt-4 flex items-center justify-between border-t border-line/60 pt-4 text-sm font-bold text-forest-900 group-hover:text-forest-700">
-              <span>${actionLabel}</span>
+              <span>${safeActionLabel}</span>
               <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true">→</span>
             </div>
           </div>

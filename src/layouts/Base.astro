@@ -13,7 +13,7 @@ const {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-authed={Astro.locals.user ? "true" : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -31,4 +31,25 @@ const {
   <body>
     <slot />
   </body>
+  <script>
+    // The browser can restore a signed-in page from the back/forward cache
+    // after sign-out. Re-check the session on every restore and leave the
+    // page when the cookie is gone.
+    document.addEventListener("DOMContentLoaded", () => {
+      if (document.documentElement.dataset.authed !== "true") return;
+      window.addEventListener("pageshow", (event) => {
+        if (!event.persisted) return;
+        fetch(window.location.pathname + window.location.search, {
+          credentials: "same-origin",
+          redirect: "manual",
+        })
+          .then((res) => {
+            if (res.type === "opaqueredirect") {
+              window.location.replace(window.location.href);
+            }
+          })
+          .catch(() => {});
+      });
+    });
+  </script>
 </html>

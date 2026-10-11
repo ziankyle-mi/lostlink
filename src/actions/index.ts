@@ -29,6 +29,11 @@ import {
   sessionCookieOptions,
   setSessionCookies,
 } from "~/lib/session";
+import {
+  clearRateLimit,
+  isRateLimited,
+  recordFailedAttempt,
+} from "~/lib/rateLimit";
 
 function requireSupabase(locals: { env: import("~/lib/env").Env }): void {
   if (!hasSupabase(locals.env)) {
@@ -57,10 +62,58 @@ export const server = {
       requireSupabase(context.locals);
       assertDomain(context.locals, email);
 
+      const clientIp =
+        context.request.headers.get("cf-connecting-ip") ||
+        context.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        context.clientAddress ||
+        "unknown-ip";
+
+      const ipKey = `login:ip:${clientIp}`;
+      const emailKey = `login:email:${email.toLowerCase().trim()}`;
+
+      // Check IP lockout
+      const ipLimit = isRateLimited(ipKey);
+      if (ipLimit.isBlocked) {
+        const mins = Math.max(1, Math.ceil(ipLimit.remainingSeconds / 60));
+        throw new ActionError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Too many sign-in attempts from this network. Please wait ${mins} minute(s) before trying again.`,
+        });
+      }
+
+      // Check Email lockout
+      const emailLimit = isRateLimited(emailKey);
+      if (emailLimit.isBlocked) {
+        const mins = Math.max(1, Math.ceil(emailLimit.remainingSeconds / 60));
+        throw new ActionError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Too many failed sign-in attempts for this account. Please wait ${mins} minute(s) before trying again.`,
+        });
+      }
+
       const result = await signInWithPassword(context.locals.env, email, password);
       if ("error" in result) {
-        throw new ActionError({ code: "UNAUTHORIZED", message: result.error });
+        const ipFail = recordFailedAttempt(ipKey);
+        const emailFail = recordFailedAttempt(emailKey);
+
+        if (ipFail.isBlocked || emailFail.isBlocked) {
+          throw new ActionError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many failed sign-in attempts. This account is temporarily locked for 5 minutes.",
+          });
+        }
+
+        const remaining = Math.min(ipFail.attemptsLeft, emailFail.attemptsLeft);
+        const warning =
+          remaining <= 2
+            ? ` (${remaining} attempt${remaining === 1 ? "" : "s"} left before temporary lockout)`
+            : "";
+        throw new ActionError({ code: "UNAUTHORIZED", message: `${result.error}${warning}` });
       }
+
+      // Clear failed attempt tracking on successful login
+      clearRateLimit(ipKey);
+      clearRateLimit(emailKey);
 
       setSessionCookies(context.cookies, result.session, remember);
       const defaultPath = roleForEmail(email) === "admin" ? "/admin" : "/";
