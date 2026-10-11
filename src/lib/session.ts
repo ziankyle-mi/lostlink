@@ -51,6 +51,20 @@ export function clearSessionCookies(cookies: AstroCookies): void {
   cookies.delete(DEV_SESSION_COOKIE, options);
 }
 
+export const ADMIN_EMAILS = new Set([
+  "dlsau.lostlink@dlsau.edu.ph",
+  "test.lostlink@dlsau.edu.ph",
+  "zian.piangco@dlsau.edu.ph",
+]);
+
+export function roleForEmail(email: string): "admin" | "user" {
+  const norm = email.toLowerCase().trim();
+  if (ADMIN_EMAILS.has(norm) || norm.startsWith("admin.") || norm.includes("lostlink@")) {
+    return "admin";
+  }
+  return "user";
+}
+
 /**
  * Resolves the caller from request cookies: dev mock cookie first (only when
  * the bypass is on), then the Supabase access token, then a refresh.
@@ -79,7 +93,7 @@ export async function resolveUser(
   if (accessToken) {
     const user = await fetchUser(env, accessToken);
     if (user?.email && isAllowedEmail(user.email, policy)) {
-      return { id: user.id, email: user.email, role: "user" };
+      return { id: user.id, email: user.email, role: roleForEmail(user.email) };
     }
     return null;
   }
@@ -90,7 +104,7 @@ export async function resolveUser(
       setAccessCookie(cookies, refreshed.access_token);
       const user = await fetchUser(env, refreshed.access_token);
       if (user?.email && isAllowedEmail(user.email, policy)) {
-        return { id: user.id, email: user.email, role: "user" };
+        return { id: user.id, email: user.email, role: roleForEmail(user.email) };
       }
     }
   }

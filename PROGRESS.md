@@ -70,6 +70,11 @@ Next: step 3, Database and RLS.
 - AuthShell green panel got the mockup glow (blurred lime + mint radial
   layers) and a 4-point lime sparkle replacing the old asterisk; the white
   card uses the `shadow-card` token. Applies to all auth pages.
+- Info pages (privacy, terms, help) use a new InfoPage frame instead of
+  AuthShell: one centered `max-w-3xl` card (no stretchy green panel), a
+  smart back link (signed in -> dashboard, signed out -> sign in), no
+  "Need Help?" pill (it self-linked on /help). Footer extracted to a shared
+  SiteFooter used by both frames.
 - The DLSAU seal links to `https://www.dlsau.edu.ph/#gsc.tab=0` in a new tab
   (owner's URL); the LostLink badge/wordmark is not a link.
 

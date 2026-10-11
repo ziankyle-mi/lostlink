@@ -1,5 +1,6 @@
 ---
 import BrandHeader from "./BrandHeader.astro";
+import SiteFooter from "./SiteFooter.astro";
 import Base from "~/layouts/Base.astro";
 
 /** Shared page frame for every auth screen: header, green panel, white card, footer. */
@@ -80,13 +81,6 @@ const { title, heading, subheading, description } = Astro.props;
       </section>
     </main>
 
-    <footer class="flex flex-wrap items-center justify-between gap-3 pt-1 pb-6 text-sm text-forest-700">
-      <p>&copy; 2026 LostLink &middot; DLSAU Lost &amp; Found System</p>
-      <p class="flex gap-6">
-        <a href="/privacy" class="hover:text-forest-900 underline underline-offset-4">Privacy</a>
-        <a href="/terms" class="hover:text-forest-900 underline underline-offset-4">Terms</a>
-        <a href="/help" class="hover:text-forest-900 underline underline-offset-4">Help</a>
-      </p>
-    </footer>
+    <SiteFooter />
   </div>
 </Base>

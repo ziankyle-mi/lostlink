@@ -1,0 +1,330 @@
+---
+import Base from "~/layouts/Base.astro";
+import AdminTicker from "~/components/admin/AdminTicker.astro";
+import AdminSidebar from "~/components/admin/AdminSidebar.astro";
+import AdminMetrics from "~/components/admin/AdminMetrics.astro";
+import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.astro";
+import IntakeQueue from "~/components/admin/IntakeQueue.astro";
+import RecentActivity from "~/components/admin/RecentActivity.astro";
+
+const user = Astro.locals.user;
+const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
+
+// View query param allows previewing the student perspective directly
+const url = new URL(Astro.request.url);
+const currentView = url.searchParams.get("view") === "student" ? "student" : "admin";
+const isStudentView = currentView === "student";
+
+// Date formatting matching "SATURDAY, OCTOBER 10" from Figma
+const today = new Date();
+const dateEyebrow = today.toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+}).toUpperCase();
+---
+
+<Base
+  title={`${isStudentView ? "Student Overview" : "Admin Overview"} | LostLink`}
+  description="LostLink campus lost and found console for De La Salle Araneta University."
+>
+  <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
+    <div>
+      <!-- Top Announcement Ticker Bar matching overview1admin.png -->
+      <AdminTicker />
+
+      <!-- Main Layout Container -->
+      <div class="mx-auto w-full max-w-[1520px] px-4 py-6 sm:px-8 sm:py-8 lg:px-12">
+        <!-- Optional View Mode Switcher Pill for reviewer/demo evaluation -->
+        <div class="mb-6 flex items-center justify-between gap-4 flex-wrap bg-white/70 backdrop-blur-xs p-2.5 sm:p-3 rounded-2xl border border-stone-200/60 shadow-2xs">
+          <div class="flex items-center gap-2">
+            <span class="inline-block size-2 rounded-full bg-[#164f38]"></span>
+            <span class="text-xs font-bold text-stone-600">Console Mode:</span>
+            <div class="inline-flex rounded-full bg-stone-200/80 p-0.5 text-xs font-bold">
+              <a
+                href="/admin"
+                class={`rounded-full px-3 py-1 transition-all ${
+                  !isStudentView
+                    ? "bg-[#164f38] text-white shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                Admin Overview
+              </a>
+              <a
+                href="/admin?view=student"
+                class={`rounded-full px-3 py-1 transition-all ${
+                  isStudentView
+                    ? "bg-[#164f38] text-white shadow-xs"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                Student Overview
+              </a>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs text-stone-500 font-medium">
+            <span>Signed in as: <strong class="text-stone-800">{userEmail}</strong></span>
+            <span class="hidden sm:inline">&bull;</span>
+            <a href="/" class="hidden sm:inline font-bold text-forest-900 hover:underline">
+              Campus Feed &rarr;
+            </a>
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse lg:flex-row items-start gap-8 lg:gap-10">
+          <!-- Main Content (Left Column) -->
+          <main class="w-full flex-1 min-w-0 space-y-7">
+            <!-- Header Row: Date Eyebrow, Overview Title, Search, CTA -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+              <div>
+                <p class="text-xs font-bold tracking-[0.22em] text-stone-500 uppercase">
+                  {dateEyebrow}
+                </p>
+                <h1 class="mt-1 font-serif text-4xl sm:text-5xl lg:text-[3.25rem] font-black text-forest-900 tracking-tight leading-none">
+                  {isStudentView ? "Student Overview" : "Overview"}
+                </h1>
+              </div>
+
+              <!-- Top Right Controls: Search bar + CTA button -->
+              <div class="flex items-center gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
+                <div class="relative flex-1 sm:w-72 lg:w-80">
+                  <input
+                    type="search"
+                    id="overview-search-input"
+                    placeholder={isStudentView ? "Search your items, claims..." : "Search items, students, claims.."}
+                    class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
+                  />
+                  <svg
+                    class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                <button
+                  type="button"
+                  id="log-found-cta-btn"
+                  class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                >
+                  <span>{isStudentView ? "Post lost or found" : "Log a found item"}</span>
+                  <span class="text-base font-black leading-none">+</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 1: 4 KPI Stat Cards -->
+            <AdminMetrics role={isStudentView ? "student" : "admin"} />
+
+            <!-- Row 2: Claims to verify Table Card -->
+            <ClaimsVerificationTable role={isStudentView ? "student" : "admin"} />
+
+            <!-- Row 3: Two Columns Split (Waiting for intake + Recent activity) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
+              <IntakeQueue role={isStudentView ? "student" : "admin"} />
+              <RecentActivity role={isStudentView ? "student" : "admin"} />
+            </div>
+          </main>
+
+          <!-- Floating Admin Sidebar (Right Column) -->
+          <div class="w-full lg:w-auto shrink-0 lg:sticky lg:top-8 self-start">
+            <AdminSidebar
+              role={isStudentView ? "student" : "admin"}
+              activeTab="overview"
+              userEmail={userEmail}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campus Footer -->
+    <footer class="mt-14 border-t border-stone-200/70 bg-[#ece5d6]/70 py-6 text-center text-xs text-stone-500">
+      <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>&copy; {today.getFullYear()} LostLink &bull; De La Salle Araneta University Disciplinary & Security Office</p>
+        <div class="flex items-center gap-4 font-semibold text-forest-900">
+          <a href="/" class="hover:underline">Campus Feed</a>
+          <a href="/help" class="hover:underline">Guidelines</a>
+          <a href="/privacy" class="hover:underline">Privacy</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Interactive Review Claim Modal -->
+  <div
+    id="review-claim-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-claim-title"
+  >
+    <div class="w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+            Claim Verification Dossier
+          </span>
+          <h3 id="modal-claim-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Item Claim Review
+          </h3>
+        </div>
+        <button
+          type="button"
+          id="close-review-modal-btn"
+          class="size-9 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-4 text-sm">
+        <div class="rounded-2xl bg-[#f5f1e6] p-4 border border-stone-200/60">
+          <p class="text-xs font-bold text-stone-500 uppercase">Item to Release</p>
+          <p id="modal-item-name" class="font-bold text-forest-900 text-base mt-0.5"></p>
+          <p class="text-xs text-stone-500 mt-1">Claimant: <strong id="modal-claimant-name" class="text-stone-800"></strong></p>
+        </div>
+
+        <div>
+          <p class="text-xs font-bold text-stone-500 uppercase">Private Details Provided by Claimant</p>
+          <p id="modal-private-details" class="mt-1.5 rounded-xl bg-stone-50 p-3.5 text-stone-800 border border-stone-200 text-xs sm:text-sm font-medium"></p>
+        </div>
+
+        <div class="rounded-xl border border-lime-600/30 bg-[#d8ef8c]/30 p-3 text-xs text-[#164f38]">
+          <strong>Verification Protocol:</strong> Check the physical item in custody against these private details before handing it over. Ensure claimant signs the custody logbook.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          id="modal-reject-btn"
+          class="rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Flag / Request Details
+        </button>
+        <button
+          type="button"
+          id="modal-release-btn"
+          class="rounded-full bg-[#d8ef8c] hover:bg-[#cbe675] px-6 py-2.5 text-xs font-black text-[#164f38] transition-all shadow-xs cursor-pointer"
+        >
+          Approve &amp; Release Item
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Toast Notification -->
+  <div
+    id="toast-notification"
+    class="fixed bottom-6 right-6 z-50 hidden translate-y-3 rounded-2xl bg-[#164f38] px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all"
+  >
+    <div class="flex items-center gap-3">
+      <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-[#164f38] text-xs font-black">
+        &#10003;
+      </span>
+      <span id="toast-message">Action processed successfully.</span>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Client-side interactions
+    (function () {
+      const modal = document.getElementById("review-claim-modal");
+      const closeBtn = document.getElementById("close-review-modal-btn");
+      const releaseBtn = document.getElementById("modal-release-btn");
+      const rejectBtn = document.getElementById("modal-reject-btn");
+      const toast = document.getElementById("toast-notification");
+      const toastMsg = document.getElementById("toast-message");
+
+      const modalItemName = document.getElementById("modal-item-name");
+      const modalClaimant = document.getElementById("modal-claimant-name");
+      const modalDetails = document.getElementById("modal-private-details");
+
+      function showToast(msg) {
+        if (!toast || !toastMsg) return;
+        toastMsg.textContent = msg;
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 3500);
+      }
+
+      // Review buttons
+      document.querySelectorAll(".claim-review-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const item = btn.getAttribute("data-claim-item") || "Item";
+          const claimant = btn.getAttribute("data-claim-claimant") || "Student";
+          const details = btn.getAttribute("data-claim-details") || "No private details available.";
+
+          if (modalItemName) modalItemName.textContent = item;
+          if (modalClaimant) modalClaimant.textContent = claimant;
+          if (modalDetails) modalDetails.textContent = details;
+
+          if (modal) modal.classList.remove("hidden");
+          if (modal) modal.classList.add("flex");
+        });
+      });
+
+      if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+          if (modal) modal.classList.add("hidden");
+          if (modal) modal.classList.remove("flex");
+        });
+      }
+
+      if (releaseBtn) {
+        releaseBtn.addEventListener("click", () => {
+          if (modal) modal.classList.add("hidden");
+          if (modal) modal.classList.remove("flex");
+          showToast("Item approved and logged as released to owner.");
+        });
+      }
+
+      if (rejectBtn) {
+        rejectBtn.addEventListener("click", () => {
+          if (modal) modal.classList.add("hidden");
+          if (modal) modal.classList.remove("flex");
+          showToast("Claim flagged for secondary identity check.");
+        });
+      }
+
+      // Confirm intake buttons
+      document.querySelectorAll(".confirm-intake-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const name = btn.getAttribute("data-intake-name") || "Item";
+          btn.textContent = "Received \u2713";
+          btn.classList.remove("bg-[#d8ef8c]");
+          btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+          btn.disabled = true;
+          showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+        });
+      });
+
+      // Quick search filter
+      const searchInput = document.getElementById("overview-search-input");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          const q = (e.target.value || "").toLowerCase().trim();
+          document.querySelectorAll("#claims .divide-y > div").forEach((row) => {
+            const text = (row.textContent || "").toLowerCase();
+            row.style.display = !q || text.includes(q) ? "" : "none";
+          });
+        });
+      }
+
+      // Log CTA button
+      const logBtn = document.getElementById("log-found-cta-btn");
+      if (logBtn) {
+        logBtn.addEventListener("click", () => {
+          window.location.href = "/";
+        });
+      }
+    })();
+  </script>
+</Base>

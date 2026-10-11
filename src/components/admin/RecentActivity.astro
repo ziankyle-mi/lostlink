@@ -1,0 +1,64 @@
+---
+interface Props {
+  role?: "admin" | "student";
+}
+
+const { role = "admin" } = Astro.props;
+const isAdmin = role === "admin";
+
+const adminLogs = [
+  { text: "Umbrella logged into custody", time: "2:45 PM" },
+  { text: "Earbuds case flagged: two claimants", time: "1:30 PM" },
+  { text: "Backpack released to owner", time: "11:20 AM" },
+  { text: "3 items unclaimed for 30+ days", time: "8:00 AM" },
+];
+
+const studentLogs = [
+  { text: "Claim submitted for Scientific calculator", time: "2:10 PM" },
+  { text: "Lost report filed for Green Lanyard", time: "Yesterday, 4:05 PM" },
+  { text: "Match alert: Keys found at Engg Bldg", time: "Oct 9, 11:20 AM" },
+  { text: "Account linked to DLSAU Portal", time: "Oct 8, 8:00 AM" },
+];
+
+const logs = isAdmin ? adminLogs : studentLogs;
+---
+
+<section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between" id="activity">
+  <div>
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 border-b border-stone-100">
+      <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
+        {isAdmin ? "Recent activity" : "My recent activity"}
+      </h2>
+      <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">
+        Today
+      </span>
+    </div>
+
+    <!-- Feed List -->
+    <div class="mt-4 divide-y divide-stone-100">
+      {logs.map((log) => (
+        <div class="flex items-center justify-between gap-4 py-4 first:pt-2 last:pb-0 hover:bg-stone-50/50 rounded-lg px-1 transition-colors">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="size-2 rounded-full bg-[#164f38] shrink-0"></span>
+            <p class="truncate text-sm font-medium text-stone-800">
+              {log.text}
+            </p>
+          </div>
+          <span class="shrink-0 text-xs font-mono font-medium text-stone-500">
+            {log.time}
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div class="mt-6 pt-4 border-t border-stone-100">
+    <a
+      href={isAdmin ? "/admin#audit-log" : "/profile#history"}
+      class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 hover:text-forest-700 transition-colors"
+    >
+      <span>{isAdmin ? "View full audit log \u2192" : "View complete activity history \u2192"}</span>
+    </a>
+  </div>
+</section>

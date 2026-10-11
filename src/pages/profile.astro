@@ -1,8 +1,13 @@
 ---
 import { actions } from "astro:actions";
 import Base from "~/layouts/Base.astro";
-import StudentNavbar from "~/components/StudentNavbar.astro";
-import DashboardFooter from "~/components/DashboardFooter.astro";
+import AdminTicker from "~/components/admin/AdminTicker.astro";
+import AdminSidebar from "~/components/admin/AdminSidebar.astro";
+import AdminMetrics from "~/components/admin/AdminMetrics.astro";
+import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.astro";
+import IntakeQueue from "~/components/admin/IntakeQueue.astro";
+import RecentActivity from "~/components/admin/RecentActivity.astro";
+import { roleForEmail } from "~/lib/session";
 
 // The middleware redirects unauthenticated visitors to /login.
 const user = Astro.locals.user;
@@ -12,73 +17,147 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
   return Astro.redirect(logoutResult.data.redirect, 302);
 }
 
-function initialsOf(email: string): string {
-  const segments = email.split("@")[0].split(/[._-]/).filter(Boolean);
+const email = user?.email ?? "student@dlsau.edu.ph";
+const isUserAdmin = user?.role === "admin" || roleForEmail(email) === "admin";
+
+function initialsOf(userEmail: string): string {
+  const segments = userEmail.split("@")[0].split(/[._-]/).filter(Boolean);
   if (segments.length >= 2) return (segments[0][0] + segments[1][0]).toUpperCase();
   if (segments.length === 1 && segments[0].length >= 2) return segments[0].slice(0, 2).toUpperCase();
-  return "MR";
+  return "ST";
 }
 
-const email = user?.email ?? "";
+const today = new Date();
+const dateEyebrow = today.toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+}).toUpperCase();
 ---
 
-<Base title="Profile | LostLink" description="Your LostLink profile, reports, and claims.">
-  <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between">
+<Base title="Student Overview | LostLink" description="Your student lost & found dashboard, active reports, and claims tracker.">
+  <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
     <div>
-      <StudentNavbar userEmail={email || undefined} />
+      <!-- Top Ticker -->
+      <AdminTicker />
 
-      <main class="mx-auto w-full max-w-7xl px-5 py-10 sm:px-10 lg:px-14">
-        <h1 class="font-serif text-3xl sm:text-4xl font-black text-ink">Profile</h1>
-
-        <!-- Account card -->
-        <section class="mt-6 rounded-card border border-line/70 bg-white p-6 sm:p-8 shadow-card">
-          <div class="flex items-center gap-4">
-            <span
-              class="flex size-14 shrink-0 items-center justify-center rounded-full border border-lime-600/30 bg-lime text-lg font-black text-forest-900"
-            >
+      <!-- Main Layout Container -->
+      <div class="mx-auto w-full max-w-[1520px] px-4 py-6 sm:px-8 sm:py-8 lg:px-12">
+        <!-- Student Banner Row -->
+        <div class="mb-6 flex items-center justify-between gap-4 flex-wrap bg-white/70 backdrop-blur-xs p-3 rounded-2xl border border-stone-200/60 shadow-2xs">
+          <div class="flex items-center gap-3">
+            <span class="flex size-9 items-center justify-center rounded-full bg-[#d8ef8c] text-xs font-black text-[#164f38]">
               {initialsOf(email)}
             </span>
-            <div class="min-w-0">
-              <p class="truncate text-base font-bold text-forest-900" title={email}>
-                {email || "Signed out"}
+            <div>
+              <p class="text-xs font-bold text-forest-900 leading-tight">
+                {email}
               </p>
-              <span class="mt-1 inline-block rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-semibold text-forest-900">
-                DLSAU Student
+              <span class="inline-block rounded-full bg-forest-700/10 px-2 py-0.5 text-[10px] font-bold text-forest-900">
+                DLSAU Student Portal
               </span>
             </div>
           </div>
-        </section>
 
-        <!-- My Reports -->
-        <section class="mt-8">
-          <h2 class="text-lg font-bold text-forest-900">My Reports</h2>
-          <div class="mt-3 rounded-card border border-line/70 bg-white p-8 text-center shadow-2xs">
-            <p class="text-sm font-semibold text-forest-900">No reports yet</p>
-            <p class="mt-1 text-sm text-sage-600">
-              Items you lose or find will appear here once you post them.
-            </p>
+          <div class="flex items-center gap-2">
+            {isUserAdmin && (
+              <a
+                href="/admin"
+                class="rounded-full bg-[#164f38] px-3.5 py-1.5 text-xs font-bold text-[#d8ef8c] hover:bg-[#123e2c] transition-colors shadow-2xs"
+              >
+                Go to Admin Console &rarr;
+              </a>
+            )}
             <a
               href="/"
-              class="mt-4 inline-flex min-h-10 items-center rounded-control bg-forest-700 px-6 py-2 text-sm font-semibold text-white hover:bg-forest-900 transition-colors"
+              class="rounded-full bg-stone-200/80 px-3.5 py-1.5 text-xs font-bold text-forest-900 hover:bg-stone-300 transition-colors"
             >
-              Post an item
+              Browse Campus Feed &rarr;
             </a>
           </div>
-        </section>
+        </div>
 
-        <!-- My Claims -->
-        <section class="mt-8">
-          <h2 class="text-lg font-bold text-forest-900">My Claims</h2>
-          <div class="mt-3 rounded-card border border-line/70 bg-white p-8 text-center shadow-2xs">
-            <p class="text-sm font-semibold text-forest-900">No claims yet</p>
-            <p class="mt-1 text-sm text-sage-600">
-              Claims you submit for found items will appear here with their status.
-            </p>
+        <div class="flex flex-col-reverse lg:flex-row items-start gap-8 lg:gap-10">
+          <!-- Main Content (Left Column) -->
+          <main class="w-full flex-1 min-w-0 space-y-7">
+            <!-- Header Row -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+              <div>
+                <p class="text-xs font-bold tracking-[0.22em] text-stone-500 uppercase">
+                  {dateEyebrow}
+                </p>
+                <h1 class="mt-1 font-serif text-4xl sm:text-5xl lg:text-[3.25rem] font-black text-forest-900 tracking-tight leading-none">
+                  Student Overview
+                </h1>
+              </div>
+
+              <!-- Top Right Controls -->
+              <div class="flex items-center gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
+                <div class="relative flex-1 sm:w-72 lg:w-80">
+                  <input
+                    type="search"
+                    id="student-search-input"
+                    placeholder="Search your items, claims..."
+                    class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
+                  />
+                  <svg
+                    class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                <a
+                  href="/"
+                  class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                >
+                  <span>Post an item</span>
+                  <span class="text-base font-black leading-none">+</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Row 1: 4 KPI Stat Cards (Student Mode) -->
+            <AdminMetrics role="student" />
+
+            <!-- Row 2: Claims to verify / My active claims Table (Student Mode) -->
+            <ClaimsVerificationTable role="student" />
+
+            <!-- Row 3: Two Columns Split -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
+              <IntakeQueue role="student" />
+              <RecentActivity role="student" />
+            </div>
+          </main>
+
+          <!-- Floating Sidebar (Student Mode) -->
+          <div class="w-full lg:w-auto shrink-0 lg:sticky lg:top-8 self-start">
+            <AdminSidebar
+              role="student"
+              activeTab="overview"
+              userEmail={email}
+            />
           </div>
-        </section>
-      </main>
+        </div>
+      </div>
     </div>
 
-    <DashboardFooter />
+    <!-- Campus Footer -->
+    <footer class="mt-14 border-t border-stone-200/70 bg-[#ece5d6]/70 py-6 text-center text-xs text-stone-500">
+      <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>&copy; {today.getFullYear()} LostLink &bull; De La Salle Araneta University</p>
+        <div class="flex items-center gap-4 font-semibold text-forest-900">
+          <a href="/" class="hover:underline">Campus Feed</a>
+          <a href="/help" class="hover:underline">Guidelines</a>
+          <a href="/privacy" class="hover:underline">Privacy</a>
+        </div>
+      </div>
+    </footer>
   </div>
 </Base>

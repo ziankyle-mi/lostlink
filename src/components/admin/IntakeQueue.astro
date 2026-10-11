@@ -1,0 +1,143 @@
+---
+interface Props {
+  role?: "admin" | "student";
+}
+
+const { role = "admin" } = Astro.props;
+const isAdmin = role === "admin";
+
+const intakeItems = [
+  {
+    id: "intake-1",
+    name: "Grey drawstring bag",
+    meta: "Posted by Kevin L. \u00b7 20 min ago",
+    iconBg: "bg-[#e6eae2]",
+    iconType: "bag",
+  },
+  {
+    id: "intake-2",
+    name: "Black tumbler",
+    meta: "Posted by Liza M. \u00b7 1 hr ago",
+    iconBg: "bg-[#e5eed6]",
+    iconType: "bottle",
+  },
+  {
+    id: "intake-3",
+    name: "Calculator, scientific",
+    meta: "Posted by Ben T. \u00b7 3 hrs ago",
+    iconBg: "bg-[#dde6de]",
+    iconType: "calculator",
+  },
+];
+---
+
+<section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between" id="intake">
+  <div>
+    <!-- Header -->
+    <div>
+      <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
+        {isAdmin ? "Waiting for intake" : "Campus Claiming Checklist"}
+      </h2>
+      <p class="mt-1 text-sm text-stone-500">
+        {isAdmin
+          ? "Posted online. Confirm once the item reaches the office."
+          : "Essential steps before heading to the Disciplinary Office."}
+      </p>
+    </div>
+
+    <!-- Items List -->
+    {isAdmin ? (
+      <div class="mt-6 divide-y divide-stone-100">
+        {intakeItems.map((item) => (
+          <div class="flex items-center justify-between gap-3 py-4 first:pt-2 last:pb-0">
+            <div class="flex items-center gap-3.5 min-w-0">
+              <div class={`size-11 shrink-0 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
+                {item.iconType === "bag" && (
+                  <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 20h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3V5a3 3 0 0 0-6 0v1H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z"></path>
+                    <path d="M9 6h6"></path>
+                  </svg>
+                )}
+                {item.iconType === "bottle" && (
+                  <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 3h6v3H9z"></path>
+                    <path d="M9 6l-2 4v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V10l-2-4"></path>
+                    <line x1="7" x2="17" y1="14" y2="14"></line>
+                  </svg>
+                )}
+                {item.iconType === "calculator" && (
+                  <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="16" height="20" x="4" y="2" rx="2"></rect>
+                    <line x1="8" x2="16" y1="6" y2="6"></line>
+                    <line x1="16" x2="16" y1="14" y2="18"></line>
+                    <path d="M16 10h.01"></path>
+                    <path d="M12 10h.01"></path>
+                    <path d="M8 10h.01"></path>
+                  </svg>
+                )}
+              </div>
+              <div class="min-w-0">
+                <p class="truncate text-sm font-bold text-stone-900 leading-tight">
+                  {item.name}
+                </p>
+                <p class="truncate text-xs text-stone-500 mt-0.5">
+                  {item.meta}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              data-intake-id={item.id}
+              data-intake-name={item.name}
+              class="confirm-intake-btn shrink-0 rounded-full bg-[#d8ef8c] hover:bg-[#cde97b] active:scale-95 px-4.5 py-2 text-xs font-bold text-[#164f38] transition-all shadow-xs cursor-pointer"
+            >
+              Confirm received
+            </button>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="mt-6 space-y-3.5">
+        <div class="flex items-start gap-3 rounded-2xl bg-[#f5f1e6]/80 p-3.5 border border-stone-200/50">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#164f38] text-xs font-black text-white">
+            1
+          </span>
+          <div class="text-xs sm:text-sm text-stone-700">
+            <p class="font-bold text-forest-900">Valid Identification</p>
+            <p class="mt-0.5 text-stone-600">Present your physical DLSAU ID card or currently validated Certificate of Registration (COR).</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 rounded-2xl bg-[#f5f1e6]/80 p-3.5 border border-stone-200/50">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#164f38] text-xs font-black text-white">
+            2
+          </span>
+          <div class="text-xs sm:text-sm text-stone-700">
+            <p class="font-bold text-forest-900">Proof of Ownership</p>
+            <p class="mt-0.5 text-stone-600">Be ready to describe hidden marks, phone unlock passwords, or unique contents to the office officer.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 rounded-2xl bg-[#f5f1e6]/80 p-3.5 border border-stone-200/50">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#164f38] text-xs font-black text-white">
+            3
+          </span>
+          <div class="text-xs sm:text-sm text-stone-700">
+            <p class="font-bold text-forest-900">Office Hours & Location</p>
+            <p class="mt-0.5 text-stone-600">Disciplinary Office, Admin Building Room 102. Open Monday to Friday, 8:00 AM &ndash; 5:00 PM.</p>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <div class="mt-6 pt-4 border-t border-stone-100">
+    <a
+      href={isAdmin ? "/admin#intake-guidelines" : "/help#claiming"}
+      class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 hover:text-forest-700 transition-colors"
+    >
+      <span>{isAdmin ? "Campus intake guidelines \u2192" : "View complete release policies \u2192"}</span>
+    </a>
+  </div>
+</section>
