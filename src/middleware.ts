@@ -29,6 +29,7 @@ const PUBLIC_PREFIXES = [
   "/robots.txt",
   "/dlsau-logo",
   "/lostlink-logo",
+  "/lostlink-badge",
 ];
 const ACTION_PREFIX = "/_actions";
 // Signing in and registering have to work while logged out. Every other
