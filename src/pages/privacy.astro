@@ -1,0 +1,66 @@
+---
+import AuthShell from "~/components/AuthShell.astro";
+---
+
+<AuthShell
+  title="Privacy | LostLink"
+  heading="Privacy Policy"
+  subheading="What LostLink collects, who can see it, and why."
+  description="LostLink privacy policy for the DLSAU lost and found system."
+>
+  <div class="mt-8 space-y-7 text-[0.9375rem] leading-relaxed text-sage-700">
+    <section>
+      <h2 class="text-base font-bold text-forest-900">What we collect</h2>
+      <p class="mt-2">
+        Your full name, your DLSAU email, and the item details you report (including
+        photos you choose to upload). We do not collect phone numbers or any contact
+        information beyond your school email.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-bold text-forest-900">Who can see it</h2>
+      <ul class="mt-2 list-disc space-y-1.5 pl-5">
+        <li>
+          Approved listings show the item only. Reporter and claimant emails are never
+          shown to other users.
+        </li>
+        <li>
+          Your reports and claims are visible only to you and to the security office
+          admins.
+        </li>
+        <li>
+          Photos of IDs and Cards are hidden from the public listing. Only admins see
+          the real photo.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-base font-bold text-forest-900">Why we use it</h2>
+      <p class="mt-2">
+        To run the campus lost and found service: matching owners with found items and
+        letting the security office verify claims. Your account is tied to your DLSAU
+        email so claims are not anonymous. We do not use your data for anything else.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-bold text-forest-900">Storage and access</h2>
+      <p class="mt-2">
+        Data is stored on Supabase with row-level security, so each account can only
+        read what it is allowed to read. Access is limited to the LostLink service and
+        the security office admins.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-base font-bold text-forest-900">Your rights</h2>
+      <p class="mt-2">
+        Under the Data Privacy Act of 2012 (RA 10173), you may request a copy or
+        correction of your data, or ask for your account to be removed. Visit the
+        security office to make a request.
+      </p>
+    </section>
+  </div>
+</AuthShell>

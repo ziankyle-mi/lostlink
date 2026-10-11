@@ -1,0 +1,52 @@
+---
+import AuthShell from "~/components/AuthShell.astro";
+
+const faqs = [
+  {
+    q: "I cannot log in.",
+    a: "LostLink only accepts DLSAU email accounts (@dlsau.edu.ph). Use Forget Password on the login page to reset your password. If it still does not work, visit the security office.",
+  },
+  {
+    q: "How do I report a lost item?",
+    a: "Log in, open Post an item, choose Lost, and fill in the item name, category, location, date, and description. An admin reviews it before it appears publicly.",
+  },
+  {
+    q: "How do I report a found item?",
+    a: "Same steps, but choose Found. Bring the item to the security office. You will get a reference code to write on the item tag.",
+  },
+  {
+    q: "How do I claim an item?",
+    a: "Open the item and click Claim. Describe unique marks, contents, and when and where you lost it. The admin compares your proof with the item held at the security office.",
+  },
+  {
+    q: "What do the statuses mean?",
+    a: "Pending means an admin is reviewing it. Approved means it is public. Claimed or Resolved means it is done. Rejected shows a reason; you can edit and resubmit.",
+  },
+  {
+    q: "Where do I pick up a verified item?",
+    a: "At the security office. Bring your claim reference code and your DLSAU ID.",
+  },
+  {
+    q: "Who handles decisions about items?",
+    a: "The security office (admin accounts). Visit them in person for questions about a specific item or claim.",
+  },
+];
+---
+
+<AuthShell
+  title="Help | LostLink"
+  heading="Help Center"
+  subheading="How LostLink works, step by step."
+  description="Help and frequently asked questions for the DLSAU lost and found system."
+>
+  <dl class="mt-8 space-y-6">
+    {
+      faqs.map((faq) => (
+        <div>
+          <dt class="text-[0.9375rem] font-bold text-forest-900">{faq.q}</dt>
+          <dd class="mt-1.5 text-[0.9375rem] leading-relaxed text-sage-700">{faq.a}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</AuthShell>

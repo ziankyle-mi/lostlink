@@ -1,0 +1,21 @@
+---
+interface Props {
+  class?: string;
+}
+
+const { class: className = "absolute right-0 top-0 h-full w-auto pointer-events-none select-none" } = Astro.props;
+---
+
+<svg
+  class={className}
+  viewBox="0 0 200 200"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <g fill="currentColor">
+    <path d="M 80 20 H 180 V 180 H 140 V 60 H 80 Z" />
+    <path d="M 20 20 H 60 V 140 H 120 V 180 H 20 Z" />
+    <circle cx="100" cy="100" r="20" />
+  </g>
+</svg>

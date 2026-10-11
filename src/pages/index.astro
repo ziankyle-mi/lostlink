@@ -1,11 +1,15 @@
 ---
 import { actions } from "astro:actions";
-import Background from "~/components/Background.astro";
-import BrandHeader from "~/components/BrandHeader.astro";
-import TrustBadges from "~/components/TrustBadges.astro";
 import Base from "~/layouts/Base.astro";
+import StudentNavbar from "~/components/StudentNavbar.astro";
+import FilterBar from "~/components/FilterBar.astro";
+import HeroFeed from "~/components/HeroFeed.astro";
+import DashboardGrid from "~/components/DashboardGrid.astro";
+import DashboardFooter from "~/components/DashboardFooter.astro";
+import ItemClaimModal from "~/components/ItemClaimModal.astro";
+import ReportModal from "~/components/ReportModal.astro";
 
-// The middleware already redirects logged-out visitors to /login.
+// The middleware redirects unauthenticated visitors to /login.
 const user = Astro.locals.user;
 
 const logoutResult = Astro.getActionResult(actions.logout);
@@ -14,40 +18,703 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
 }
 ---
 
-<Base title="Dashboard | LostLink">
-  <main class="relative flex min-h-dvh flex-col">
-    <Background />
+<Base title="LostLink | DLSAU Lost & Found System" description="Campus lost and found system for De La Salle Araneta University.">
+  <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between selection:bg-lime">
+    <div>
+      <!-- Top Navigation and Announcement Ticker -->
+      <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} />
 
-    <div class="relative flex flex-1 flex-col px-6 py-8 sm:px-10 sm:py-10">
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <BrandHeader />
-
-        <div class="flex items-center gap-3">
-          <span class="rounded-full bg-forest-700/10 px-3 py-1.5 text-xs font-semibold text-forest-900">
-            {user?.email}
-          </span>
-          <form method="POST" action={actions.logout}>
-            <button
-              type="submit"
-              class="min-h-10 cursor-pointer rounded-lg border border-forest-700 bg-surface px-4 py-2 text-xs font-bold tracking-wider text-forest-700 uppercase shadow-sm transition-all hover:bg-forest-700 hover:text-white hover:shadow-md active:scale-95"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
+      <!-- Filter Controls Toolbar -->
+      <div class="mt-4">
+        <FilterBar />
       </div>
 
-      <div class="flex flex-1 items-center justify-center py-10">
-        <section
-          class="w-full max-w-sm rounded-card bg-surface p-8 text-center shadow-card sm:p-10"
-          aria-labelledby="dashboard-title"
-        >
-          <h1 id="dashboard-title" class="eyebrow text-forest-900 tracking-widest">SYSTEM PREVIEW</h1>
-          <p class="mt-6 font-serif text-2xl font-bold text-forest-900">hehe not yet finished</p>
-        </section>
-      </div>
+      <!-- Campus Feed Headline & Two CTA Action Cards -->
+      <HeroFeed />
 
-      <TrustBadges />
+      <!-- 8-Card Campus Feed Grid -->
+      <DashboardGrid />
     </div>
-  </main>
+
+    <!-- Campus Footer -->
+    <DashboardFooter />
+  </div>
+
+  <!-- Interactive Modals -->
+  <ItemClaimModal />
+  <ReportModal />
+
+  <!-- Client-side Interactive Filtering, Modals, and Search Logic -->
+  <script is:inline>
+    (function () {
+      // State
+      let currentFilterType = "all";
+      let currentCategory = "All Categories";
+      let currentLocation = "All Locations";
+      let searchQuery = "";
+
+      const cards = document.querySelectorAll(".item-card");
+      const emptyState = document.getElementById("empty-state");
+      const counterBadge = document.getElementById("item-counter-badge");
+      const feedSubtitle = document.getElementById("feed-subtitle");
+      const loadMoreBtn = document.getElementById("load-more-btn");
+      const searchInput = document.getElementById("global-search-input");
+
+      function updateGrid() {
+        let visibleCount = 0;
+        let totalMatches = 0;
+
+        cards.forEach((card) => {
+          const type = card.dataset.itemType;
+          const category = card.dataset.itemCategory;
+          const location = card.dataset.itemLocation;
+          const name = (card.dataset.itemName || "").toLowerCase();
+          const desc = (card.dataset.itemDesc || "").toLowerCase();
+
+          const matchesType = currentFilterType === "all" || type === currentFilterType;
+          const matchesCategory = currentCategory === "All Categories" || category === currentCategory;
+          const matchesLocation = currentLocation === "All Locations" || location === currentLocation;
+          const query = searchQuery.trim().toLowerCase();
+          const matchesSearch = !query || name.includes(query) || desc.includes(query) || category.toLowerCase().includes(query) || location.toLowerCase().includes(query);
+
+          const matches = matchesType && matchesCategory && matchesLocation && matchesSearch;
+
+          const isExtra = card.parentElement.classList.contains("extra-item");
+          const isExtraHidden = isExtra && card.parentElement.classList.contains("hidden");
+
+          if (matches) {
+            totalMatches++;
+            if (!isExtraHidden) {
+              card.classList.remove("hidden");
+              visibleCount++;
+            } else {
+              card.classList.add("hidden");
+            }
+          } else {
+            card.classList.add("hidden");
+          }
+        });
+
+        // Update counter & subtitle
+        if (counterBadge) {
+          if (currentFilterType === "all" && currentCategory === "All Categories" && currentLocation === "All Locations" && !searchQuery) {
+            counterBadge.textContent = "10";
+          } else {
+            counterBadge.textContent = String(totalMatches);
+          }
+        }
+
+        if (feedSubtitle) {
+          const totalBase = (currentFilterType === "all" && currentCategory === "All Categories" && currentLocation === "All Locations" && !searchQuery) ? 10 : totalMatches;
+          feedSubtitle.textContent = `Showing ${visibleCount} of ${totalBase} items, newest first.`;
+        }
+
+        // Empty state
+        if (emptyState) {
+          if (visibleCount === 0) {
+            emptyState.classList.remove("hidden");
+          } else {
+            emptyState.classList.add("hidden");
+          }
+        }
+      }
+
+      // Filter Type Buttons (All, Found, Lost)
+      const typeButtons = document.querySelectorAll(".filter-type-btn");
+      typeButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          typeButtons.forEach((b) => {
+            b.classList.remove("bg-forest-700", "text-white", "shadow-2xs", "active");
+            b.classList.add("text-forest-900/80");
+          });
+          btn.classList.add("bg-forest-700", "text-white", "shadow-2xs", "active");
+          btn.classList.remove("text-forest-900/80");
+
+          currentFilterType = btn.dataset.filterType || "all";
+          updateGrid();
+        });
+      });
+
+      // Nav bar links for Found / Lost Items
+      document.querySelectorAll("[data-nav-filter]").forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const targetType = link.dataset.navFilter;
+          const targetBtn = document.querySelector(`.filter-type-btn[data-filter-type="${targetType}"]`);
+          if (targetBtn) targetBtn.click();
+          const feed = document.getElementById("feed");
+          if (feed) feed.scrollIntoView({ behavior: "smooth" });
+        });
+      });
+
+      // Live search inputs (both desktop and mobile)
+      const mobileSearchInput = document.getElementById("mobile-search-input");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          searchQuery = e.target.value;
+          if (mobileSearchInput) mobileSearchInput.value = searchQuery;
+          updateGrid();
+        });
+      }
+      if (mobileSearchInput) {
+        mobileSearchInput.addEventListener("input", (e) => {
+          searchQuery = e.target.value;
+          if (searchInput) searchInput.value = searchQuery;
+          updateGrid();
+        });
+      }
+
+      // Dropdowns: Category, Location, Date
+      function setupDropdown(btnId, menuId, optionClass, onSelect) {
+        const btn = document.getElementById(btnId);
+        const menu = document.getElementById(menuId);
+        if (!btn || !menu) return;
+
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isClosed = menu.classList.contains("hidden");
+          // Close all open dropdowns first
+          document.querySelectorAll("[id$='-dropdown-menu'], #user-menu-dropdown, #notif-popover").forEach((m) => m.classList.add("hidden"));
+          if (isClosed) {
+            menu.classList.remove("hidden");
+            btn.setAttribute("aria-expanded", "true");
+          }
+        });
+
+        menu.querySelectorAll("." + optionClass).forEach((opt) => {
+          opt.addEventListener("click", (e) => {
+            e.stopPropagation();
+            onSelect(opt);
+            menu.classList.add("hidden");
+            btn.setAttribute("aria-expanded", "false");
+          });
+        });
+      }
+
+      setupDropdown("category-dropdown-btn", "category-dropdown-menu", "category-option", (opt) => {
+        const val = opt.dataset.category;
+        currentCategory = val;
+        const label = document.getElementById("selected-category-label");
+        if (label) label.textContent = val === "All Categories" ? "Category" : val;
+        updateGrid();
+      });
+
+      setupDropdown("location-dropdown-btn", "location-dropdown-menu", "location-option", (opt) => {
+        const val = opt.dataset.location;
+        currentLocation = val;
+        const label = document.getElementById("selected-location-label");
+        if (label) label.textContent = val === "All Locations" ? "Location" : val;
+        updateGrid();
+      });
+
+      setupDropdown("date-dropdown-btn", "date-dropdown-menu", "date-option", (opt) => {
+        const label = document.getElementById("selected-date-label");
+        if (label) label.textContent = opt.textContent.trim();
+        updateGrid();
+      });
+
+      // Reset filters
+      function resetAllFilters() {
+        currentFilterType = "all";
+        currentCategory = "All Categories";
+        currentLocation = "All Locations";
+        searchQuery = "";
+
+        if (searchInput) searchInput.value = "";
+        if (mobileSearchInput) mobileSearchInput.value = "";
+        const allBtn = document.querySelector('.filter-type-btn[data-filter-type="all"]');
+        if (allBtn) {
+          typeButtons.forEach((b) => {
+            b.classList.remove("bg-forest-700", "text-white", "shadow-2xs", "active");
+            b.classList.add("text-forest-900/80");
+          });
+          allBtn.classList.add("bg-forest-700", "text-white", "shadow-2xs", "active");
+          allBtn.classList.remove("text-forest-900/80");
+        }
+
+        const catLabel = document.getElementById("selected-category-label");
+        if (catLabel) catLabel.textContent = "Category";
+        const locLabel = document.getElementById("selected-location-label");
+        if (locLabel) locLabel.textContent = "Location";
+        const dateLabel = document.getElementById("selected-date-label");
+        if (dateLabel) dateLabel.textContent = "Date";
+
+        updateGrid();
+      }
+
+      const resetBtn = document.getElementById("reset-filters-btn");
+      if (resetBtn) resetBtn.addEventListener("click", resetAllFilters);
+
+      const emptyClearBtn = document.getElementById("empty-clear-filters-btn");
+      if (emptyClearBtn) emptyClearBtn.addEventListener("click", resetAllFilters);
+
+      const viewAllBtn = document.getElementById("view-all-items-btn");
+      if (viewAllBtn) {
+        viewAllBtn.addEventListener("click", () => {
+          resetAllFilters();
+          const extraItems = document.querySelectorAll(".extra-item");
+          extraItems.forEach((item) => item.classList.remove("hidden"));
+          updateGrid();
+          if (loadMoreBtn) {
+            loadMoreBtn.textContent = "All 10 items displayed";
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.classList.add("opacity-60", "cursor-default");
+          }
+        });
+      }
+
+      // Load More items
+      if (loadMoreBtn) {
+        loadMoreBtn.addEventListener("click", () => {
+          const extraItems = document.querySelectorAll(".extra-item");
+          let unhiddenCount = 0;
+          extraItems.forEach((item) => {
+            if (item.classList.contains("hidden")) {
+              item.classList.remove("hidden");
+              unhiddenCount++;
+            }
+          });
+          if (unhiddenCount > 0) {
+            updateGrid();
+            loadMoreBtn.textContent = "All 10 items displayed";
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.classList.add("opacity-60", "cursor-default");
+          }
+        });
+      }
+
+      // Avatar & Notif popovers
+      const avatarBtn = document.getElementById("user-avatar-btn");
+      const userMenu = document.getElementById("user-menu-dropdown");
+      if (avatarBtn && userMenu) {
+        avatarBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          userMenu.classList.toggle("hidden");
+        });
+      }
+
+      const notifBtn = document.getElementById("notif-bell-btn");
+      const notifPopover = document.getElementById("notif-popover");
+      if (notifBtn && notifPopover) {
+        notifBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          notifPopover.classList.toggle("hidden");
+        });
+      }
+
+      // Close popovers on click outside
+      document.addEventListener("click", (e) => {
+        document.querySelectorAll("[id$='-dropdown-menu'], #user-menu-dropdown, #notif-popover").forEach((m) => {
+          if (!m.contains(e.target)) m.classList.add("hidden");
+        });
+      });
+
+      // Claim / Details Modal
+      const claimModal = document.getElementById("claim-modal-backdrop");
+      const closeClaimModal = document.getElementById("close-claim-modal");
+      const cancelClaimBtn = document.getElementById("cancel-claim-btn");
+
+      function openItemModal(card) {
+        if (!claimModal) return;
+        const name = card.dataset.itemName;
+        const type = card.dataset.itemType;
+        const category = card.dataset.itemCategory;
+        const location = card.dataset.itemLocation;
+        const date = card.dataset.itemDate;
+        const desc = card.dataset.itemDesc;
+        const ref = card.dataset.itemRef;
+        let images = [];
+        try {
+          images = JSON.parse(card.dataset.itemImages || "[]");
+        } catch (e) {
+          images = [];
+        }
+
+        document.getElementById("modal-item-title").textContent = name;
+        document.getElementById("modal-category").textContent = category;
+        document.getElementById("modal-location").textContent = location;
+        document.getElementById("modal-date").textContent = date;
+        document.getElementById("modal-description").textContent = desc;
+
+        // Render photo gallery in claim modal if photos exist
+        const imagesContainer = document.getElementById("modal-images-container");
+        const imagesGallery = document.getElementById("modal-images-gallery");
+        if (imagesContainer && imagesGallery) {
+          imagesGallery.innerHTML = "";
+          if (images.length > 0) {
+            imagesContainer.classList.remove("hidden");
+            images.forEach((imgSrc, idx) => {
+              const imgEl = document.createElement("img");
+              imgEl.src = imgSrc;
+              imgEl.alt = `${name} - Photo ${idx + 1}`;
+              imgEl.className = "h-24 w-28 shrink-0 rounded-xl border border-stone-200 object-cover shadow-2xs";
+              imagesGallery.appendChild(imgEl);
+            });
+          } else {
+            imagesContainer.classList.add("hidden");
+          }
+        }
+
+        const typeBadge = document.getElementById("modal-type-badge");
+        const refContainer = document.getElementById("modal-ref-container");
+        const proofLabel = document.getElementById("modal-proof-label");
+        const submitBtn = document.getElementById("submit-claim-btn");
+
+        if (type === "found") {
+          typeBadge.textContent = "FOUND";
+          typeBadge.className = "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-forest-700 text-white";
+          if (refContainer) {
+            refContainer.classList.remove("hidden");
+            document.getElementById("modal-ref-code").textContent = ref || "LL-4821";
+          }
+          if (proofLabel) proofLabel.textContent = "Describe Proof of Ownership";
+          if (submitBtn) submitBtn.textContent = "Submit Claim Verification";
+        } else {
+          typeBadge.textContent = "LOST";
+          typeBadge.className = "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#d8ef8c] text-forest-900 border border-lime-600/30";
+          if (refContainer) refContainer.classList.add("hidden");
+          if (proofLabel) proofLabel.textContent = "Did you find this? Let the owner know";
+          if (submitBtn) submitBtn.textContent = "Notify Finder / Report Found";
+        }
+
+        const successMsg = document.getElementById("claim-success-msg");
+        if (successMsg) successMsg.classList.add("hidden");
+        const form = document.getElementById("claim-submit-form");
+        if (form) form.classList.remove("hidden");
+
+        claimModal.classList.remove("hidden");
+        claimModal.classList.add("flex");
+      }
+
+      function hideClaimModal() {
+        if (!claimModal) return;
+        claimModal.classList.add("hidden");
+        claimModal.classList.remove("flex");
+      }
+
+      // Delegated card click listener on grid (supports both initial and dynamically added cards)
+      const itemsGrid = document.getElementById("items-grid");
+      if (itemsGrid) {
+        itemsGrid.addEventListener("click", (e) => {
+          if (e.target.closest(".slider-prev") || e.target.closest(".slider-next")) {
+            return;
+          }
+          const card = e.target.closest(".item-card");
+          if (card) {
+            openItemModal(card);
+          }
+        });
+      }
+
+      // Slidable Photo Carousel Controls (prev/next buttons)
+      document.addEventListener("click", (e) => {
+        const prevBtn = e.target.closest(".slider-prev");
+        const nextBtn = e.target.closest(".slider-next");
+        if (prevBtn || nextBtn) {
+          e.stopPropagation();
+          e.preventDefault();
+          const slider = (prevBtn || nextBtn).closest(".card-slider");
+          if (!slider) return;
+          const track = slider.querySelector(".slider-track");
+          const count = parseInt(slider.dataset.imagesCount || "1", 10);
+          const badgeIdx = slider.querySelector(".current-slide-idx");
+          let currentIdx = parseInt(slider.dataset.currentIdx || "0", 10);
+
+          if (prevBtn) {
+            currentIdx = (currentIdx - 1 + count) % count;
+          } else {
+            currentIdx = (currentIdx + 1) % count;
+          }
+
+          slider.dataset.currentIdx = String(currentIdx);
+          if (track) track.style.transform = `translateX(-${currentIdx * 100}%)`;
+          if (badgeIdx) badgeIdx.textContent = String(currentIdx + 1);
+        }
+      }, true);
+
+      // Touch swipe support for card-slider on mobile
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let activeSlider = null;
+
+      document.addEventListener("touchstart", (e) => {
+        activeSlider = e.target.closest(".card-slider");
+        if (activeSlider) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      document.addEventListener("touchend", (e) => {
+        if (!activeSlider) return;
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+
+        if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
+          const count = parseInt(activeSlider.dataset.imagesCount || "1", 10);
+          if (count > 1) {
+            let currentIdx = parseInt(activeSlider.dataset.currentIdx || "0", 10);
+            if (diffX < 0) {
+              currentIdx = (currentIdx + 1) % count;
+            } else {
+              currentIdx = (currentIdx - 1 + count) % count;
+            }
+            activeSlider.dataset.currentIdx = String(currentIdx);
+            const track = activeSlider.querySelector(".slider-track");
+            const badgeIdx = activeSlider.querySelector(".current-slide-idx");
+            if (track) track.style.transform = `translateX(-${currentIdx * 100}%)`;
+            if (badgeIdx) badgeIdx.textContent = String(currentIdx + 1);
+          }
+        }
+        activeSlider = null;
+      }, { passive: true });
+
+      if (closeClaimModal) closeClaimModal.addEventListener("click", hideClaimModal);
+      if (cancelClaimBtn) cancelClaimBtn.addEventListener("click", hideClaimModal);
+
+      window.handleClaimSubmit = function () {
+        const form = document.getElementById("claim-submit-form");
+        const successMsg = document.getElementById("claim-success-msg");
+        if (form) form.classList.add("hidden");
+        if (successMsg) successMsg.classList.remove("hidden");
+        setTimeout(hideClaimModal, 2200);
+      };
+
+      // Report Modal
+      const reportModal = document.getElementById("report-modal-backdrop");
+      const closeReportModal = document.getElementById("close-report-modal");
+      const cancelReportBtn = document.getElementById("cancel-report-btn");
+
+      function openReport(type) {
+        if (!reportModal) return;
+        const foundChoice = document.getElementById("report-choice-found");
+        const lostChoice = document.getElementById("report-choice-lost");
+        const typeInput = document.getElementById("report-type-val");
+        const photoStar = document.getElementById("photo-req-star");
+        const photoBadge = document.getElementById("photo-req-badge");
+        const photoHint = document.getElementById("photo-req-hint");
+        const validationError = document.getElementById("photo-validation-error");
+
+        if (validationError) validationError.classList.add("hidden");
+
+        if (type === "found") {
+          typeInput.value = "found";
+          foundChoice.classList.add("border-forest-700", "bg-forest-700/5");
+          foundChoice.classList.remove("border-line", "bg-white");
+          lostChoice.classList.remove("border-forest-700", "bg-lime/15");
+          lostChoice.classList.add("border-line", "bg-white");
+
+          if (photoStar) photoStar.classList.remove("hidden");
+          if (photoBadge) {
+            photoBadge.textContent = "1 required (max 3)";
+            photoBadge.className = "rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-bold text-forest-700";
+          }
+          if (photoHint) {
+            photoHint.textContent = "Upload clear photos so the owner can identify it. Compressed automatically for crisp, fast display.";
+          }
+        } else {
+          typeInput.value = "lost";
+          lostChoice.classList.add("border-forest-700", "bg-lime/15");
+          lostChoice.classList.remove("border-line", "bg-white");
+          foundChoice.classList.remove("border-forest-700", "bg-forest-700/5");
+          foundChoice.classList.add("border-line", "bg-white");
+
+          if (photoStar) photoStar.classList.add("hidden");
+          if (photoBadge) {
+            photoBadge.textContent = "Optional (max 3)";
+            photoBadge.className = "rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-bold text-stone-600";
+          }
+          if (photoHint) {
+            photoHint.textContent = "Optional: Add reference photos if you have them. Photos are compressed for quick display.";
+          }
+        }
+
+        const successMsg = document.getElementById("report-success-msg");
+        if (successMsg) successMsg.classList.add("hidden");
+        const form = document.getElementById("quick-report-form");
+        if (form) form.classList.remove("hidden");
+
+        reportModal.classList.remove("hidden");
+        reportModal.classList.add("flex");
+      }
+
+      function hideReportModal() {
+        if (!reportModal) return;
+        reportModal.classList.add("hidden");
+        reportModal.classList.remove("flex");
+      }
+
+      document.querySelectorAll("[data-open-report]").forEach((btn) => {
+        btn.addEventListener("click", () => openReport(btn.dataset.openReport));
+      });
+
+      const topPostBtn = document.getElementById("top-post-item-btn");
+      if (topPostBtn) topPostBtn.addEventListener("click", () => openReport("found"));
+
+      const foundChoice = document.getElementById("report-choice-found");
+      if (foundChoice) foundChoice.addEventListener("click", () => openReport("found"));
+
+      const lostChoice = document.getElementById("report-choice-lost");
+      if (lostChoice) lostChoice.addEventListener("click", () => openReport("lost"));
+
+      if (closeReportModal) closeReportModal.addEventListener("click", hideReportModal);
+      if (cancelReportBtn) cancelReportBtn.addEventListener("click", hideReportModal);
+
+      // Handle Post Report Submission with Validation & Live Feed Update
+      window.handleReportSubmit = function () {
+        const typeInput = document.getElementById("report-type-val");
+        const reportType = typeInput ? typeInput.value : "found";
+        const photos = window.reportUploadedPhotos || [];
+        const validationError = document.getElementById("photo-validation-error");
+
+        // VALIDATION RULE:
+        // Found items MUST have 1 to 3 photos! Cannot post without validation.
+        // Lost items: Photos are optional (0 to 3).
+        if (reportType === "found" && photos.length < 1) {
+          if (validationError) {
+            validationError.classList.remove("hidden");
+            const dropzone = document.getElementById("photo-dropzone");
+            if (dropzone) dropzone.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+          return; // Block submission!
+        }
+
+        const nameInput = document.getElementById("report-name");
+        const catSelect = document.getElementById("report-category");
+        const locSelect = document.getElementById("report-location");
+        const otherInput = document.getElementById("report-location-other");
+        const descInput = document.getElementById("report-desc");
+
+        const itemName = nameInput ? nameInput.value.trim() : "Reported Item";
+        const itemCategory = catSelect ? catSelect.value : "Accessories";
+        const itemLocation = (locSelect && locSelect.value === "__other__")
+          ? (otherInput ? otherInput.value.trim() : "Campus")
+          : (locSelect ? locSelect.value : "Campus");
+        const itemDesc = descInput ? descInput.value.trim() : "";
+        const locationPrefix = reportType === "found" ? "Found at" : "Last seen at";
+        const actionLabel = reportType === "found" ? "Claim this item" : "I found this";
+        const refCode = reportType === "found" ? `LL-${Math.floor(4000 + Math.random() * 900)}` : "";
+        const currentDate = "Just now";
+
+        // Build newly created card DOM
+        const newCard = document.createElement("article");
+        newCard.className = "item-card group relative flex flex-col justify-between overflow-hidden rounded-card border border-line/80 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-card cursor-pointer";
+        newCard.dataset.itemId = `user-item-${Date.now()}`;
+        newCard.dataset.itemType = reportType;
+        newCard.dataset.itemCategory = itemCategory;
+        newCard.dataset.itemLocation = itemLocation;
+        newCard.dataset.itemName = itemName;
+        newCard.dataset.itemDesc = itemDesc;
+        newCard.dataset.itemDate = currentDate;
+        newCard.dataset.itemAction = actionLabel;
+        newCard.dataset.itemRef = refCode;
+        newCard.dataset.itemImages = JSON.stringify(photos);
+
+        // Build top graphic area with photos / slider or illustration
+        let topGraphicHtml = "";
+        const statusBadge = `
+          <span class="absolute left-4 top-4 z-20 rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
+            reportType === "found"
+              ? "bg-forest-700 text-white shadow-xs"
+              : "bg-[#d8ef8c] text-forest-900 border border-lime-600/30 shadow-xs"
+          }">
+            ${reportType.toUpperCase()}
+          </span>
+        `;
+
+        if (photos.length > 0) {
+          const slidesHtml = photos.map((src, i) => `
+            <div class="slider-slide relative h-full w-full shrink-0 bg-stone-900/5">
+              <img src="${src}" alt="${itemName} - Photo ${i + 1}" loading="lazy" class="h-full w-full object-cover" />
+            </div>
+          `).join("");
+
+          const sliderControls = photos.length > 1 ? `
+            <button type="button" class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition-all hover:bg-black/85 hover:scale-105 active:scale-95 cursor-pointer" aria-label="Previous photo">
+              <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button type="button" class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition-all hover:bg-black/85 hover:scale-105 active:scale-95 cursor-pointer" aria-label="Next photo">
+              <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            </button>
+            <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full bg-black/65 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-xs shadow-xs">
+              <span class="current-slide-idx">1</span>/${photos.length}
+            </div>
+          ` : "";
+
+          topGraphicHtml = `
+            <div class="relative flex h-48 sm:h-52 lg:h-56 w-full items-center justify-center overflow-hidden bg-stone-100">
+              ${statusBadge}
+              <div class="card-slider relative h-full w-full overflow-hidden" data-images-count="${photos.length}" data-current-idx="0">
+                <div class="slider-track flex h-full w-full transition-transform duration-300 ease-out">
+                  ${slidesHtml}
+                </div>
+                ${sliderControls}
+              </div>
+            </div>
+          `;
+        } else {
+          topGraphicHtml = `
+            <div class="relative flex h-48 sm:h-52 lg:h-56 w-full items-center justify-center overflow-hidden transition-colors" style="background-color: #dee8e0;">
+              ${statusBadge}
+              <div class="flex size-16 items-center justify-center rounded-full bg-forest-700/10 text-forest-700">
+                <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+            </div>
+          `;
+        }
+
+        newCard.innerHTML = `
+          ${topGraphicHtml}
+          <div class="flex flex-1 flex-col justify-between bg-white p-5 sm:p-6">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-stone-500">${itemCategory}</p>
+              <h3 class="mt-1 text-base sm:text-lg lg:text-xl font-bold tracking-tight text-forest-900 line-clamp-1">${itemName}</h3>
+            </div>
+            <div class="mt-5 flex items-end justify-between gap-3">
+              <div>
+                <p class="text-xs font-medium leading-none text-stone-400">${locationPrefix}</p>
+                <p class="mt-1.5 text-sm sm:text-base font-bold text-forest-900 line-clamp-1">${itemLocation}</p>
+              </div>
+              <p class="font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">${currentDate}</p>
+            </div>
+            <div class="mt-4 flex items-center justify-between border-t border-line/60 pt-4 text-sm font-bold text-forest-900 group-hover:text-forest-700">
+              <span>${actionLabel}</span>
+              <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true">→</span>
+            </div>
+          </div>
+        `;
+
+        // Prepend to items grid so it immediately appears in "Latest on campus"
+        if (itemsGrid) {
+          itemsGrid.prepend(newCard);
+        }
+
+        // Update counts
+        const allCards = document.querySelectorAll(".item-card:not(.hidden)");
+        const totalCards = document.querySelectorAll(".item-card");
+        if (counterBadge) counterBadge.textContent = String(totalCards.length);
+        if (feedSubtitle) {
+          feedSubtitle.textContent = `Showing ${allCards.length} of ${totalCards.length} items, newest first.`;
+        }
+
+        // Reset form & photos
+        const form = document.getElementById("quick-report-form");
+        if (form) {
+          form.reset();
+          form.classList.add("hidden");
+        }
+        if (window.resetReportPhotos) window.resetReportPhotos();
+
+        // Show success confirmation
+        const successMsg = document.getElementById("report-success-msg");
+        if (successMsg) successMsg.classList.remove("hidden");
+
+        setTimeout(hideReportModal, 1600);
+      };
+    })();
+  </script>
 </Base>

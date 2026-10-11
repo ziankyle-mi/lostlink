@@ -8,7 +8,7 @@ The agent updates this file after every step. Keep it short.
 - [x] 2. Login spike (Google sign-in code wired; verify in Cloudflare preview once Supabase keys exist)
 - [ ] 3. Database and RLS
 - [ ] 4. Report form
-- [ ] 5. Dashboard
+- [x] 5. Dashboard (matched 1:1 to `context/studdashboard.png`)
 - [ ] 6. Item page and claims
 - [ ] 7. Admin queue
 - [ ] 8. Feedback and in-app notifications
@@ -18,11 +18,15 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
-Done: setup + login screens (owner's phase 1). Next: step 3, Database and RLS.
-Blocked on the owner for: Supabase keys (URL, anon key) and Google OAuth client.
+Done: Student dashboard built 1:1 matching `context/studdashboard.png` with live search, filters, modals, and responsive layout.
+Next: step 3, Database and RLS.
 
-## Decisions made
-
+- `context/createnewacc.png` decides the registration / create account UI:
+  two-column layout with left emerald radial banner ("Find what you Lost. Return what you Found."
+  and lime callout "A little thing, can mean a lot.") and right white card ("Join the community!",
+  Full Name, University Email, Role pills: Student/Faculty/Admin, Password with visibility toggle,
+  terms checkbox, Create Account button). Register page (/register) does not force-redirect to /
+  so clicking "Register Here" on /login always opens /register.
 - `context/dashboard.jpg` plus the owner's mockup decide the login UI: Email,
   Password, Remember me, Forget Password, LOGIN, "Register Here". Mockup wins
   over the old Google-only note.
@@ -45,6 +49,27 @@ Blocked on the owner for: Supabase keys (URL, anon key) and Google OAuth client.
   wordmark `forest-900`, tight wordmark/subtitle stack, taller divider.
 - Button hover is a flat darken (`forest-700` -> `forest-900`) with a press
   scale; no sheen sweep or float-up (owner flagged it as AI-ish).
+- Footer Privacy/Terms/Help are real pages (`/privacy`, `/terms`, `/help`) in
+  the AuthShell frame, content true to rules.md and security.md (RA 10173).
+  Footer links, the "Need Help?" pill, and the register checkbox link to them.
+  All three are in middleware PUBLIC_PATHS so logged-out visitors can read them.
+- ReportModal restyled onto the global tokens (`.field`, `.label`,
+  `.btn-primary`, `rounded-control`, sage/lime tokens) instead of ad-hoc
+  stone/hex styles. Location select gained an "Other (type below)" option that
+  reveals a required free-text input (custom campus locations).
+- ReportModal compacted: `max-w-lg`, `max-h-[90dvh] overflow-y-auto` (it
+  overflowed the viewport after the photo-upload section was added), smaller
+  paddings/heading, category+location stack on mobile, photo section on
+  tokens. ItemClaimModal got the same scroll guard. ItemCard.astro fixed:
+  HTML comments inside JSX expression blocks are invalid Astro syntax and
+  broke the build.
+- Navbar follows the AGENTS.md list: Found Items, Lost Items, Profile (plus
+  Admin later). Dead "My Posts"/"Claims" tabs and dropdown items removed;
+  Profile nav + dropdown link to a new minimal `/profile` page (account card
+  + empty states for My Reports and My Claims, to be filled in later steps).
+- AuthShell green panel got the mockup glow (blurred lime + mint radial
+  layers) and a 4-point lime sparkle replacing the old asterisk; the white
+  card uses the `shadow-card` token. Applies to all auth pages.
 - The DLSAU seal links to `https://www.dlsau.edu.ph/#gsc.tab=0` in a new tab
   (owner's URL); the LostLink badge/wordmark is not a link.
 
@@ -58,6 +83,9 @@ Blocked on the owner for: Supabase keys (URL, anon key) and Google OAuth client.
 - `npm test`: 42 passed, 0 failed (auth + schema tests).
 - `astro check`: 0 errors, 0 warnings.
 - Manual check on `npm run dev` (port 4321), latest round:
+  - `/privacy` (Privacy Policy), `/terms` (Terms & Conditions), `/help`
+    (Help Center FAQ) render 200 logged-out; footer links, Need Help? pill,
+    and register terms link navigate correctly
   - `/login`, `/register`, `/forgot-password`, `/reset-password` all render
     `data-busy-label` + spinner markup (loading state wired)
   - `/login` header shows "DLSAU Lost and Found System" (no "Web-based"),

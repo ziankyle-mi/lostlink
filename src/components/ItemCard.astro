@@ -1,0 +1,124 @@
+---
+import type { DashboardItem } from "~/data/mockItems";
+import ItemIllustration from "./ItemIllustration.astro";
+
+interface Props {
+  item: DashboardItem;
+}
+
+const { item } = Astro.props;
+---
+
+<article
+  class="item-card group relative flex flex-col justify-between overflow-hidden rounded-card border border-line/80 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-card cursor-pointer"
+  data-item-id={item.id}
+  data-item-type={item.type}
+  data-item-category={item.category}
+  data-item-location={item.location}
+  data-item-name={item.name}
+  data-item-desc={item.description}
+  data-item-date={item.date}
+  data-item-action={item.actionLabel}
+  data-item-ref={item.referenceCode ?? ""}
+  data-item-images={JSON.stringify(item.images ?? [])}
+>
+  <!-- Top Graphic Area (Scaled generously) -->
+  <div
+    class="relative flex h-48 sm:h-52 lg:h-56 w-full items-center justify-center overflow-hidden transition-colors bg-stone-100"
+    style={!item.images?.length ? `background-color: ${item.tint};` : undefined}
+  >
+    <!-- Status Badge -->
+    <span
+      class={`absolute left-4 top-4 z-20 rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
+        item.type === "found"
+          ? "bg-forest-700 text-white shadow-xs"
+          : "bg-[#d8ef8c] text-forest-900 border border-lime-600/30 shadow-xs"
+      }`}
+    >
+      {item.type.toUpperCase()}
+    </span>
+
+    {item.images && item.images.length > 0 ? (
+      <div class="card-slider relative h-full w-full overflow-hidden" data-images-count={item.images.length} data-current-idx="0">
+        {/* Slides Track */}
+        <div class="slider-track flex h-full w-full transition-transform duration-300 ease-out">
+          {item.images.map((imgUrl, idx) => (
+            <div class="slider-slide relative h-full w-full shrink-0 bg-stone-900/5">
+              <img
+                src={imgUrl}
+                alt={`${item.name} - Photo ${idx + 1}`}
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+
+        {item.images.length > 1 && (
+          <>
+            {/* Prev Slide Button */}
+            <button
+              type="button"
+              class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition-all hover:bg-black/85 hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label="Previous photo"
+            >
+              <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Next Slide Button */}
+            <button
+              type="button"
+              class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition-all hover:bg-black/85 hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label="Next photo"
+            >
+              <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Slide Counter Badge */}
+            <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full bg-black/65 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-xs shadow-xs">
+              <span class="current-slide-idx">1</span>/{item.images.length}
+            </div>
+          </>
+        )}
+      </div>
+    ) : (
+      <ItemIllustration icon={item.icon} class="w-20 h-16 sm:w-22 sm:h-18 transition-transform duration-200 group-hover:scale-105" />
+    )}
+  </div>
+
+  <!-- Bottom Card Content (Scaled up matching login typography) -->
+  <div class="flex flex-1 flex-col justify-between bg-white p-5 sm:p-6">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-wider text-stone-500">
+        {item.category}
+      </p>
+      <h3 class="mt-1 text-base sm:text-lg lg:text-xl font-bold tracking-tight text-forest-900 line-clamp-1">
+        {item.name}
+      </h3>
+    </div>
+
+    <div class="mt-5 flex items-end justify-between gap-3">
+      <div>
+        <p class="text-xs font-medium leading-none text-stone-400">
+          {item.locationPrefix}
+        </p>
+        <p class="mt-1.5 text-sm sm:text-base font-bold text-forest-900 line-clamp-1">
+          {item.location}
+        </p>
+      </div>
+      <p class="font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">
+        {item.date}
+      </p>
+    </div>
+
+    <!-- Action Link -->
+    <div class="mt-4 flex items-center justify-between border-t border-line/60 pt-4 text-sm font-bold text-forest-900 group-hover:text-forest-700">
+      <span>{item.actionLabel}</span>
+      <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true">→</span>
+    </div>
+  </div>
+</article>

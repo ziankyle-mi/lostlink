@@ -5,10 +5,7 @@ import PasswordField from "~/components/PasswordField.astro";
 import SubmitButton from "~/components/SubmitButton.astro";
 import { devBypassEnabled } from "~/lib/session";
 
-if (Astro.locals.user) {
-  return Astro.redirect("/");
-}
-
+// If user submits registration successfully, redirect accordingly
 const registerResult = Astro.getActionResult(actions.register);
 if (registerResult && !registerResult.error && registerResult.data?.redirect) {
   return Astro.redirect(registerResult.data.redirect, 302);
@@ -26,7 +23,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
 ---
 
 <AuthShell
-  title="Create account | LostLink"
+  title="Create Account | LostLink"
   heading="Join the community!"
   description="Create your LostLink account with a DLSAU email."
 >
@@ -38,7 +35,8 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     )
   }
 
-  <form method="POST" action={actions.register} class="mt-7">
+  <form method="POST" action={actions.register} class="mt-6 space-y-4">
+    <!-- Full Name -->
     <div>
       <label for="name" class="label">Full Name</label>
       <input
@@ -61,7 +59,8 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       }
     </div>
 
-    <div class="mt-5">
+    <!-- University Email -->
+    <div>
       <label for="email" class="label">University Email</label>
       <input
         id="email"
@@ -83,24 +82,57 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       }
     </div>
 
+    <!-- Role Selection Pills from createnewacc.png -->
+    <div>
+      <label class="label">Role</label>
+      <input type="hidden" name="role" id="role-input" value="student" />
+      <div class="grid grid-cols-3 gap-2.5">
+        <button
+          type="button"
+          data-role="student"
+          class="role-btn active flex min-h-11 items-center justify-center rounded-control bg-forest-700 text-xs sm:text-sm font-bold text-white shadow-2xs transition-all cursor-pointer"
+        >
+          Student
+        </button>
+        <button
+          type="button"
+          data-role="faculty"
+          class="role-btn flex min-h-11 items-center justify-center rounded-control border border-line bg-canvas/40 text-xs sm:text-sm font-medium text-forest-900/70 transition-all hover:bg-canvas cursor-pointer"
+        >
+          Faculty
+        </button>
+        <button
+          type="button"
+          data-role="admin"
+          class="role-btn flex min-h-11 items-center justify-center rounded-control border border-line bg-canvas/40 text-xs sm:text-sm font-medium text-forest-900/70 transition-all hover:bg-canvas cursor-pointer"
+        >
+          Admin
+        </button>
+      </div>
+    </div>
+
+    <!-- Password Field -->
     <PasswordField
       id="password"
       name="password"
       label="Password"
+      placeholder="Password"
       autocomplete="new-password"
       error={fieldError("password")}
-      class="mt-5"
     />
 
-    <label class="mt-5 flex cursor-pointer items-center gap-2.5 text-[0.9375rem] text-sage-700">
+    <!-- Terms and Conditions Checkbox -->
+    <label class="flex cursor-pointer items-center gap-2.5 text-[0.9375rem] text-sage-700 pt-1">
       <input
         type="checkbox"
         name="agree"
         value="on"
+        required
         class="size-5 shrink-0 cursor-pointer rounded accent-forest-700"
         aria-describedby={fieldError("agree") ? "agree-error" : undefined}
       />
-      I have read the terms &amp; conditions
+      I have read the
+      <a href="/terms" class="font-semibold text-ink underline underline-offset-4 hover:text-forest-700">terms &amp; Conditions</a>
     </label>
     {
       fieldError("agree") && (
@@ -110,13 +142,14 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       )
     }
 
-    <div class="mt-6">
+    <!-- Submit Button -->
+    <div class="pt-2">
       <SubmitButton label="Create Account" busy="Creating account..." />
     </div>
 
     <p class="caption">
       Already have an account?
-      <a href="/login">Sign in</a>
+      <a href="/login">Log in here</a>
     </p>
   </form>
 
@@ -127,7 +160,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           <input type="hidden" name="next" value="/" />
           <button
             type="submit"
-            class="text-xs font-medium text-sage-600 underline underline-offset-4 hover:text-forest-700"
+            class="text-xs font-medium text-sage-600 underline underline-offset-4 hover:text-forest-700 cursor-pointer"
           >
             Test login (dev)
           </button>
@@ -135,4 +168,27 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       </div>
     )
   }
+
+  <!-- Interactive script for Role pill selection -->
+  <script is:inline>
+    (function () {
+      const roleBtns = document.querySelectorAll(".role-btn");
+      const roleInput = document.getElementById("role-input");
+
+      roleBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          roleBtns.forEach((b) => {
+            b.classList.remove("bg-forest-700", "text-white", "font-bold", "active");
+            b.classList.add("border", "border-line", "bg-canvas/40", "text-forest-900/70", "font-medium");
+          });
+          btn.classList.add("bg-forest-700", "text-white", "font-bold", "active");
+          btn.classList.remove("border", "border-line", "bg-canvas/40", "text-forest-900/70", "font-medium");
+
+          if (roleInput) {
+            roleInput.value = btn.dataset.role || "student";
+          }
+        });
+      });
+    })();
+  </script>
 </AuthShell>

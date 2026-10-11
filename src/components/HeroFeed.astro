@@ -1,0 +1,98 @@
+---
+import ActionCardsWatermark from "./ActionCardsWatermark.astro";
+---
+
+<section class="mx-auto w-full max-w-7xl px-4 sm:px-10 lg:px-14 pt-4 sm:pt-6 pb-4" aria-labelledby="campus-feed-title">
+  <!-- Title / Eyebrow Header (Scaled generously) -->
+  <div class="text-center pt-2 sm:pt-3 pb-6 sm:pb-10">
+    <p class="text-xs sm:text-sm font-bold tracking-[0.25em] uppercase text-forest-900/70">
+      CAMPUS FEED
+    </p>
+    <h1
+      id="campus-feed-title"
+      class="mt-2 font-serif text-5xl sm:text-7xl md:text-8xl lg:text-[5.5rem] font-black tracking-tight text-forest-900 leading-[1.03]"
+    >
+      Lost<span class="italic font-serif font-black text-forest-900">&</span>Found
+    </h1>
+    <p class="mx-auto mt-3 sm:mt-4 max-w-lg text-sm sm:text-lg md:text-xl leading-relaxed text-forest-900/80 px-2">
+      Everything the DLSAU community has lost or found, all in one place.
+    </p>
+  </div>
+
+  <!-- Two Big Action Banner Cards (Scaled to match AuthShell panel size) -->
+  <div class="grid grid-cols-1 gap-5 sm:gap-8 md:grid-cols-2">
+    <!-- Left Card: Found an item? -->
+    <div
+      class="relative overflow-hidden rounded-3xl bg-[#164f38] p-6 sm:p-10 lg:p-12 text-white shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
+    >
+      <!-- Watermark Graphic -->
+      <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-[#1e5c41] opacity-60" />
+
+      <!-- Card Content Top -->
+      <div class="relative z-10">
+        <span class="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white/95">
+          I FOUND SOMETHING
+        </span>
+        <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight">
+          Found an item?<br />
+          <span class="text-[#d8ef8c]">Post it here.</span>
+        </h2>
+        <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-[1.0625rem] text-white/80 leading-relaxed">
+          Add a photo, note where you found it and where it's being kept.
+        </p>
+      </div>
+
+      <!-- Card Content Bottom Row -->
+      <div class="relative z-10 mt-6 sm:mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <button
+          type="button"
+          data-open-report="found"
+          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-[#d8ef8c] px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-forest-900 shadow-2xs transition-all hover:bg-[#c9e376] hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
+        >
+          <span>Post a found item</span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <p class="text-xs sm:text-sm md:text-base text-white/90">
+          <strong class="font-bold text-white">128</strong> items waiting to be claimed
+        </p>
+      </div>
+    </div>
+
+    <!-- Right Card: Lost something? -->
+    <div
+      class="relative overflow-hidden rounded-3xl bg-[#d8ef8c] p-6 sm:p-10 lg:p-12 text-forest-900 shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
+    >
+      <!-- Watermark Graphic -->
+      <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-[#c2dc6d] opacity-55" />
+
+      <!-- Card Content Top -->
+      <div class="relative z-10">
+        <span class="inline-flex items-center rounded-full border border-forest-900/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-forest-900">
+          I LOST SOMETHING
+        </span>
+        <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight text-forest-900">
+          Lost something?<br />
+          <span>Tell the community.</span>
+        </h2>
+        <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-[1.0625rem] text-forest-900/85 leading-relaxed">
+          Describe it, say where you last saw it and we'll keep your post visible.
+        </p>
+      </div>
+
+      <!-- Card Content Bottom Row -->
+      <div class="relative z-10 mt-6 sm:mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <button
+          type="button"
+          data-open-report="lost"
+          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-forest-700 px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-forest-900 hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
+        >
+          <span>Post a lost item</span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <p class="text-xs sm:text-sm md:text-base text-forest-900/90">
+          <strong class="font-bold text-forest-900">46</strong> active lost reports
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

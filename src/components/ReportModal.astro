@@ -1,0 +1,419 @@
+---
+import { CATEGORIES, LOCATIONS } from "~/data/mockItems";
+
+const presets = LOCATIONS.filter((l) => l !== "All Locations");
+---
+
+<div
+  id="report-modal-backdrop"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-xs p-3 sm:p-4"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="report-modal-title"
+>
+  <div class="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-card border border-line/70 bg-white p-5 shadow-2xl sm:p-7">
+    <!-- Close button -->
+    <button
+      type="button"
+      id="close-report-modal"
+      class="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full text-sage-600 hover:bg-canvas hover:text-ink cursor-pointer transition-colors"
+      aria-label="Close dialog"
+    >
+      <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <h3 id="report-modal-title" class="font-serif text-xl sm:text-2xl font-black text-ink">
+      Post an Item to Campus Feed
+    </h3>
+    <p class="mt-1 text-xs sm:text-sm text-sage-600">
+      Report an item you lost or found within De La Salle Araneta University.
+    </p>
+
+    <!-- Step 1: Type Selection Choice -->
+    <div class="mt-4 grid grid-cols-2 gap-3">
+      <button
+        type="button"
+        id="report-choice-found"
+        class="flex flex-col items-start rounded-2xl border-2 border-forest-700 bg-forest-700/5 p-3.5 text-left transition-all hover:bg-forest-700/10 cursor-pointer"
+      >
+        <span class="rounded-full bg-forest-700 px-2.5 py-0.5 text-[0.6875rem] font-bold text-white uppercase tracking-wider">
+          Found
+        </span>
+        <span class="mt-2 text-sm font-bold text-forest-900">I Found Something</span>
+        <span class="mt-0.5 text-xs text-sage-600 leading-normal">
+          Drop off at Security Office
+        </span>
+      </button>
+
+      <button
+        type="button"
+        id="report-choice-lost"
+        class="flex flex-col items-start rounded-2xl border-2 border-line bg-white p-3.5 text-left transition-all hover:border-forest-700 hover:bg-lime/15 cursor-pointer"
+      >
+        <span class="rounded-full bg-lime px-2.5 py-0.5 text-[0.6875rem] font-bold text-forest-900 uppercase tracking-wider">
+          Lost
+        </span>
+        <span class="mt-2 text-sm font-bold text-forest-900">I Lost Something</span>
+        <span class="mt-0.5 text-xs text-sage-600 leading-normal">
+          Broadcast to community
+        </span>
+      </button>
+    </div>
+
+    <!-- Form Inputs -->
+    <form
+      id="quick-report-form"
+      class="mt-5 space-y-3.5"
+      onsubmit="event.preventDefault(); window.handleReportSubmit();"
+    >
+      <input type="hidden" id="report-type-val" value="found" />
+
+      <div>
+        <label for="report-name" class="label">Item Name</label>
+        <input
+          type="text"
+          id="report-name"
+          required
+          placeholder="e.g. Black leather wallet, Hydroflask bottle..."
+          class="field"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label for="report-category" class="label">Category</label>
+          <select id="report-category" required class="field">
+            <option value="" selected disabled>Select category</option>
+            {CATEGORIES.filter((c) => c !== "All Categories").map((c) => (
+              <option value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label for="report-location" class="label">Location</label>
+          <select id="report-location" required class="field">
+            <option value="" selected disabled>Select location</option>
+            {presets.map((l) => (
+              <option value={l}>{l}</option>
+            ))}
+            <option value="__other__">Other (type below)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="report-location-other-wrap" class="hidden">
+        <label for="report-location-other" class="label">Custom location</label>
+        <input
+          type="text"
+          id="report-location-other"
+          placeholder="e.g. Room 201, Science Building"
+          class="field"
+        />
+      </div>
+
+      <!-- Step 2: Photo Upload (1-3 images, required for Found, optional for Lost) -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="label mb-0" id="report-photos-label">
+            Item Photos <span id="photo-req-star" class="text-danger">*</span>
+          </label>
+          <span
+            id="photo-req-badge"
+            class="rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-bold text-forest-700"
+          >
+            1 required (max 3)
+          </span>
+        </div>
+        <p id="photo-req-hint" class="text-xs text-sage-600">
+          Upload clear photos so the owner can identify it. Compressed automatically for crisp, fast display.
+        </p>
+        <!-- Hidden Native File Input -->
+        <input
+          type="file"
+          id="report-photos-input"
+          accept="image/png, image/jpeg, image/jpg, image/webp"
+          multiple
+          class="hidden"
+        />
+
+        <!-- Clickable & Drag-and-Drop Dropzone -->
+        <div
+          id="photo-dropzone"
+          role="button"
+          tabindex="0"
+          aria-label="Upload item photos"
+          class="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line bg-canvas p-4 text-center transition-all hover:border-forest-700 hover:bg-forest-700/5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-forest-700/20"
+        >
+          <div class="flex size-9 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 group-hover:scale-110 transition-transform">
+            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <p class="mt-2 text-sm font-bold text-forest-900">
+            Click to upload or drag & drop photos
+          </p>
+          <p class="mt-0.5 text-xs text-sage-600">
+            PNG, JPG, WebP up to 5MB (1 to 3 images)
+          </p>
+        </div>
+
+        <!-- Thumbnails Preview Grid -->
+        <div id="photos-preview-grid" class="hidden grid grid-cols-3 gap-2.5 pt-1">
+          <!-- Dynamically populated thumbnails with remove buttons -->
+        </div>
+
+        <!-- Status & Compression Info -->
+        <div id="photos-status-bar" class="hidden flex items-center justify-between text-xs text-sage-600">
+          <span id="photos-count-indicator">0 of 3 photos attached</span>
+          <span id="photos-compression-tag" class="text-emerald-700 font-semibold">✓ Auto-compressed & crisp</span>
+        </div>
+
+        <!-- Validation Error Alert -->
+        <div
+          id="photo-validation-error"
+          class="hidden rounded-control border border-danger/25 bg-danger/5 p-2.5 text-xs font-bold text-danger flex items-center gap-2"
+          role="alert"
+        >
+          <svg class="size-4 shrink-0 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Please add at least 1 photo for found items (up to 3 photos allowed).</span>
+        </div>
+      </div>
+
+      <div>
+        <label for="report-desc" class="label">Description</label>
+        <textarea
+          id="report-desc"
+          required
+          rows="2"
+          minlength="10"
+          placeholder="Provide identifiable details, colors, or condition..."
+          class="field resize-y"
+        ></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          id="cancel-report-btn"
+          class="min-h-10 rounded-control border border-line px-5 py-2 text-sm font-semibold text-sage-700 hover:bg-canvas cursor-pointer transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn-primary w-auto min-h-10 rounded-control px-7 py-2 text-sm"
+        >
+          Submit Report
+        </button>
+      </div>
+    </form>
+
+    <div
+      id="report-success-msg"
+      class="hidden mt-4 rounded-control border border-line bg-canvas p-3.5 text-center text-sm font-semibold text-forest-900"
+    >
+      Your report has been submitted! It will appear on the campus feed once verified.
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (function () {
+    // Custom location dropdown
+    const locSelect = document.getElementById("report-location");
+    const otherWrap = document.getElementById("report-location-other-wrap");
+    const otherInput = document.getElementById("report-location-other");
+    if (locSelect && otherWrap && otherInput) {
+      locSelect.addEventListener("change", function () {
+        const isOther = locSelect.value === "__other__";
+        otherWrap.classList.toggle("hidden", !isOther);
+        otherInput.required = isOther;
+        if (!isOther) otherInput.value = "";
+        if (isOther) otherInput.focus();
+      });
+    }
+
+    // Photo Upload, Client Compression, Previews, and Limit (1-3 images)
+    window.reportUploadedPhotos = [];
+
+    const fileInput = document.getElementById("report-photos-input");
+    const dropzone = document.getElementById("photo-dropzone");
+    const previewGrid = document.getElementById("photos-preview-grid");
+    const statusBar = document.getElementById("photos-status-bar");
+    const countIndicator = document.getElementById("photos-count-indicator");
+    const validationError = document.getElementById("photo-validation-error");
+
+    if (!fileInput || !dropzone) return;
+
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    // Drag and Drop
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add("border-forest-700", "bg-forest-700/10");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove("border-forest-700", "bg-forest-700/10");
+      });
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      const files = e.dataTransfer?.files;
+      if (files && files.length) handleSelectedFiles(Array.from(files));
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      const files = e.target.files;
+      if (files && files.length) handleSelectedFiles(Array.from(files));
+      fileInput.value = "";
+    });
+
+    // Compress image via HTML5 Canvas (max 1200px, JPEG 0.85)
+    async function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file.type.startsWith("image/")) {
+          return reject(new Error("File is not an image"));
+        }
+        const reader = new FileReader();
+        reader.onload = (readerEvent) => {
+          const img = new Image();
+          img.onload = () => {
+            const maxDimension = 1200;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              } else {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return resolve(readerEvent.target.result);
+
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+            resolve(compressedDataUrl);
+          };
+          img.onerror = reject;
+          img.src = readerEvent.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleSelectedFiles(files) {
+      if (validationError) validationError.classList.add("hidden");
+
+      const availableSlots = 3 - window.reportUploadedPhotos.length;
+      if (availableSlots <= 0) {
+        alert("You have already added the maximum of 3 photos.");
+        return;
+      }
+
+      if (files.length > availableSlots) {
+        alert(`You can only add up to 3 photos in total. Adding ${availableSlots} of your selected photos.`);
+      }
+
+      const filesToProcess = files.slice(0, availableSlots);
+
+      for (const file of filesToProcess) {
+        try {
+          const compressedDataUrl = await compressImage(file);
+          window.reportUploadedPhotos.push(compressedDataUrl);
+        } catch (err) {
+          console.error("Compression error:", err);
+        }
+      }
+
+      renderPhotoPreviews();
+    }
+
+    function renderPhotoPreviews() {
+      if (!previewGrid || !statusBar || !countIndicator) return;
+
+      previewGrid.innerHTML = "";
+      const count = window.reportUploadedPhotos.length;
+
+      if (count > 0) {
+        previewGrid.classList.remove("hidden");
+        statusBar.classList.remove("hidden");
+        countIndicator.textContent = `${count} of 3 photos attached`;
+
+        window.reportUploadedPhotos.forEach((dataUrl, index) => {
+          const card = document.createElement("div");
+          card.className = "relative aspect-square overflow-hidden rounded-control border border-line bg-canvas shadow-2xs group";
+
+          const img = document.createElement("img");
+          img.src = dataUrl;
+          img.alt = `Uploaded item photo ${index + 1}`;
+          img.className = "h-full w-full object-cover";
+
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.setAttribute("aria-label", `Remove photo ${index + 1}`);
+          removeBtn.className = "absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-danger text-white shadow-xs hover:opacity-90 cursor-pointer text-xs font-bold transition-transform active:scale-90";
+          removeBtn.innerHTML = "✕";
+          removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            window.reportUploadedPhotos.splice(index, 1);
+            renderPhotoPreviews();
+          };
+
+          const badge = document.createElement("span");
+          badge.className = "absolute bottom-1 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs";
+          badge.textContent = `Photo ${index + 1}`;
+
+          card.appendChild(img);
+          card.appendChild(removeBtn);
+          card.appendChild(badge);
+          previewGrid.appendChild(card);
+        });
+
+        // Toggle dropzone if 3 photos reached
+        if (count >= 3) {
+          dropzone.classList.add("hidden");
+        } else {
+          dropzone.classList.remove("hidden");
+        }
+      } else {
+        previewGrid.classList.add("hidden");
+        statusBar.classList.add("hidden");
+        dropzone.classList.remove("hidden");
+      }
+    }
+
+    window.resetReportPhotos = function () {
+      window.reportUploadedPhotos = [];
+      renderPhotoPreviews();
+      if (validationError) validationError.classList.add("hidden");
+    };
+  })();
+</script>

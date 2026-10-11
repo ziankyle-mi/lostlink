@@ -38,6 +38,7 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   agree: z.coerce.boolean().optional().default(false),
+  role: z.enum(["student", "faculty", "admin"]).optional().default("student"),
 });
 
 export const forgotPasswordSchema = z.object({

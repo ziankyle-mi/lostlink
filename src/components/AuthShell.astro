@@ -14,46 +14,51 @@ const { title, heading, subheading, description } = Astro.props;
 ---
 
 <Base title={title} description={description}>
-  <div class="flex min-h-dvh flex-col bg-canvas px-5 sm:px-10 lg:px-14">
+  <div class="flex min-h-dvh flex-col bg-canvas px-4 sm:px-10 lg:px-14">
     <header class="flex items-center justify-between gap-4 border-b border-line py-5 sm:py-6">
       <BrandHeader />
       <div class="flex items-center gap-5">
         <p class="hidden text-[0.8125rem] font-medium tracking-wide text-forest-700 uppercase md:block">
           DLSAU Campus Community
         </p>
-        <a href="/forgot-password" class="help-pill">Need Help?</a>
+        <a href="/help" class="help-pill">Need Help?</a>
       </div>
     </header>
 
     <main class="grid flex-1 gap-5 py-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
       <aside
-        class="relative hidden flex-col justify-between rounded-card bg-forest-700 p-9 text-white lg:flex xl:p-10"
+        class="relative hidden flex-col justify-between overflow-hidden rounded-card bg-forest-700 p-9 text-white lg:flex xl:p-10"
       >
-        <div class="flex items-start justify-between">
+        <!-- Soft light glow, matching the mockup -->
+        <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+          <div class="absolute -right-20 -top-24 size-[30rem] rounded-full bg-lime/15 blur-3xl"></div>
+          <div
+            class="absolute right-6 top-1/2 size-[26rem] -translate-y-1/2 rounded-full bg-[#9fd4a8]/25 blur-3xl"
+          >
+          </div>
+        </div>
+
+        <div class="relative flex items-start justify-between">
           <span class="rounded-full border border-white/70 px-4 py-1.5 text-[0.9375rem]">
             DLSAU &middot; Lost &amp; Found
           </span>
-          <svg
-            viewBox="0 0 24 24"
-            class="size-7 text-lime"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.6"
-            stroke-linecap="round"
-            aria-hidden="true"
-          >
-            <path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5"></path>
+          <svg viewBox="0 0 24 24" class="size-6 text-lime" fill="currentColor" aria-hidden="true">
+            <path
+              d="M12 2c.4 4.8 5.2 9.6 10 10-4.8.4-9.6 5.2-10 10-.4-4.8-5.2-9.6-10-10 4.8-.4 9.6-5.2 10-10z"
+            ></path>
           </svg>
         </div>
 
-        <p class="font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal">
+        <p
+          class="relative font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal"
+        >
           Find what<br />
           <span class="font-bold text-lime">you Lost.</span><br />
           Return what<br />
           <span class="font-bold text-lime">you Found.</span>
         </p>
 
-        <div class="rounded-2xl bg-lime px-8 py-7">
+        <div class="relative rounded-2xl bg-lime px-8 py-7">
           <p class="text-2xl leading-snug font-semibold text-forest-700 xl:text-[1.75rem]">
             A little thing,<br />can mean a lot.
           </p>
@@ -61,7 +66,7 @@ const { title, heading, subheading, description } = Astro.props;
       </aside>
 
       <section
-        class="flex flex-col justify-center rounded-card border border-line/70 bg-white px-6 py-8 sm:px-10 sm:py-10 xl:px-11"
+        class="flex flex-col justify-center rounded-card border border-line/70 bg-white px-6 py-8 shadow-card sm:px-10 sm:py-10 xl:px-11"
         aria-labelledby="auth-title"
       >
         <h1
@@ -78,9 +83,9 @@ const { title, heading, subheading, description } = Astro.props;
     <footer class="flex flex-wrap items-center justify-between gap-3 pt-1 pb-6 text-sm text-forest-700">
       <p>&copy; 2026 LostLink &middot; DLSAU Lost &amp; Found System</p>
       <p class="flex gap-6">
-        <span>Privacy</span>
-        <span>Terms</span>
-        <span>Help</span>
+        <a href="/privacy" class="hover:text-forest-900 underline underline-offset-4">Privacy</a>
+        <a href="/terms" class="hover:text-forest-900 underline underline-offset-4">Terms</a>
+        <a href="/help" class="hover:text-forest-900 underline underline-offset-4">Help</a>
       </p>
     </footer>
   </div>

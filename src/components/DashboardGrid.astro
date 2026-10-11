@@ -1,0 +1,79 @@
+---
+import { INITIAL_ITEMS, EXTRA_ITEMS } from "~/data/mockItems";
+import ItemCard from "./ItemCard.astro";
+---
+
+<section id="feed" class="mx-auto w-full max-w-7xl px-4 sm:px-10 lg:px-14 py-6 sm:py-10" aria-labelledby="latest-heading">
+  <!-- Section Header (Scaled up) -->
+  <div class="flex flex-wrap items-end justify-between gap-3 sm:gap-4 pb-5 sm:pb-8">
+    <div>
+      <h2 id="latest-heading" class="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-[2.65rem] font-black text-forest-900 leading-tight">
+        Latest on campus
+      </h2>
+      <p id="feed-subtitle" class="mt-1 text-sm sm:text-base text-forest-900/75">
+        Showing 8 of 10 items, newest first.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      id="view-all-items-btn"
+      class="inline-flex items-center gap-1.5 text-sm sm:text-base font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 cursor-pointer"
+    >
+      <span>View all items</span>
+      <span aria-hidden="true">→</span>
+    </button>
+  </div>
+
+  <!-- Cards Grid (Fluid 1 -> 2 -> 3 -> 4 columns) -->
+  <div
+    id="items-grid"
+    class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-6 lg:gap-7"
+  >
+    <!-- Initial 8 Mockup Cards -->
+    {INITIAL_ITEMS.map((item) => (
+      <ItemCard item={item} />
+    ))}
+
+    <!-- Additional items loaded on click -->
+    {EXTRA_ITEMS.map((item) => (
+      <div class="extra-item hidden">
+        <ItemCard item={item} />
+      </div>
+    ))}
+  </div>
+
+  <!-- Empty State when filters yield 0 results -->
+  <div
+    id="empty-state"
+    class="hidden my-14 rounded-card border border-line bg-white/80 p-10 text-center sm:p-14"
+  >
+    <div class="mx-auto flex size-14 items-center justify-center rounded-full bg-[#ece5d6] text-forest-900">
+      <svg class="size-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </div>
+    <h3 class="mt-5 font-serif text-xl sm:text-2xl font-bold text-forest-900">No matching items found</h3>
+    <p class="mt-2 text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
+      Try adjusting your search terms or clearing current filters to browse all campus lost and found reports.
+    </p>
+    <button
+      type="button"
+      id="empty-clear-filters-btn"
+      class="mt-6 inline-flex min-h-11 items-center rounded-full bg-forest-700 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-forest-900 cursor-pointer"
+    >
+      Clear all filters
+    </button>
+  </div>
+
+  <!-- Load More Button (Scaled up) -->
+  <div class="mt-10 text-center sm:mt-12">
+    <button
+      type="button"
+      id="load-more-btn"
+      class="inline-flex min-h-[3.25rem] items-center gap-2 rounded-full border border-forest-900/40 bg-white/90 px-8 sm:px-10 py-3 text-sm sm:text-base font-bold text-forest-900 shadow-2xs transition-all hover:bg-white hover:shadow-sm active:scale-95 cursor-pointer"
+    >
+      <span>Load more items</span>
+    </button>
+  </div>
+</section>
