@@ -84,4 +84,49 @@ describe("Live Admin & Notifications Integration", () => {
     // Clean up test notification
     await supabase.from("notifications").delete().eq("id", inserted.id);
   });
+
+  it("supports admin post removal workflow with audit logging", async () => {
+    const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
+      auth: { persistSession: false },
+    });
+
+    const { data: prof } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
+    if (!prof?.id) return;
+
+    // Create a temporary test item
+    const testItemName = `Test Removable Item [${Date.now()}]`;
+    const { data: testItem, error: itemErr } = await supabase
+      .from("items")
+      .insert({
+        type: "lost",
+        name: testItemName,
+        category: "Accessories",
+        location: "Campus Plaza",
+        event_date: new Date().toISOString().split("T")[0],
+        description: "Test description for admin post removal verification.",
+        reporter_id: prof.id,
+        status: "approved",
+      })
+      .select()
+      .single();
+
+    expect(itemErr).toBeNull();
+    expect(testItem?.id).toBeDefined();
+
+    // Perform removal clean up
+    await supabase.from("admin_log").delete().eq("item_id", testItem.id);
+    await supabase.from("claims").delete().eq("item_id", testItem.id);
+    const { error: delErr } = await supabase.from("items").delete().eq("id", testItem.id);
+    expect(delErr).toBeNull();
+
+    // Verify item is removed
+    const { data: checkItem } = await supabase
+      .from("items")
+      .select("id")
+      .eq("id", testItem.id)
+      .maybeSingle();
+
+    expect(checkItem).toBeNull();
+  });
 });

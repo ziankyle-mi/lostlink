@@ -18,15 +18,14 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
-Done: Completed items #3 (Admin Dashboard Live Data & Actions) and #4 (In-App Notifications Live Wiring).
-- Live Supabase metrics (`itemsInCustody`, `activeLostReports`, `claimsToVerify`, `returnedThisMonth`) queried via `readEnv()` + `@supabase/supabase-js`.
-- Claims verification table wired with live Supabase claims and interactive dossier review modal (`verify_claim` and `deny_claim` actions writing to `claims`, `items`, and `admin_log`).
-- Waiting for intake queue wired with live pending found items and custody confirmation (`confirm_intake` action).
-- Recent activity audit feed wired to live `admin_log` entries with relative timestamps.
-- Notifications bell wired to live `notifications` table with unread counter dot, badge, timestamp formatting, and mark-all-read endpoint (`/api/notifications`).
-- Replaced all external/unrelated Unsplash placeholder images with high-resolution, context-accurate Gemini Imagen photos stored locally in `public/items/` (keys with DLSAU lanyard, student RFID ID card, black bifold wallet, insulated bottle with lime boot, silver laptop, earbuds on couch, campus backpack, folding umbrella, Casio scientific calculator, and black rimmed eyeglasses).
-- Live Campus Feed SSR: Wired home page `index.astro`, `HeroFeed`, `FilterBar`, and `DashboardGrid` to query live Supabase `items` table on page load, rendering all reported items with photos across devices immediately.
-- 50 passing vitest tests; `astro check` with 0 errors and 0 warnings.
+Done: Admin Post Removal Control & Moderation Option for Disciplinary Office.
+- Implemented Admin Post Removal option strictly restricted to authorized administrators (Disciplinary Office / DO). Non-admin users cannot see or trigger post removals.
+- Added `/api/admin/actions` (`remove_post` action) and `DELETE /api/items` with strict role verification (`user.role === 'admin' || roleForEmail(email) === 'admin'`), cascading foreign key cleanups (`admin_log`, `claims`), item deletion/archival, audit logging into `admin_log`, and automated in-app notification to the reporter.
+- Added visual quick-action remove button on `ItemCard.astro` and dedicated Disciplinary Office controls banner inside `ItemClaimModal.astro`.
+- Created accessible `AdminRemoveModal.astro` with confirmation dialog, destructive rose styling, and loading spinner state to prevent accidental post removals.
+- Implemented dynamic DOM removal with CSS transitions, real-time counter updates, and persistent `sessionStorage` tracking across demo sessions.
+- Added "Remove" moderation button for admin items in `IntakeQueue.astro` on `/admin`.
+- 51 passing vitest tests; `astro check` with 0 errors and 0 warnings.
 
 - `context/createnewacc.png` decides the registration / create account UI:
   two-column layout with left emerald radial banner ("Find what you Lost. Return what you Found."

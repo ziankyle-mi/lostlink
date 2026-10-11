@@ -585,6 +585,46 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
         });
       });
 
+      // Remove intake post buttons (Admin only)
+      document.querySelectorAll(".remove-intake-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const name = btn.getAttribute("data-intake-name") || "Item";
+          const itemId = btn.getAttribute("data-intake-id");
+          if (!confirm(`Are you sure you want to remove the post for "${name}"?`)) {
+            return;
+          }
+          btn.disabled = true;
+          btn.textContent = "Removing...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "remove_post", itemId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              const row = btn.closest(".flex.items-center.justify-between");
+              if (row) {
+                row.style.transition = "all 0.3s ease-out";
+                row.style.opacity = "0";
+                row.style.transform = "scale(0.9)";
+                setTimeout(() => row.remove(), 300);
+              }
+              showToast(`Post "${name}" was removed.`);
+            } else {
+              btn.disabled = false;
+              btn.textContent = "Remove";
+              showToast(data.error || "Failed to remove post.");
+            }
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = "Remove";
+            showToast("Failed to remove post.");
+          }
+        });
+      });
+
       // Quick search filter
       const searchInput = document.getElementById("overview-search-input");
       if (searchInput) {

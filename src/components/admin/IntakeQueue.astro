@@ -111,14 +111,25 @@ const queueItems = mappedLiveIntake.length > 0
               </div>
             </div>
 
-            <button
-              type="button"
-              data-intake-id={item.id}
-              data-intake-name={item.name}
-              class="confirm-intake-btn shrink-0 rounded-full bg-[#d8ef8c] hover:bg-[#cde97b] active:scale-95 px-4.5 py-2 text-xs font-bold text-[#164f38] transition-all shadow-xs cursor-pointer"
-            >
-              Confirm received
-            </button>
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                data-intake-id={item.id}
+                data-intake-name={item.name}
+                class="remove-intake-btn rounded-full border border-rose-200/90 bg-rose-50 hover:bg-rose-100 active:scale-95 px-3 py-1.5 text-xs font-bold text-rose-700 transition-all shadow-2xs cursor-pointer"
+                title="Remove post"
+              >
+                Remove
+              </button>
+              <button
+                type="button"
+                data-intake-id={item.id}
+                data-intake-name={item.name}
+                class="confirm-intake-btn rounded-full bg-[#d8ef8c] hover:bg-[#cde97b] active:scale-95 px-4 py-1.5 text-xs font-bold text-[#164f38] transition-all shadow-xs cursor-pointer"
+              >
+                Confirm received
+              </button>
+            </div>
           </div>
         ))}
       </div>

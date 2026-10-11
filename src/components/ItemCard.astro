@@ -4,9 +4,10 @@ import ItemIllustration from "./ItemIllustration.astro";
 
 interface Props {
   item: DashboardItem;
+  isAdmin?: boolean;
 }
 
-const { item } = Astro.props;
+const { item, isAdmin = false } = Astro.props;
 ---
 
 <article
@@ -37,6 +38,22 @@ const { item } = Astro.props;
     >
       {item.type.toUpperCase()}
     </span>
+
+    <!-- Admin Remove Button (Visible ONLY to Admins) -->
+    {isAdmin && (
+      <button
+        type="button"
+        class="admin-remove-card-btn absolute right-3.5 top-3.5 z-30 flex size-8 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow-md backdrop-blur-xs transition-all hover:bg-rose-600 hover:text-white hover:scale-110 active:scale-95 cursor-pointer"
+        data-item-id={item.id}
+        data-item-name={item.name}
+        title="Remove Post (Admin)"
+        aria-label={`Remove post ${item.name}`}
+      >
+        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    )}
 
     {item.images && item.images.length > 0 ? (
       <div class="card-slider relative h-full w-full overflow-hidden" data-images-count={item.images.length} data-current-idx="0">

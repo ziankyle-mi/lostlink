@@ -44,3 +44,5 @@
 | Joshua Enriquez | `joshua.enriquez@dlsau.edu.ph` | `huan123456` | **user** | `huan` |
 | Paulo Mendoza | `paulo.mendoza@dlsau.edu.ph` | `paulo123456` | **user** | `paulo` |
 | Zian Piangco | `zian.piangco@dlsau.edu.ph` | `zian123456` | **admin** | `zian` |
+| Andrew Cruz | `andrew.cruz@dlsau.edu.ph` | `Andoy123` | **admin** | 
+

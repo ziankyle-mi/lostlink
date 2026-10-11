@@ -4,9 +4,10 @@ import ItemCard from "./ItemCard.astro";
 
 interface Props {
   items?: DashboardItem[];
+  isAdmin?: boolean;
 }
 
-const { items } = Astro.props;
+const { items, isAdmin = false } = Astro.props;
 const displayItems = items && items.length > 0 ? items : [...INITIAL_ITEMS, ...EXTRA_ITEMS];
 const initialDisplay = displayItems.slice(0, 8);
 const extraDisplay = displayItems.slice(8);
@@ -43,13 +44,13 @@ const showingCount = Math.min(8, totalCount);
   >
     <!-- Initial Cards -->
     {initialDisplay.map((item) => (
-      <ItemCard item={item} />
+      <ItemCard item={item} isAdmin={isAdmin} />
     ))}
 
     <!-- Additional items loaded on click -->
     {extraDisplay.map((item) => (
       <div class="extra-item hidden">
-        <ItemCard item={item} />
+        <ItemCard item={item} isAdmin={isAdmin} />
       </div>
     ))}
   </div>

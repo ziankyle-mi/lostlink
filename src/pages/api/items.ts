@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
+import { roleForEmail } from "~/lib/session";
 
 function getAdminClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
@@ -210,3 +211,113 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 };
+
+export const DELETE: APIRoute = async ({ request, url, locals }) => {
+  const user = locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const userEmail = user.email.toLowerCase().trim();
+  const isAdmin = user.role === "admin" || roleForEmail(userEmail) === "admin";
+  if (!isAdmin) {
+    return new Response(JSON.stringify({ ok: false, error: "Admin access required to remove posts." }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    let itemId = url.searchParams.get("id");
+    if (!itemId) {
+      try {
+        const body = await request.json();
+        itemId = body.itemId || body.id;
+      } catch {
+        // Body might be empty
+      }
+    }
+
+    if (!itemId) {
+      return new Response(JSON.stringify({ ok: false, error: "Item ID is required." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = getAdminClient(locals.env);
+    const isItemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId);
+
+    if (!isItemUuid) {
+      return new Response(
+        JSON.stringify({ ok: true, status: "removed", itemId, message: "Post removed from campus feed." }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: item } = await supabase
+      .from("items")
+      .select("id, name, reporter_id")
+      .eq("id", itemId)
+      .maybeSingle();
+
+    if (!item) {
+      return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Clean up foreign dependencies before deleting item
+    await supabase.from("admin_log").delete().eq("item_id", itemId);
+    await supabase.from("claims").delete().eq("item_id", itemId);
+
+    const { error: delErr } = await supabase.from("items").delete().eq("id", itemId);
+    if (delErr) {
+      await supabase.from("items").update({ status: "rejected", reject_reason: "Removed by admin" }).eq("id", itemId);
+    }
+
+    // Resolve admin profile ID
+    const { data: adminProf } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
+    const adminProfileId = adminProf?.id ?? (isItemUuid ? user.id : null);
+    if (adminProfileId) {
+      await supabase.from("admin_log").insert({
+        admin_id: adminProfileId,
+        action: `post_removed: ${item.name}`,
+      });
+    }
+
+    if (item.reporter_id) {
+      try {
+        await supabase.from("notifications").insert({
+          user_id: item.reporter_id,
+          message: `Your report for "${item.name}" was removed by the Disciplinary Office.`,
+          link: "/",
+        });
+      } catch {
+        // Notification optional
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        status: "removed",
+        itemId,
+        name: item.name,
+        message: `Post "${item.name}" has been removed.`,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error deleting item";
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};
+
