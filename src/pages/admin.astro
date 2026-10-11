@@ -7,13 +7,16 @@ import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.
 import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
 
+import { roleForEmail } from "~/lib/session";
+
 const user = Astro.locals.user;
 const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
+const isRealAdmin = user?.role === "admin" || roleForEmail(userEmail) === "admin";
 
-// View query param allows previewing the student perspective directly
+// View query param allows previewing both views, while students default safely to student view
 const url = new URL(Astro.request.url);
-const currentView = url.searchParams.get("view") === "student" ? "student" : "admin";
-const isStudentView = currentView === "student";
+const requestedView = url.searchParams.get("view");
+const isStudentView = requestedView === "student" || (!isRealAdmin && requestedView !== "admin");
 
 // Date formatting matching "SATURDAY, OCTOBER 10" from Figma
 const today = new Date();

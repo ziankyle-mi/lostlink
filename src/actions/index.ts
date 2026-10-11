@@ -25,6 +25,7 @@ import {
   clearSessionCookies,
   devBypassEnabled,
   policyFromEnv,
+  roleForEmail,
   sessionCookieOptions,
   setSessionCookies,
 } from "~/lib/session";
@@ -62,7 +63,9 @@ export const server = {
       }
 
       setSessionCookies(context.cookies, result.session, remember);
-      return { redirect: safeNextPath(next) };
+      const defaultPath = roleForEmail(email) === "admin" ? "/admin" : "/";
+      const targetPath = next && next !== "/" ? safeNextPath(next) : defaultPath;
+      return { redirect: targetPath };
     },
   }),
 
