@@ -21,6 +21,7 @@ coverage/
 # OS and editor
 .DS_Store
 Thumbs.db
+~$*
 .idea/
 .vscode/*
 !.vscode/extensions.json
