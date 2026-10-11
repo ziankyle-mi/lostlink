@@ -32,11 +32,14 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
     const { data: dbItems } = await supabase
       .from("items")
       .select("*")
-      .or("status.eq.approved,status.eq.in_custody,status.eq.pending,status.is.null")
       .order("created_at", { ascending: false });
 
-    if (dbItems && dbItems.length > 0) {
-      liveItems = dbItems.map((row) => {
+    const visibleDbItems = (dbItems || []).filter(
+      (item) => item.status !== "rejected" && item.status !== "archived",
+    );
+
+    if (visibleDbItems.length > 0) {
+      liveItems = visibleDbItems.map((row) => {
         let images: string[] = [];
         if (row.photo_path) {
           try {
