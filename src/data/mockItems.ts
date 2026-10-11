@@ -30,10 +30,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     actionLabel: "Claim this item",
     referenceCode: "LL-4821",
     description: "Black leather bifold wallet with student card slots found near the quiet study section tables.",
-    images: [
-      "https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1554412933-514a83d2f3c8?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/wallet.jpg"],
   },
   {
     id: "item-2",
@@ -48,6 +45,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     tint: "#e9e7dc",
     actionLabel: "I found this",
     description: "Cobalt blue vacuum-insulated stainless steel bottle with lime silicone boot and small dent on the bottom rim.",
+    images: ["/items/water_bottle.jpg"],
   },
   {
     id: "item-3",
@@ -63,9 +61,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     actionLabel: "Claim this item",
     referenceCode: "LL-4819",
     description: "Official DLSAU student RFID card found on the turnstile counter. Turned in to security guard.",
-    images: [
-      "https://images.unsplash.com/photo-1589330694653-dad6ef49c654?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/student_id.jpg"],
   },
   {
     id: "item-4",
@@ -81,11 +77,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     actionLabel: "Claim this item",
     referenceCode: "LL-4805",
     description: "Ring with 3 metallic door keys attached to a green DLSAU lanyard with swivel snap hook.",
-    images: [
-      "https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1609137144822-44f24ef364c7?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1590402494587-44b71d7772f6?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/keys.jpg"],
   },
   {
     id: "item-5",
@@ -100,10 +92,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     tint: "#dee8e0",
     actionLabel: "I found this",
     description: "Silver 14-inch ultrabook with green sticker on the outer lid. Left near the window corner booth.",
-    images: [
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/laptop.jpg"],
   },
   {
     id: "item-6",
@@ -119,9 +108,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     actionLabel: "Claim this item",
     referenceCode: "LL-4798",
     description: "White matte wireless charging case found on the waiting couch beside the registrar desk.",
-    images: [
-      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/earbuds.jpg"],
   },
   {
     id: "item-7",
@@ -136,6 +123,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     tint: "#e4ecd6",
     actionLabel: "I found this",
     description: "Navy blue canvas backpack with two zipper compartments containing lecture notebooks and calculator.",
+    images: ["/items/backpack.jpg"],
   },
   {
     id: "item-8",
@@ -151,10 +139,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     actionLabel: "Claim this item",
     referenceCode: "LL-4772",
     description: "Black 3-fold automatic umbrella with wooden hook handle, found under the bleachers.",
-    images: [
-      "https://images.unsplash.com/photo-1534353436294-0dbd4bdac845?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/umbrella.jpg"],
   },
 ];
 
@@ -173,9 +158,7 @@ export const EXTRA_ITEMS: DashboardItem[] = [
     actionLabel: "Claim this item",
     referenceCode: "LL-4760",
     description: "Casio natural display scientific calculator with gray sliding cover.",
-    images: [
-      "https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/calculator.jpg"],
   },
   {
     id: "item-10",
@@ -190,9 +173,7 @@ export const EXTRA_ITEMS: DashboardItem[] = [
     tint: "#e9e7dc",
     actionLabel: "I found this",
     description: "Square matte black acetate prescription glasses in a brown hard case.",
-    images: [
-      "https://images.unsplash.com/photo-1591076482161-42ce6da69f67?auto=format&fit=crop&w=600&q=80"
-    ],
+    images: ["/items/eyeglasses.jpg"],
   },
 ];
 
