@@ -55,6 +55,7 @@ export const ADMIN_EMAILS = new Set([
   "dlsau.lostlink@dlsau.edu.ph",
   "test.lostlink@dlsau.edu.ph",
   "zian.piangco@dlsau.edu.ph",
+  "andrew.cruz@dlsau.edu.ph",
 ]);
 
 export function roleForEmail(email: string): "admin" | "user" {

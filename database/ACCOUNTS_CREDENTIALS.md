@@ -11,7 +11,7 @@
 | Johanne Capili | `johanne.capili@dlsau.edu.ph` | `capili` | **user** | `capili` |
 | Charmaine Casi | `charmaine.casi@dlsau.edu.ph` | `casi123456` | **user** | `casi` |
 | Iris Chua | `iris.chua@dlsau.edu.ph` | `chua123456` | **user** | `chua` |
-| Andrew Cruz | `andrew.cruz@dlsau.edu.ph` | `cruz123456` | **user** | `cruz` |
+| Andrew Cruz | `andrew.cruz@dlsau.edu.ph` | `Andoy123` | **admin** | `Andoy123` |
 | Justin Encarnado | `justin.encarnado@dlsau.edu.ph` | `encarnado` | **user** | `encarnado` |
 | Brian Fonte | `brian.fonte@dlsau.edu.ph` | `fonte123456` | **user** | `fonte` |
 | Justine Garma | `justine.garma@dlsau.edu.ph` | `garma123456` | **user** | `garma` |
