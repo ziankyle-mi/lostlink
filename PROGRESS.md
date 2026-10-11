@@ -25,6 +25,7 @@ Done: Completed items #3 (Admin Dashboard Live Data & Actions) and #4 (In-App No
 - Recent activity audit feed wired to live `admin_log` entries with relative timestamps.
 - Notifications bell wired to live `notifications` table with unread counter dot, badge, timestamp formatting, and mark-all-read endpoint (`/api/notifications`).
 - Replaced all external/unrelated Unsplash placeholder images with high-resolution, context-accurate Gemini Imagen photos stored locally in `public/items/` (keys with DLSAU lanyard, student RFID ID card, black bifold wallet, insulated bottle with lime boot, silver laptop, earbuds on couch, campus backpack, folding umbrella, Casio scientific calculator, and black rimmed eyeglasses).
+- Live Campus Feed SSR: Wired home page `index.astro`, `HeroFeed`, `FilterBar`, and `DashboardGrid` to query live Supabase `items` table on page load, rendering all reported items with photos across devices immediately.
 - 50 passing vitest tests; `astro check` with 0 errors and 0 warnings.
 
 - `context/createnewacc.png` decides the registration / create account UI:
