@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readEnv } from "~/lib/env";
 import { createClient } from "@supabase/supabase-js";
 
-describe("Live Admin & Notifications Integration", () => {
+describe("Live Admin & Notifications Integration", { timeout: 20000 }, () => {
   const env = readEnv();
 
   it("loads environment configuration with valid Supabase settings", () => {

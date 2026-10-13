@@ -19,6 +19,7 @@ const { item, isAdmin = false } = Astro.props;
   data-item-name={item.name}
   data-item-desc={item.description}
   data-item-date={item.date}
+  data-item-event-date={item.eventDate}
   data-item-action={item.actionLabel}
   data-item-ref={item.referenceCode ?? ""}
   data-item-images={JSON.stringify(item.images ?? [])}
