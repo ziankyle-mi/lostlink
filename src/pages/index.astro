@@ -354,8 +354,14 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         currentDate = "all";
         searchQuery = "";
 
-        if (searchInput) searchInput.value = "";
-        if (mobileSearchInput) mobileSearchInput.value = "";
+        if (searchInput) {
+          searchInput.value = "";
+          searchInput.dispatchEvent(new Event("input"));
+        }
+        if (mobileSearchInput) {
+          mobileSearchInput.value = "";
+          mobileSearchInput.dispatchEvent(new Event("input"));
+        }
         const allBtn = document.querySelector('.filter-type-btn[data-filter-type="all"]');
         if (allBtn) {
           typeButtons.forEach((b) => {
@@ -1135,6 +1141,14 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
         setTimeout(hideReportModal, 1600);
       };
+
+      // Parse search from URL params if arriving from another page
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSearch = urlParams.get("search");
+      if (urlSearch && searchInput) {
+        searchInput.value = urlSearch;
+        searchInput.dispatchEvent(new Event("input"));
+      }
     })();
   </script>
 </Base>
