@@ -786,25 +786,47 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
         if (type === "found") {
           typeInput.value = "found";
-          foundChoice.classList.add("border-forest-700", "bg-forest-700/5");
-          foundChoice.classList.remove("border-line", "bg-white");
-          lostChoice.classList.remove("border-forest-700", "bg-lime/15");
-          lostChoice.classList.add("border-line", "bg-white");
+          foundChoice.classList.add("border-[#164f38]", "bg-[#164f38]/5");
+          foundChoice.classList.remove("border-stone-200/90", "bg-white");
+          const foundCheck = foundChoice.querySelector(".choice-check");
+          if (foundCheck) {
+            foundCheck.classList.remove("hidden");
+            foundCheck.classList.add("flex");
+          }
+
+          lostChoice.classList.remove("border-[#164f38]", "bg-[#d8ef8c]/25");
+          lostChoice.classList.add("border-stone-200/90", "bg-white");
+          const lostCheck = lostChoice.querySelector(".choice-check");
+          if (lostCheck) {
+            lostCheck.classList.add("hidden");
+            lostCheck.classList.remove("flex");
+          }
 
           if (photoStar) photoStar.classList.remove("hidden");
           if (photoBadge) {
             photoBadge.textContent = "1 required (max 3)";
-            photoBadge.className = "rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-bold text-forest-700";
+            photoBadge.className = "rounded-full bg-[#164f38]/10 px-2.5 py-0.5 text-xs font-bold text-[#164f38]";
           }
           if (photoHint) {
             photoHint.textContent = "Upload clear photos so the owner can identify it. Compressed automatically for crisp, fast display.";
           }
         } else {
           typeInput.value = "lost";
-          lostChoice.classList.add("border-forest-700", "bg-lime/15");
-          lostChoice.classList.remove("border-line", "bg-white");
-          foundChoice.classList.remove("border-forest-700", "bg-forest-700/5");
-          foundChoice.classList.add("border-line", "bg-white");
+          lostChoice.classList.add("border-[#164f38]", "bg-[#d8ef8c]/25");
+          lostChoice.classList.remove("border-stone-200/90", "bg-white");
+          const lostCheck = lostChoice.querySelector(".choice-check");
+          if (lostCheck) {
+            lostCheck.classList.remove("hidden");
+            lostCheck.classList.add("flex");
+          }
+
+          foundChoice.classList.remove("border-[#164f38]", "bg-[#164f38]/5");
+          foundChoice.classList.add("border-stone-200/90", "bg-white");
+          const foundCheck = foundChoice.querySelector(".choice-check");
+          if (foundCheck) {
+            foundCheck.classList.add("hidden");
+            foundCheck.classList.remove("flex");
+          }
 
           if (photoStar) photoStar.classList.add("hidden");
           if (photoBadge) {
