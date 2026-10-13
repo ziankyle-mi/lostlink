@@ -398,49 +398,9 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         });
       }
 
-      // Avatar & Notif popovers
-      const avatarBtn = document.getElementById("user-avatar-btn");
-      const userMenu = document.getElementById("user-menu-dropdown");
-      if (avatarBtn && userMenu) {
-        avatarBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          userMenu.classList.toggle("hidden");
-        });
-      }
-
-      const notifBtn = document.getElementById("notif-bell-btn");
-      const notifPopover = document.getElementById("notif-popover");
-      if (notifBtn && notifPopover) {
-        notifBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          notifPopover.classList.toggle("hidden");
-        });
-      }
-
-      const markReadBtn = document.getElementById("mark-all-notifs-read-btn");
-      if (markReadBtn) {
-        markReadBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          const dot = document.getElementById("notif-unread-dot");
-          const badge = document.getElementById("notif-unread-badge");
-          if (dot) dot.classList.add("hidden");
-          if (badge) badge.textContent = "All caught up";
-          markReadBtn.classList.add("hidden");
-          try {
-            await fetch("/api/notifications", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ markAllRead: true }),
-            });
-          } catch (err) {
-            console.warn("[notifs] Mark read notice:", err);
-          }
-        });
-      }
-
-      // Close popovers on click outside
+      // Close filter dropdowns on click outside
       document.addEventListener("click", (e) => {
-        document.querySelectorAll("[id$='-dropdown-menu'], #user-menu-dropdown, #notif-popover").forEach((m) => {
+        document.querySelectorAll("[id$='-dropdown-menu']").forEach((m) => {
           if (!m.contains(e.target)) m.classList.add("hidden");
         });
       });

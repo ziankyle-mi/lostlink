@@ -197,6 +197,8 @@ const initials = getInitials(userEmail);
             type="button"
             id="notif-bell-btn"
             aria-label="View notifications"
+            aria-haspopup="true"
+            aria-expanded="false"
             class="flex size-10 sm:size-11 items-center justify-center rounded-full border border-line bg-white text-forest-900 shadow-2xs transition-all hover:bg-stone-50 active:scale-95 cursor-pointer"
           >
             <svg
@@ -301,6 +303,8 @@ const initials = getInitials(userEmail);
             type="button"
             id="user-avatar-btn"
             aria-label="User account menu"
+            aria-haspopup="true"
+            aria-expanded="false"
             class="flex size-10 sm:size-11 items-center justify-center rounded-full border border-lime-600/30 bg-[#d8ef8c] text-sm sm:text-base font-black text-forest-900 shadow-2xs transition-all hover:opacity-90 active:scale-95 cursor-pointer"
           >
             {initials}
@@ -332,7 +336,7 @@ const initials = getInitials(userEmail);
                 </a>
               )}
               <a
-                href="#feed"
+                href="/#feed"
                 class="block rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-[#f5f1e6]"
               >
                 Browse Campus Feed
@@ -393,19 +397,65 @@ const initials = getInitials(userEmail);
       const markReadBtn = document.getElementById("mark-all-notifs-read-btn");
       const postBtn = document.getElementById("top-post-item-btn");
 
+      function closeUserMenu() {
+        if (userMenu && !userMenu.classList.contains("hidden")) {
+          userMenu.classList.add("hidden");
+          avatarBtn?.setAttribute("aria-expanded", "false");
+        }
+      }
+
+      function openUserMenu() {
+        if (userMenu) {
+          closeNotifPopover();
+          userMenu.classList.remove("hidden");
+          avatarBtn?.setAttribute("aria-expanded", "true");
+        }
+      }
+
+      function toggleUserMenu() {
+        if (!userMenu) return;
+        if (userMenu.classList.contains("hidden")) {
+          openUserMenu();
+        } else {
+          closeUserMenu();
+        }
+      }
+
+      function closeNotifPopover() {
+        if (notifPopover && !notifPopover.classList.contains("hidden")) {
+          notifPopover.classList.add("hidden");
+          notifBtn?.setAttribute("aria-expanded", "false");
+        }
+      }
+
+      function openNotifPopover() {
+        if (notifPopover) {
+          closeUserMenu();
+          notifPopover.classList.remove("hidden");
+          notifBtn?.setAttribute("aria-expanded", "true");
+        }
+      }
+
+      function toggleNotifPopover() {
+        if (!notifPopover) return;
+        if (notifPopover.classList.contains("hidden")) {
+          openNotifPopover();
+        } else {
+          closeNotifPopover();
+        }
+      }
+
       if (avatarBtn && userMenu) {
         avatarBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (notifPopover) notifPopover.classList.add("hidden");
-          userMenu.classList.toggle("hidden");
+          toggleUserMenu();
         });
       }
 
       if (notifBtn && notifPopover) {
         notifBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (userMenu) userMenu.classList.add("hidden");
-          notifPopover.classList.toggle("hidden");
+          toggleNotifPopover();
         });
       }
 
@@ -442,10 +492,18 @@ const initials = getInitials(userEmail);
       // Close dropdowns on outside click
       document.addEventListener("click", (e) => {
         if (userMenu && !userMenu.contains(e.target) && !avatarBtn?.contains(e.target)) {
-          userMenu.classList.add("hidden");
+          closeUserMenu();
         }
         if (notifPopover && !notifPopover.contains(e.target) && !notifBtn?.contains(e.target)) {
-          notifPopover.classList.add("hidden");
+          closeNotifPopover();
+        }
+      });
+
+      // Close dropdowns on Escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeUserMenu();
+          closeNotifPopover();
         }
       });
 
