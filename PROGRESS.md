@@ -18,6 +18,14 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Cloudflare Deployment & Interactive Buttons Fix.
+- Resolved fatal JavaScript duplicate `itemsGrid` declaration in `src/pages/index.astro`, restoring all interactive buttons across the dashboard (report modals, claim modals, filter pills, dropdowns, and search).
+- Moved self-contained interactive scripts for Avatar menu, Sign Out, Notification bell, and outside click handlers into `StudentNavbar.astro` so they function across all pages (`/`, `/profile`, `/item/[id]`).
+- Updated `item/[id].astro`, `profile.astro`, `admin.astro`, and `StudentNavbar.astro` to resolve Cloudflare runtime environment variables via `Astro.locals.env || readEnv()`.
+- Added `/items` to `PUBLIC_PREFIXES` in `src/middleware.ts` to allow public serving of item photos without authentication redirects.
+- Fixed conflicting navigation on `ItemCard.astro` action links and added `?report=` and `?search=` URL parameter support.
+- Verified: `astro check` with 0 errors, 0 warnings; `npm test` 56/56 passing; production build succeeded.
+
 Done: Core Usability Release (Dedicated Student Profile & Shareable Item Pages).
 - Rebuilt `/profile` as a real Student Activity tracker querying live Supabase data: "Items I Reported" (with status badges, reference codes, drop-off advice) and "My Submitted Claims" (with ownership proof and security review status).
 - Built dedicated `/item/[id]` page: dynamic route with direct shareable links, full photo gallery, location/date badges, reference codes, and standalone claim submission form with instant feedback.

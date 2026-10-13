@@ -530,7 +530,6 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       }
 
       // Delegated card click listener on grid (supports both initial and dynamically added cards)
-      const itemsGrid = document.getElementById("items-grid");
       if (itemsGrid) {
         itemsGrid.addEventListener("click", (e) => {
           if (e.target.closest(".slider-prev") || e.target.closest(".slider-next")) {
@@ -538,6 +537,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           }
           if (e.target.closest(".admin-remove-card-btn")) {
             return;
+          }
+          const actionLink = e.target.closest("a[href^='/item/']");
+          if (actionLink) {
+            e.preventDefault();
           }
           const card = e.target.closest(".item-card");
           if (card) {
@@ -880,6 +883,23 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
       const lostChoice = document.getElementById("report-choice-lost");
       if (lostChoice) lostChoice.addEventListener("click", () => openReport("lost"));
+
+      window.openReport = openReport;
+
+      // Handle ?report=found, ?report=lost, or ?search=... from external links / other pages
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const reportParam = urlParams.get("report");
+        if (reportParam === "found" || reportParam === "lost") {
+          openReport(reportParam);
+        }
+        const searchParam = urlParams.get("search");
+        if (searchParam && searchInput) {
+          searchInput.value = searchParam;
+          searchQuery = searchParam;
+          updateGrid();
+        }
+      } catch (e) {}
 
       if (closeReportModal) closeReportModal.addEventListener("click", hideReportModal);
       if (cancelReportBtn) cancelReportBtn.addEventListener("click", hideReportModal);

@@ -29,7 +29,7 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
 }).toUpperCase();
 
 // Query live data from Supabase
-const env = readEnv();
+const env = Astro.locals.env || readEnv();
 let liveMetrics = {
   itemsInCustody: 0,
   activeLostReports: 0,

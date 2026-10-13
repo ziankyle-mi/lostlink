@@ -34,6 +34,7 @@ const PUBLIC_PREFIXES = [
   "/dlsau-logo",
   "/lostlink-logo",
   "/lostlink-badge",
+  "/items",
 ];
 const ACTION_PREFIX = "/_actions";
 // Signing in and registering have to work while logged out. Every other

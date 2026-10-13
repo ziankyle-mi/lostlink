@@ -21,7 +21,7 @@ function initialsOf(emailStr: string): string {
   return "ST";
 }
 
-const env = readEnv();
+const env = Astro.locals.env || readEnv();
 let myReports: any[] = [];
 let myClaims: any[] = [];
 let profileName = userEmail.split("@")[0].replace(/[._]/g, " ");

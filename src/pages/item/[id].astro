@@ -11,7 +11,7 @@ const { id } = Astro.params;
 const user = Astro.locals.user;
 const userEmail = user?.email || "";
 
-const env = readEnv();
+const env = Astro.locals.env || readEnv();
 let item: any = null;
 let isReporter = false;
 
