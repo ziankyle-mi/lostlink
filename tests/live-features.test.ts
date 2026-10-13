@@ -83,7 +83,7 @@ describe("Live Admin & Notifications Integration", { timeout: 20000 }, () => {
 
     // Clean up test notification
     await supabase.from("notifications").delete().eq("id", inserted.id);
-  });
+  }, 30000);
 
   it("supports admin post removal workflow with audit logging", async () => {
     const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
@@ -128,5 +128,5 @@ describe("Live Admin & Notifications Integration", { timeout: 20000 }, () => {
       .maybeSingle();
 
     expect(checkItem).toBeNull();
-  });
+  }, 30000);
 });

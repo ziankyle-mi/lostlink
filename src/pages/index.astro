@@ -142,24 +142,35 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       const feedSubtitle = document.getElementById("feed-subtitle");
       const loadMoreBtn = document.getElementById("load-more-btn");
       const searchInput = document.getElementById("global-search-input");
-      const skeletonGrid = document.getElementById("skeleton-grid");
       const itemsGrid = document.getElementById("items-grid");
 
-      let transitionTimer = null;
+      // Fast path: filtering is instant DOM show/hide on already-rendered cards,
+      // so we do NOT flash the skeleton grid (that added a 150ms lag on every
+      // click). Skeleton is only used by load-more / async paths.
       function applyGridWithTransition(action) {
-        if (skeletonGrid && itemsGrid) {
-          if (transitionTimer) clearTimeout(transitionTimer);
-          skeletonGrid.classList.remove("hidden");
-          itemsGrid.classList.add("hidden");
-          if (emptyState) emptyState.classList.add("hidden");
-          action();
-          transitionTimer = setTimeout(() => {
-            skeletonGrid.classList.add("hidden");
-            itemsGrid.classList.remove("hidden");
-          }, 150);
-        } else {
-          action();
+        action();
+      }
+
+      // Date-range match against the card's ISO eventDate (data-item-event-date).
+      function matchesDate(eventDate, range) {
+        if (range === "all") return true;
+        if (!eventDate) return false;
+        const d = new Date(eventDate + "T00:00:00");
+        if (Number.isNaN(d.getTime())) return false;
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (range === "today") {
+          return d.getTime() === startOfToday.getTime();
         }
+        if (range === "week") {
+          const days = (startOfToday - d) / 86400000;
+          return days >= 0 && days < 7;
+        }
+        if (range === "month") {
+          const days = (startOfToday - d) / 86400000;
+          return days >= 0 && days < 30;
+        }
+        return true;
       }
 
       // Prune previously removed demo/mock items in this session
@@ -186,14 +197,16 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           const location = card.dataset.itemLocation;
           const name = (card.dataset.itemName || "").toLowerCase();
           const desc = (card.dataset.itemDesc || "").toLowerCase();
+          const eventDate = card.dataset.itemEventDate || "";
 
           const matchesType = currentFilterType === "all" || type === currentFilterType;
           const matchesCategory = currentCategory === "All Categories" || category === currentCategory;
           const matchesLocation = currentLocation === "All Locations" || location === currentLocation;
+          const matchesDateRange = matchesDate(eventDate, currentDate);
           const query = searchQuery.trim().toLowerCase();
           const matchesSearch = !query || name.includes(query) || desc.includes(query) || category.toLowerCase().includes(query) || location.toLowerCase().includes(query);
 
-          const matches = matchesType && matchesCategory && matchesLocation && matchesSearch;
+          const matches = matchesType && matchesCategory && matchesLocation && matchesDateRange && matchesSearch;
 
           const isExtra = card.parentElement.classList.contains("extra-item");
           const isExtraHidden = isExtra && card.parentElement.classList.contains("hidden");
@@ -212,16 +225,19 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         });
 
         // Update counter & subtitle
+        const isDefaultView =
+          currentFilterType === "all" &&
+          currentCategory === "All Categories" &&
+          currentLocation === "All Locations" &&
+          currentDate === "all" &&
+          !searchQuery;
+
         if (counterBadge) {
-          if (currentFilterType === "all" && currentCategory === "All Categories" && currentLocation === "All Locations" && !searchQuery) {
-            counterBadge.textContent = String(cardTotal());
-          } else {
-            counterBadge.textContent = String(totalMatches);
-          }
+          counterBadge.textContent = String(isDefaultView ? cardTotal() : totalMatches);
         }
 
         if (feedSubtitle) {
-          const totalBase = (currentFilterType === "all" && currentCategory === "All Categories" && currentLocation === "All Locations" && !searchQuery) ? cardTotal() : totalMatches;
+          const totalBase = isDefaultView ? cardTotal() : totalMatches;
           feedSubtitle.textContent = `Showing ${visibleCount} of ${totalBase} items, newest first.`;
         }
 
@@ -326,6 +342,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       setupDropdown("date-dropdown-btn", "date-dropdown-menu", "date-option", (opt) => {
         const label = document.getElementById("selected-date-label");
         if (label) label.textContent = opt.textContent.trim();
+        currentDate = opt.dataset.date || "all";
         applyGridWithTransition(updateGrid);
       });
 
@@ -334,6 +351,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         currentFilterType = "all";
         currentCategory = "All Categories";
         currentLocation = "All Locations";
+        currentDate = "all";
         searchQuery = "";
 
         if (searchInput) searchInput.value = "";

@@ -15,10 +15,10 @@ const user = Astro.locals.user;
 const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
 const isRealAdmin = user?.role === "admin" || roleForEmail(userEmail) === "admin";
 
-// View query param allows previewing both views, while students default safely to student view
-const url = new URL(Astro.request.url);
-const requestedView = url.searchParams.get("view");
-const isStudentView = requestedView === "student" || (!isRealAdmin && requestedView !== "admin");
+// The admin console is guarded on the server: non-admins are sent back to the feed.
+if (!isRealAdmin) {
+  return Astro.redirect("/");
+}
 
 // Date formatting matching "SATURDAY, OCTOBER 10" from Figma
 const today = new Date();
@@ -48,152 +48,84 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       { auth: { persistSession: false } },
     );
 
-    if (isStudentView) {
-      // Resolve student profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", userEmail.toLowerCase().trim())
-        .maybeSingle();
+    // Admin View: Live stats from entire campus
+    const [
+      custodyRes,
+      lostRes,
+      claimsRes,
+      returnedRes,
+      claimsListRes,
+      intakeListRes,
+      logsListRes,
+    ] = await Promise.all([
+      supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .eq("type", "found")
+        .neq("status", "returned"),
+      supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .eq("type", "lost")
+        .neq("status", "resolved"),
+      supabase
+        .from("claims")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["claimed", "returned"]),
+      supabase
+        .from("claims")
+        .select(`
+          id,
+          proof_description,
+          status,
+          created_at,
+          items ( name, location, category ),
+          profiles ( full_name, email )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("items")
+        .select(`
+          id,
+          name,
+          category,
+          location,
+          reference_code,
+          created_at,
+          profiles ( full_name, email )
+        `)
+        .eq("type", "found")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("admin_log")
+        .select(`
+          id,
+          action,
+          created_at,
+          item_id,
+          items ( name )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(8),
+    ]);
 
-      const profileId = profile?.id;
+    liveMetrics = {
+      itemsInCustody: custodyRes.count ?? 0,
+      activeLostReports: lostRes.count ?? 0,
+      claimsToVerify: claimsRes.count ?? 0,
+      returnedThisMonth: returnedRes.count ?? 0,
+    };
 
-      if (profileId) {
-        const { count: reportsCount } = await supabase
-          .from("items")
-          .select("id", { count: "exact", head: true })
-          .eq("reporter_id", profileId);
-
-        const { count: claimsCount } = await supabase
-          .from("claims")
-          .select("id", { count: "exact", head: true })
-          .eq("claimant_id", profileId)
-          .eq("status", "pending");
-
-        const { count: recoveredCount } = await supabase
-          .from("claims")
-          .select("id", { count: "exact", head: true })
-          .eq("claimant_id", profileId)
-          .eq("status", "verified");
-
-        liveMetrics = {
-          itemsInCustody: reportsCount ?? 0,
-          activeLostReports: claimsCount ?? 0,
-          claimsToVerify: claimsCount ?? 0,
-          returnedThisMonth: recoveredCount ?? 0,
-        };
-
-        const { data: sClaims } = await supabase
-          .from("claims")
-          .select(`
-            id,
-            proof_description,
-            status,
-            created_at,
-            items ( name, location, category ),
-            profiles ( full_name, email )
-          `)
-          .eq("claimant_id", profileId)
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (sClaims) liveClaims = sClaims;
-
-        const { data: sNotifs } = await supabase
-          .from("notifications")
-          .select("id, message, created_at")
-          .eq("user_id", profileId)
-          .order("created_at", { ascending: false })
-          .limit(6);
-
-        if (sNotifs) {
-          liveLogs = sNotifs.map((n) => ({
-            action: n.message,
-            created_at: n.created_at,
-            items: { name: "" },
-          }));
-        }
-      }
-    } else {
-      // Admin View: Live stats from entire campus
-      const [
-        custodyRes,
-        lostRes,
-        claimsRes,
-        returnedRes,
-        claimsListRes,
-        intakeListRes,
-        logsListRes,
-      ] = await Promise.all([
-        supabase
-          .from("items")
-          .select("id", { count: "exact", head: true })
-          .eq("type", "found")
-          .neq("status", "returned"),
-        supabase
-          .from("items")
-          .select("id", { count: "exact", head: true })
-          .eq("type", "lost")
-          .neq("status", "resolved"),
-        supabase
-          .from("claims")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .from("items")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["claimed", "returned"]),
-        supabase
-          .from("claims")
-          .select(`
-            id,
-            proof_description,
-            status,
-            created_at,
-            items ( name, location, category ),
-            profiles ( full_name, email )
-          `)
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("items")
-          .select(`
-            id,
-            name,
-            category,
-            location,
-            reference_code,
-            created_at,
-            profiles ( full_name, email )
-          `)
-          .eq("type", "found")
-          .eq("status", "pending")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("admin_log")
-          .select(`
-            id,
-            action,
-            created_at,
-            item_id,
-            items ( name )
-          `)
-          .order("created_at", { ascending: false })
-          .limit(8),
-      ]);
-
-      liveMetrics = {
-        itemsInCustody: custodyRes.count ?? 0,
-        activeLostReports: lostRes.count ?? 0,
-        claimsToVerify: claimsRes.count ?? 0,
-        returnedThisMonth: returnedRes.count ?? 0,
-      };
-
-      if (claimsListRes.data) liveClaims = claimsListRes.data;
-      if (intakeListRes.data) liveIntake = intakeListRes.data;
-      if (logsListRes.data) liveLogs = logsListRes.data;
-    }
+    if (claimsListRes.data) liveClaims = claimsListRes.data;
+    if (intakeListRes.data) liveIntake = intakeListRes.data;
+    if (logsListRes.data) liveLogs = logsListRes.data;
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
   }
@@ -201,7 +133,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
 ---
 
 <Base
-  title={`${isStudentView ? "Student Overview" : "Admin Overview"} | LostLink`}
+  title="Admin Console | LostLink"
   description="LostLink campus lost and found console for De La Salle Araneta University."
 >
   <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
@@ -211,44 +143,6 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
 
       <!-- Main Layout Container -->
       <div class="mx-auto w-full max-w-[1520px] px-4 py-6 sm:px-8 sm:py-8 lg:px-12">
-        <!-- Optional View Mode Switcher Pill for reviewer/demo evaluation -->
-        <div class="mb-6 flex items-center justify-between gap-4 flex-wrap bg-white/70 backdrop-blur-xs p-2.5 sm:p-3 rounded-2xl border border-stone-200/60 shadow-2xs">
-          <div class="flex items-center gap-2">
-            <span class="inline-block size-2 rounded-full bg-[#164f38]"></span>
-            <span class="text-xs font-bold text-stone-600">Console Mode:</span>
-            <div class="inline-flex rounded-full bg-stone-200/80 p-0.5 text-xs font-bold">
-              <a
-                href="/admin?view=admin"
-                class={`rounded-full px-3 py-1 transition-all ${
-                  !isStudentView
-                    ? "bg-[#164f38] text-white shadow-xs"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Admin Overview
-              </a>
-              <a
-                href="/admin?view=student"
-                class={`rounded-full px-3 py-1 transition-all ${
-                  isStudentView
-                    ? "bg-[#164f38] text-white shadow-xs"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                Student Overview
-              </a>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 text-xs text-stone-500 font-medium">
-            <span>Signed in as: <strong class="text-stone-800">{userEmail}</strong></span>
-            <span class="hidden sm:inline">&bull;</span>
-            <a href="/" class="hidden sm:inline font-bold text-forest-900 hover:underline">
-              Campus Feed &rarr;
-            </a>
-          </div>
-        </div>
-
         <div class="flex flex-col-reverse lg:flex-row items-start gap-8 lg:gap-10">
           <!-- Main Content (Left Column) -->
           <main class="w-full flex-1 min-w-0 space-y-7">
@@ -259,7 +153,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                   {dateEyebrow}
                 </p>
                 <h1 class="mt-1 font-serif text-4xl sm:text-5xl lg:text-[3.25rem] font-black text-forest-900 tracking-tight leading-none">
-                  {isStudentView ? "Student Overview" : "Overview"}
+                  Overview
                 </h1>
               </div>
 
@@ -269,7 +163,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                   <input
                     type="search"
                     id="overview-search-input"
-                    placeholder={isStudentView ? "Search your items, claims..." : "Search items, students, claims.."}
+                    placeholder="Search items, students, claims.."
                     class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
                   />
                   <svg
@@ -290,29 +184,29 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                   id="log-found-cta-btn"
                   class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
                 >
-                  <span>{isStudentView ? "Post lost or found" : "Log a found item"}</span>
+                  <span>Log a found item</span>
                   <span class="text-base font-black leading-none">+</span>
                 </button>
               </div>
             </div>
 
             <!-- Row 1: 4 KPI Stat Cards -->
-            <AdminMetrics role={isStudentView ? "student" : "admin"} metrics={liveMetrics} />
+            <AdminMetrics role="admin" metrics={liveMetrics} />
 
             <!-- Row 2: Claims to verify Table Card -->
-            <ClaimsVerificationTable role={isStudentView ? "student" : "admin"} liveClaims={liveClaims} />
+            <ClaimsVerificationTable role="admin" liveClaims={liveClaims} />
 
             <!-- Row 3: Two Columns Split (Waiting for intake + Recent activity) -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
-              <IntakeQueue role={isStudentView ? "student" : "admin"} liveIntake={liveIntake} />
-              <RecentActivity role={isStudentView ? "student" : "admin"} liveLogs={liveLogs} />
+              <IntakeQueue role="admin" liveIntake={liveIntake} />
+              <RecentActivity role="admin" liveLogs={liveLogs} />
             </div>
           </main>
 
           <!-- Floating Admin Sidebar (Right Column) -->
           <div class="w-full lg:w-auto shrink-0 lg:sticky lg:top-8 self-start">
             <AdminSidebar
-              role={isStudentView ? "student" : "admin"}
+              role="admin"
               activeTab="overview"
               userEmail={userEmail}
             />

@@ -1,6 +1,7 @@
 ---
 import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
+import DashboardFooter from "~/components/DashboardFooter.astro";
 import { roleForEmail } from "~/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
@@ -20,6 +21,13 @@ function initialsOf(emailStr: string): string {
   if (segments.length === 1 && segments[0].length >= 2) return segments[0].slice(0, 2).toUpperCase();
   return "ST";
 }
+
+const today = new Date();
+const dateEyebrow = today.toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+}).toUpperCase();
 
 const env = Astro.locals.env || readEnv();
 let myReports: any[] = [];
@@ -100,7 +108,7 @@ function parsePhotos(photoPath?: string | null): string[] {
 ---
 
 <Base
-  title="My Activity | LostLink"
+  title="Student Profile & Activity | LostLink"
   description="Track your reported lost & found items and active claims at De La Salle Araneta University."
 >
   <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
@@ -108,20 +116,34 @@ function parsePhotos(photoPath?: string | null): string[] {
       <!-- Top Navbar -->
       <StudentNavbar userEmail={userEmail} />
 
-      <!-- Main Container -->
-      <main class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 space-y-8">
-        <!-- Student Header Card -->
-        <div class="rounded-3xl border border-stone-200/80 bg-white p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <!-- Main Container (Page frame matching UI design system) -->
+      <main class="mx-auto w-full max-w-7xl px-4 sm:px-10 lg:px-14 py-8 sm:py-10 space-y-8 sm:space-y-10">
+        <!-- Page Eyebrow and Heading -->
+        <div class="space-y-1.5">
+          <p class="text-xs sm:text-sm font-bold tracking-[0.25em] uppercase text-forest-900/70">
+            {dateEyebrow}
+          </p>
+          <h1 class="font-serif text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-forest-900 leading-tight">
+            Student <span class="italic font-serif font-black">Overview</span>
+          </h1>
+          <p class="text-sm sm:text-base text-stone-600 max-w-2xl">
+            Manage your reported campus items, verification requests, and property claims across De La Salle Araneta University.
+          </p>
+        </div>
+
+        <!-- Student Account Card (Section card recipe) -->
+        <section class="rounded-3xl bg-white border border-stone-200/60 shadow-xs p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div class="flex items-center gap-4 sm:gap-5">
-            <span class="flex size-14 sm:size-16 items-center justify-center rounded-2xl bg-forest-900 text-lg sm:text-xl font-black text-[#d8ef8c] shadow-xs">
+            <!-- Lime Avatar matching navbar token -->
+            <span class="flex size-14 sm:size-16 shrink-0 items-center justify-center rounded-full bg-[#d8ef8c] border border-lime-600/30 text-xl sm:text-2xl font-black text-forest-900 shadow-xs">
               {initialsOf(userEmail)}
             </span>
             <div>
               <div class="flex items-center gap-2.5 flex-wrap">
-                <h1 class="text-xl sm:text-2xl font-black text-forest-900 capitalize leading-tight">
+                <h2 class="font-serif text-2xl sm:text-3xl font-black text-forest-900 capitalize leading-tight">
                   {profileName}
-                </h1>
-                <span class="rounded-full bg-forest-700/10 px-2.5 py-0.5 text-xs font-bold text-forest-800">
+                </h2>
+                <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-900">
                   {isUserAdmin ? "Security Office Staff" : "DLSAU Student / Faculty"}
                 </span>
               </div>
@@ -131,130 +153,188 @@ function parsePhotos(photoPath?: string | null): string[] {
             </div>
           </div>
 
-          <!-- Quick Actions -->
-          <div class="flex items-center gap-3 w-full sm:w-auto">
+          <!-- Quick Action Buttons -->
+          <div class="flex items-center gap-3 w-full md:w-auto flex-wrap sm:flex-nowrap">
+            <a
+              href="/?report=found"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-full sm:w-auto text-sm cursor-pointer"
+            >
+              <span>Post an item</span>
+              <span aria-hidden="true">+</span>
+            </a>
             <a
               href="/"
-              class="flex-1 sm:flex-none text-center rounded-full border border-stone-200 bg-stone-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-forest-900 hover:bg-stone-100 transition-colors cursor-pointer"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-stone-200/90 bg-white px-5 py-2.5 text-sm font-bold text-forest-900 shadow-2xs hover:bg-stone-50 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
             >
-              Campus Feed
+              Campus feed
             </a>
             {isUserAdmin && (
               <a
                 href="/admin"
-                class="flex-1 sm:flex-none text-center rounded-full bg-forest-900 px-4 py-2.5 text-xs sm:text-sm font-bold text-[#d8ef8c] hover:bg-forest-800 transition-colors shadow-xs cursor-pointer"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#164f38] px-5 py-2.5 text-xs font-bold text-[#d8ef8c] hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-full sm:w-auto cursor-pointer"
               >
-                Admin Console &rarr;
+                <span>Admin Console</span>
+                <span aria-hidden="true">&rarr;</span>
               </a>
             )}
           </div>
+        </section>
+
+        <!-- KPI Metric Row (Recipe from ui-design-system with Card 3 in Lime) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5" aria-label="Student Activity Metrics">
+          <!-- Card 1: Total Items Reported -->
+          <div class="rounded-3xl bg-white p-6 sm:p-7 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+            <p class="text-sm font-medium text-stone-600">Total items reported</p>
+            <div class="mt-4">
+              <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
+                {totalReports}
+              </p>
+              <p class="mt-3 text-xs text-stone-500 font-medium">
+                Submitted to campus feed
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 2: Active Reports -->
+          <div class="rounded-3xl bg-white p-6 sm:p-7 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+            <p class="text-sm font-medium text-stone-600">Active reports</p>
+            <div class="mt-4">
+              <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
+                {activeReports}
+              </p>
+              <p class="mt-3 text-xs text-stone-500 font-medium">
+                Awaiting return or claim
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 3: Claims Submitted (Lime Accent Card per recipe line 228) -->
+          <div class="rounded-3xl bg-[#d8ef8c] p-6 sm:p-7 border border-lime-600/30 shadow-xs flex flex-col justify-between text-forest-900">
+            <p class="text-sm font-bold text-forest-900">Claims submitted</p>
+            <div class="mt-4">
+              <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
+                {totalClaims}
+              </p>
+              <p class="mt-3 text-xs text-forest-800 font-semibold">
+                Ownership verifications filed
+              </p>
+            </div>
+          </div>
         </div>
 
-        <!-- 3 Quick KPI Stat Counters -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-2xs">
-            <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Total Items Reported</p>
-            <p class="mt-2 font-serif text-3xl font-black text-forest-900">{totalReports}</p>
+        <!-- Campus Handover Protocol Callout Card (Lime Callout Recipe from line 242) -->
+        <div class="rounded-3xl bg-[#d8ef8c] p-6 sm:p-8 text-forest-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs border border-lime-600/30">
+          <div class="space-y-1.5 max-w-2xl">
+            <span class="inline-block rounded-full bg-forest-900/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-forest-900">
+              CAMPUS HANDOVER PROTOCOL
+            </span>
+            <h3 class="font-serif text-xl sm:text-2xl font-black text-forest-900 leading-tight">
+              Have an item to drop off or retrieve?
+            </h3>
+            <p class="text-xs sm:text-sm font-medium text-forest-900/80 leading-relaxed">
+              The Disciplinary Office (Admin Building, 1st Floor) is open Monday to Friday, 8:00 AM – 5:00 PM. Bring your student ID and reference tag code for secure handovers.
+            </p>
           </div>
-          <div class="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-2xs">
-            <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Active Reports</p>
-            <p class="mt-2 font-serif text-3xl font-black text-amber-700">{activeReports}</p>
-          </div>
-          <div class="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-2xs">
-            <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Claims Submitted</p>
-            <p class="mt-2 font-serif text-3xl font-black text-forest-700">{totalClaims}</p>
-          </div>
+          <a
+            href="/help"
+            class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer text-sm"
+          >
+            <span>Turn-in guide</span>
+            <span aria-hidden="true">&rarr;</span>
+          </a>
         </div>
 
-        <!-- Section 1: My Reported Items -->
-        <section class="space-y-4">
-          <div class="flex items-center justify-between gap-4">
+        <!-- Section 1: My Reported Items (Section card recipe) -->
+        <section class="rounded-3xl bg-white border border-stone-200/60 shadow-xs p-6 sm:p-8 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200/70">
             <div>
-              <h2 class="text-xl sm:text-2xl font-black text-forest-900">
+              <h2 class="font-serif text-2xl sm:text-3xl font-black text-forest-900 leading-tight">
                 Items I Reported
               </h2>
-              <p class="text-xs sm:text-sm text-stone-500">
-                Track status, administrative verification, and handover for items you reported.
+              <p class="mt-1 text-sm text-stone-500">
+                Track administrative verification, campus custody, and handover status.
               </p>
             </div>
             <a
-              href="/"
-              class="inline-flex items-center gap-1.5 rounded-full bg-forest-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-forest-800 transition-colors"
+              href="/?report=found"
+              class="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-5 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-fit cursor-pointer"
             >
-              <span>+ Post an item</span>
+              <span>Post an item</span>
+              <span aria-hidden="true">+</span>
             </a>
           </div>
 
           {myReports.length === 0 ? (
-            <div class="rounded-3xl border border-dashed border-stone-300 bg-white/60 p-10 text-center">
-              <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-stone-100 text-stone-400">
-                <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="rounded-3xl border border-dashed border-stone-300 bg-[#fbf9f4] p-10 text-center">
+              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f5f1e6] text-forest-700">
+                <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
               </div>
-              <h3 class="mt-3 text-base font-bold text-forest-900">No reports submitted yet</h3>
-              <p class="mt-1 text-xs text-stone-500 max-w-sm mx-auto">
-                Lost an item or found someone else's property on campus? Post a report to alert the community.
+              <h3 class="mt-4 font-serif text-xl font-bold text-forest-900">No items reported yet</h3>
+              <p class="mt-1 text-xs sm:text-sm text-stone-500 max-w-sm mx-auto">
+                Lost something on campus or found someone else's property? Post a report to alert the university community.
               </p>
               <a
-                href="/"
-                class="mt-4 inline-block rounded-full bg-forest-900 px-5 py-2 text-xs font-bold text-[#d8ef8c] hover:bg-forest-800 transition-colors"
+                href="/?report=found"
+                class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer"
               >
-                Go to Feed & Report
+                <span>Go to Feed &amp; Report</span>
+                <span aria-hidden="true">&rarr;</span>
               </a>
             </div>
           ) : (
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {myReports.map((item) => {
                 const photos = parsePhotos(item.photo_path);
                 const hasPhoto = photos.length > 0;
                 return (
-                  <article class="flex flex-col justify-between rounded-2xl border border-stone-200 bg-white p-5 shadow-2xs hover:shadow-card transition-shadow">
+                  <article class="flex flex-col justify-between overflow-hidden rounded-2xl border border-stone-200/90 bg-white p-5 sm:p-6 shadow-2xs hover:shadow-card transition-all">
                     <div>
                       <div class="flex items-center justify-between gap-2 mb-3">
-                        <span class={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
-                          item.type === "found" ? "bg-forest-700 text-white" : "bg-[#d8ef8c] text-forest-900"
+                        <span class={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                          item.type === "found" ? "bg-forest-700 text-white shadow-xs" : "bg-[#d8ef8c] text-forest-900 border border-lime-600/30"
                         }`}>
                           {item.type}
                         </span>
 
-                        <span class={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                        <span class={`rounded-full px-3 py-1 text-xs font-bold ${
                           item.status === "approved"
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            ? "bg-[#164f38] text-[#d8ef8c]"
                             : item.status === "pending"
-                              ? "bg-amber-100 text-amber-800 border border-amber-300"
+                              ? "bg-[#ece5d6] text-forest-900"
                               : item.status === "claimed" || item.status === "resolved"
-                                ? "bg-blue-100 text-blue-800 border border-blue-300"
-                                : "bg-rose-100 text-rose-800 border border-rose-300"
+                                ? "bg-[#d8ef8c] text-forest-900"
+                                : "bg-[#9b2c1f]/10 text-[#9b2c1f]"
                         }`}>
-                          {item.status.toUpperCase()}
+                          {item.status === "approved" ? "LIVE ON FEED" : item.status === "pending" ? "UNDER REVIEW" : item.status.toUpperCase()}
                         </span>
                       </div>
 
                       {hasPhoto && (
-                        <div class="mb-3.5 h-36 w-full overflow-hidden rounded-xl bg-stone-100 border border-stone-200">
+                        <div class="mb-4 h-40 w-full overflow-hidden rounded-xl bg-stone-100 border border-stone-200/80">
                           <img src={photos[0]} alt={item.name} class="h-full w-full object-cover" loading="lazy" />
                         </div>
                       )}
 
-                      <h3 class="font-bold text-base text-forest-900 line-clamp-1">
+                      <h3 class="font-bold text-base sm:text-lg text-forest-900 line-clamp-1 tracking-tight">
                         {item.name}
                       </h3>
-                      <p class="text-xs text-stone-500 mt-0.5">
+                      <p class="text-xs text-stone-500 mt-1 font-medium">
                         {item.category} &bull; {item.location}
                       </p>
 
                       {item.reference_code && (
-                        <div class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-mono font-bold text-forest-800">
+                        <div class="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-[#f5f1e6] px-2.5 py-1 text-xs font-mono font-bold text-forest-800">
                           <span>Tag: {item.reference_code}</span>
                           <button
                             type="button"
-                            class="copy-ref-btn p-0.5 text-forest-900/70 hover:text-forest-900"
+                            class="copy-ref-btn p-0.5 text-forest-900/70 hover:text-forest-900 cursor-pointer"
                             data-copy-ref={item.reference_code}
                             title="Copy tag code"
                             aria-label="Copy tag code"
                           >
-                            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                             <span class="copy-ref-tooltip">Copied!</span>
@@ -263,25 +343,25 @@ function parsePhotos(photoPath?: string | null): string[] {
                       )}
 
                       {item.status === "pending" && item.type === "found" && (
-                        <p class="mt-2.5 text-xs text-amber-800 bg-amber-50 rounded-lg p-2 border border-amber-200">
-                          &bull; Please drop this item off at the Security Office with tag code.
+                        <p class="mt-3 text-xs text-amber-900 bg-amber-50 rounded-xl p-3 border border-amber-200/70 leading-relaxed font-medium">
+                          &bull; Please drop this item off at the Security Office (Admin 1F) with reference tag code.
                         </p>
                       )}
 
                       {item.status === "rejected" && item.reject_reason && (
-                        <p class="mt-2.5 text-xs text-rose-800 bg-rose-50 rounded-lg p-2 border border-rose-200">
+                        <p class="mt-3 text-xs text-rose-900 bg-rose-50 rounded-xl p-3 border border-rose-200/70 leading-relaxed font-medium">
                           Reason: {item.reject_reason}
                         </p>
                       )}
                     </div>
 
-                    <div class="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
+                    <div class="mt-5 pt-3.5 border-t border-stone-100 flex items-center justify-between text-xs">
                       <span class="text-stone-400 font-medium">
                         {item.event_date || (item.created_at ? item.created_at.split("T")[0] : "Recently")}
                       </span>
                       <a
                         href={`/item/${item.id}`}
-                        class="font-bold text-forest-900 hover:text-forest-700 underline"
+                        class="font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
                       >
                         View details &rarr;
                       </a>
@@ -293,33 +373,42 @@ function parsePhotos(photoPath?: string | null): string[] {
           )}
         </section>
 
-        <!-- Section 2: My Submitted Claims -->
-        <section class="space-y-4 pt-4 border-t border-stone-200/80">
-          <div>
-            <h2 class="text-xl sm:text-2xl font-black text-forest-900">
-              My Submitted Claims
-            </h2>
-            <p class="text-xs sm:text-sm text-stone-500">
-              Ownership verification requests you have submitted to the Security Office.
-            </p>
+        <!-- Section 2: My Submitted Claims (Section card + Table row recipe) -->
+        <section class="rounded-3xl bg-white border border-stone-200/60 shadow-xs p-6 sm:p-8 space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200/70">
+            <div>
+              <h2 class="font-serif text-2xl sm:text-3xl font-black text-forest-900 leading-tight">
+                My Submitted Claims
+              </h2>
+              <p class="mt-1 text-sm text-stone-500">
+                Ownership verification requests submitted to the Security &amp; Disciplinary Office.
+              </p>
+            </div>
+            <a
+              href="/"
+              class="text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
+            >
+              Browse Campus Feed &rarr;
+            </a>
           </div>
 
           {myClaims.length === 0 ? (
-            <div class="rounded-3xl border border-dashed border-stone-300 bg-white/60 p-10 text-center">
-              <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-stone-100 text-stone-400">
-                <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="rounded-3xl border border-dashed border-stone-300 bg-[#fbf9f4] p-10 text-center">
+              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#eef2e3] text-forest-700">
+                <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="mt-3 text-base font-bold text-forest-900">No claims submitted</h3>
-              <p class="mt-1 text-xs text-stone-500 max-w-sm mx-auto">
+              <h3 class="mt-4 font-serif text-xl font-bold text-forest-900">No claims submitted</h3>
+              <p class="mt-1 text-xs sm:text-sm text-stone-500 max-w-sm mx-auto">
                 Spotted your lost item on the feed? Click "Claim this item" and submit unique identifying proof.
               </p>
               <a
                 href="/"
-                class="mt-4 inline-block rounded-full bg-forest-900 px-5 py-2 text-xs font-bold text-[#d8ef8c] hover:bg-forest-800 transition-colors"
+                class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer"
               >
-                Browse Campus Feed
+                <span>Browse Campus Feed</span>
+                <span aria-hidden="true">&rarr;</span>
               </a>
             </div>
           ) : (
@@ -327,61 +416,61 @@ function parsePhotos(photoPath?: string | null): string[] {
               {myClaims.map((claim) => {
                 const targetItem = claim.items;
                 return (
-                  <div class="rounded-2xl border border-stone-200 bg-white p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div class="space-y-1.5 flex-1 min-w-0">
-                      <div class="flex items-center gap-2.5 flex-wrap">
-                        <h4 class="font-bold text-base text-forest-900">
-                          {targetItem?.name || "Item Claim"}
-                        </h4>
-                        {targetItem?.reference_code && (
-                          <span class="inline-flex items-center gap-1 rounded bg-stone-100 px-2 py-0.5 text-xs font-mono font-bold text-stone-600">
-                            <span>{targetItem.reference_code}</span>
-                            <button
-                              type="button"
-                              class="copy-ref-btn p-0.5 text-forest-900/70 hover:text-forest-900"
-                              data-copy-ref={targetItem.reference_code}
-                              title="Copy reference code"
-                              aria-label="Copy reference code"
-                            >
-                              <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                              <span class="copy-ref-tooltip">Copied!</span>
-                            </button>
-                          </span>
-                        )}
-                        <span class={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          claim.status === "verified"
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                            : claim.status === "pending"
-                              ? "bg-amber-100 text-amber-800 border border-amber-300"
-                              : claim.status === "denied"
-                                ? "bg-rose-100 text-rose-800 border border-rose-300"
-                                : "bg-stone-100 text-stone-600"
-                        }`}>
-                          {claim.status === "verified"
-                            ? "VERIFIED &bull; VISIT SECURITY OFFICE"
-                            : claim.status === "pending"
-                              ? "UNDER REVIEW"
-                              : claim.status === "denied"
-                                ? "DENIED"
-                                : "WITHDRAWN"}
-                        </span>
+                  <div class="flex items-center gap-4 rounded-2xl border border-stone-200/80 bg-[#fdfcf9] p-4 sm:p-5 hover:bg-white transition-all shadow-2xs flex-col sm:flex-row sm:items-center justify-between">
+                    <div class="flex items-start sm:items-center gap-4 min-w-0 flex-1 w-full sm:w-auto">
+                      <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eef2e3] text-forest-900">
+                        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
                       </div>
-
-                      <p class="text-xs text-stone-600 italic bg-stone-50 p-2.5 rounded-xl border border-stone-200/60 line-clamp-2">
-                        &ldquo;{claim.proof_description}&rdquo;
-                      </p>
-
-                      <p class="text-[11px] text-stone-400">
-                        Submitted on {new Date(claim.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
+                      <div class="min-w-0 flex-1 space-y-1">
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                          <h4 class="font-bold text-base text-forest-900">
+                            {targetItem?.name || "Item Claim"}
+                          </h4>
+                          {targetItem?.reference_code && (
+                            <span class="inline-flex items-center gap-1 rounded bg-[#f5f1e6] px-2 py-0.5 text-xs font-mono font-bold text-forest-800">
+                              <span>{targetItem.reference_code}</span>
+                              <button
+                                type="button"
+                                class="copy-ref-btn p-0.5 text-forest-900/70 hover:text-forest-900 cursor-pointer"
+                                data-copy-ref={targetItem.reference_code}
+                                title="Copy reference code"
+                                aria-label="Copy reference code"
+                              >
+                                <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span class="copy-ref-tooltip">Copied!</span>
+                              </button>
+                            </span>
+                          )}
+                          <span class={`rounded-full px-3 py-1 text-xs font-bold ${
+                            claim.status === "verified"
+                              ? "bg-[#d8ef8c] text-forest-900"
+                              : claim.status === "pending"
+                                ? "bg-[#ece5d6] text-forest-900"
+                                : "bg-[#9b2c1f]/10 text-[#9b2c1f]"
+                          }`}>
+                            {claim.status === "verified"
+                              ? "VERIFIED • VISIT DO"
+                              : claim.status === "pending"
+                                ? "UNDER REVIEW"
+                                : "DENIED"}
+                          </span>
+                        </div>
+                        <p class="text-xs text-stone-600 line-clamp-1 italic">
+                          &ldquo;{claim.proof_description}&rdquo;
+                        </p>
+                        <p class="text-[11px] text-stone-400 font-medium">
+                          Submitted {new Date(claim.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                      </div>
                     </div>
-
                     {targetItem?.id && (
                       <a
                         href={`/item/${targetItem.id}`}
-                        class="shrink-0 rounded-full border border-forest-900/20 bg-forest-900/5 px-4 py-2 text-xs font-bold text-forest-900 hover:bg-forest-900/10 text-center transition-colors"
+                        class="shrink-0 text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 mt-2 sm:mt-0"
                       >
                         View Item &rarr;
                       </a>
@@ -395,17 +484,8 @@ function parsePhotos(photoPath?: string | null): string[] {
       </main>
     </div>
 
-    <!-- Campus Footer -->
-    <footer class="mt-14 border-t border-stone-200/70 bg-[#ece5d6]/70 py-6 text-center text-xs text-stone-500">
-      <div class="mx-auto max-w-6xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>&copy; {new Date().getFullYear()} LostLink &bull; De La Salle Araneta University</p>
-        <div class="flex items-center gap-4 font-semibold text-forest-900">
-          <a href="/" class="hover:underline">Campus Feed</a>
-          <a href="/help" class="hover:underline">Guidelines</a>
-          <a href="/privacy" class="hover:underline">Privacy</a>
-        </div>
-      </div>
-    </footer>
+    <!-- Campus Dashboard Footer -->
+    <DashboardFooter />
   </div>
 
   <script>
