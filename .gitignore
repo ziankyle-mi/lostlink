@@ -27,3 +27,4 @@ Thumbs.db
 !.vscode/extensions.json
 
 .dev.vars
+.opencode/
