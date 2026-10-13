@@ -77,6 +77,20 @@ const userName = isAdmin
         </span>
       </a>
 
+      <!-- Campus feed (jump to the post grid to view/remove posts) -->
+      <a
+        href="/"
+        class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/10 hover:text-white transition-all"
+      >
+        <span class="flex items-center gap-3.5">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          Campus feed
+        </span>
+      </a>
+
       {isAdmin ? (
         <>
           <!-- Claims (Admin) -->

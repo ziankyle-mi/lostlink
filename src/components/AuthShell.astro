@@ -28,22 +28,33 @@ const { title, heading, subheading, description } = Astro.props;
 
     <main class="grid flex-1 gap-5 py-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
       <aside
-        class="relative hidden flex-col justify-between overflow-hidden rounded-card bg-forest-700 p-9 text-white lg:flex xl:p-10"
+        class="relative hidden flex-col justify-between overflow-hidden rounded-[2.25rem] p-9 text-white lg:flex xl:p-10 border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_20px_45px_-15px_rgba(8,46,26,0.35)]"
+        style="background: radial-gradient(130% 120% at 85% 25%, #246a48 0%, #164f38 42%, #0d3222 100%);"
       >
-        <!-- Soft light glow, matching the mockup -->
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-          <div class="absolute -right-20 -top-24 size-[30rem] rounded-full bg-lime/15 blur-3xl"></div>
+        <!-- Subtle organic ambient glow (really soft and diffused) -->
+        <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
           <div
-            class="absolute right-6 top-1/2 size-[26rem] -translate-y-1/2 rounded-full bg-[#9fd4a8]/25 blur-3xl"
+            class="absolute -right-16 -top-16 size-[28rem] rounded-full opacity-35 blur-3xl"
+            style="background: radial-gradient(circle, rgba(216, 239, 140, 0.3) 0%, rgba(38, 106, 72, 0.4) 45%, transparent 70%);"
+          >
+          </div>
+          <div
+            class="absolute -right-10 top-1/2 size-[22rem] -translate-y-1/2 rounded-full opacity-20 blur-2xl"
+            style="background: radial-gradient(circle, rgba(163, 219, 142, 0.25) 0%, transparent 70%);"
           >
           </div>
         </div>
 
         <div class="relative flex items-start justify-between">
-          <span class="rounded-full border border-white/70 px-4 py-1.5 text-[0.9375rem]">
+          <span class="rounded-full border border-white/25 bg-white/[0.04] px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium tracking-wide text-white/90">
             DLSAU &middot; Lost &amp; Found
           </span>
-          <svg viewBox="0 0 24 24" class="size-6 text-lime" fill="currentColor" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            class="size-6 text-[#d8ef8c] opacity-90 drop-shadow-[0_0_6px_rgba(216,239,140,0.35)]"
+            fill="currentColor"
+            aria-hidden="true"
+          >
             <path
               d="M12 2c.4 4.8 5.2 9.6 10 10-4.8.4-9.6 5.2-10 10-.4-4.8-5.2-9.6-10-10 4.8-.4 9.6-5.2 10-10z"
             ></path>
@@ -51,16 +62,16 @@ const { title, heading, subheading, description } = Astro.props;
         </div>
 
         <p
-          class="relative font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal"
+          class="relative font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal tracking-tight text-white"
         >
           Find what<br />
-          <span class="font-bold text-lime">you Lost.</span><br />
+          <span class="font-bold text-[#d8ef8c]">you Lost.</span><br />
           Return what<br />
-          <span class="font-bold text-lime">you Found.</span>
+          <span class="font-bold text-[#d8ef8c]">you Found.</span>
         </p>
 
-        <div class="relative rounded-2xl bg-lime px-8 py-7">
-          <p class="text-2xl leading-snug font-semibold text-forest-700 xl:text-[1.75rem]">
+        <div class="relative rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs">
+          <p class="text-xl sm:text-2xl leading-snug font-bold text-forest-900 xl:text-[1.625rem]">
             A little thing,<br />can mean a lot.
           </p>
         </div>

@@ -209,7 +209,10 @@ function parsePhotos(photoPath?: string | null): string[] {
           </div>
 
           <!-- Card 3: Claims Submitted (Lime Accent Card per recipe line 228) -->
-          <div class="rounded-3xl bg-[#d8ef8c] p-6 sm:p-7 border border-lime-600/30 shadow-xs flex flex-col justify-between text-forest-900">
+          <div
+            class="rounded-3xl p-6 sm:p-7 border border-lime-600/30 shadow-xs flex flex-col justify-between text-forest-900"
+            style="background: linear-gradient(155deg, #daf191 0%, #d1ec84 100%);"
+          >
             <p class="text-sm font-bold text-forest-900">Claims submitted</p>
             <div class="mt-4">
               <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
@@ -222,22 +225,39 @@ function parsePhotos(photoPath?: string | null): string[] {
           </div>
         </div>
 
-        <!-- Campus Handover Protocol Callout Card (Lime Callout Recipe from line 242) -->
-        <div class="rounded-3xl bg-[#d8ef8c] p-6 sm:p-8 text-forest-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xs border border-lime-600/30">
-          <div class="space-y-1.5 max-w-2xl">
-            <span class="inline-block rounded-full bg-forest-900/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-forest-900">
-              CAMPUS HANDOVER PROTOCOL
-            </span>
-            <h3 class="font-serif text-xl sm:text-2xl font-black text-forest-900 leading-tight">
+        <!-- Campus Handover Protocol Callout Card (Subtle forest glow card) -->
+        <div
+          class="relative overflow-hidden rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-md border border-white/10"
+          style="background: radial-gradient(130% 120% at 85% 20%, #226746 0%, #164f38 45%, #0d3222 100%);"
+        >
+          <!-- Really subtle ambient glow -->
+          <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              class="absolute -top-12 -right-12 size-64 rounded-full opacity-30 blur-3xl"
+              style="background: radial-gradient(circle, rgba(216, 239, 140, 0.25) 0%, rgba(38, 106, 72, 0.3) 50%, transparent 75%);"
+            >
+            </div>
+          </div>
+
+          <div class="relative space-y-2 max-w-2xl">
+            <div class="flex items-center gap-2">
+              <span class="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#d8ef8c] border border-white/10">
+                CAMPUS HANDOVER PROTOCOL
+              </span>
+              <svg viewBox="0 0 24 24" class="size-4 text-[#d8ef8c] opacity-80" fill="currentColor" aria-hidden="true">
+                <path d="M12 2c.4 4.8 5.2 9.6 10 10-4.8.4-9.6 5.2-10 10-.4-4.8-5.2-9.6-10-10 4.8-.4 9.6-5.2 10-10z"></path>
+              </svg>
+            </div>
+            <h3 class="font-serif text-xl sm:text-2xl font-black text-white leading-tight">
               Have an item to drop off or retrieve?
             </h3>
-            <p class="text-xs sm:text-sm font-medium text-forest-900/80 leading-relaxed">
+            <p class="text-xs sm:text-sm font-normal text-stone-200/90 leading-relaxed">
               The Disciplinary Office (Admin Building, 1st Floor) is open Monday to Friday, 8:00 AM – 5:00 PM. Bring your student ID and reference tag code for secure handovers.
             </p>
           </div>
           <a
             href="/help"
-            class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer text-sm"
+            class="relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-[#d8ef8c] px-6 py-2.5 font-bold text-forest-900 hover:bg-[#c9e376] active:scale-95 shadow-xs transition-all cursor-pointer text-sm"
           >
             <span>Turn-in guide</span>
             <span aria-hidden="true">&rarr;</span>
