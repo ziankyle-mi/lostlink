@@ -1,4 +1,5 @@
 import type { Env } from "./env";
+import { createClient } from "@supabase/supabase-js";
 import { type SupabaseSession, type SupabaseUser, pkcePair, randomToken } from "./auth";
 
 const TOKEN_PATH = "/auth/v1/token";
@@ -169,6 +170,48 @@ export async function fetchUser(
   if (!response.ok) return null;
   const user = (await response.json()) as SupabaseUser;
   return user?.id ? user : null;
+}
+
+/**
+ * Creates the `profiles` row for a brand-new account.
+ *
+ * Sign-up only creates the Supabase auth user, and RLS blocks client-side
+ * inserts into `profiles`, so this runs on the server with the service role
+ * key. Without this row the account is invisible to the admin directory, has
+ * no notifications, and shows a blank name on /profile.
+ *
+ * Failures are swallowed on purpose: a missing profile row must never block a
+ * student from registering.
+ */
+export async function ensureProfileRow(
+  env: Env,
+  userId: string,
+  email: string,
+  fullName: string,
+  role: "user" | "admin" = "user",
+): Promise<boolean> {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) return false;
+
+  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
+    auth: { persistSession: false },
+  });
+  const { error } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      email: email.toLowerCase().trim(),
+      full_name: fullName,
+      role,
+      active: true,
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    console.warn("[register] profiles row not created:", error.message);
+    return false;
+  }
+  return true;
 }
 
 export { randomToken };

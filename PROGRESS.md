@@ -18,6 +18,31 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Registration fixes — new accounts get a `profiles` row; role pills no longer lie.
+- **Missing profile row (the real bug):** `actions.register` only created the
+  Supabase auth user. `profiles` rows were only ever inserted by
+  `scripts/seed-dlsau-accounts.mjs`, so every self-registered account had no
+  profile: no notifications (`StudentNavbar.astro` silently skips the lookup),
+  a blank name on `/profile`, and no entry in the admin Campus Accounts
+  Directory, so their items showed as "Student".
+  Fix: `ensureProfileRow()` in `src/lib/supabase.ts` upserts
+  `{ id, email, full_name, role, active: true }` with the service role key
+  (RLS blocks anon inserts) right after `signUpWithPassword` resolves the new
+  user id via `fetchUser`. Failures are swallowed + warned so a missing row can
+  never block registration.
+- **Role pills were cosmetic:** `registerSchema` accepts `role` but the handler
+  ignored it, so tapping "Admin" silently produced a student account. Kept the
+  pills (they match `context/createnewacc.png`) and added one caption under
+  them: "New accounts start as Student. Admin access is assigned by the Security
+  Office." Privilege still comes only from the `roleForEmail` server allowlist,
+  now with an explicit comment so it is not "fixed" later.
+- Auto-login after register was left as is (deliberate: DLSAU blocks outbound
+  email, so requiring confirmation would strand demo users).
+- Verified: `astro check` 0 errors / 0 warnings (7 pre-existing hints);
+  `npm test` 82/82 (4 new in `tests/register-profile.test.ts`: row payload,
+  admin role only when granted, no-throw on RLS rejection, no-op when
+  Supabase is unconfigured); `npm run build` success.
+
 Done: Bug fix — admin college filter bar no longer clips the active pill.
 - `UsersManagement.astro` filter bar had `rounded-2xl sm:rounded-full` on a
   `flex-wrap` container. Its 5 long pills always wrap to 2 rows at admin

@@ -16,6 +16,8 @@ import {
   resetPasswordSchema,
 } from "~/lib/schemas";
 import {
+  ensureProfileRow,
+  fetchUser,
   requestPasswordRecovery,
   signInWithPassword,
   signUpWithPassword,
@@ -126,6 +128,8 @@ export const server = {
   register: defineAction({
     accept: "form",
     input: registerSchema,
+    // `role` is accepted by the schema for the form only and is never trusted
+    // for privilege: the granted role comes from the server-side allowlist.
     handler: async ({ name, email, password, agree }, context) => {
       requireSupabase(context.locals);
       assertDomain(context.locals, email);
@@ -142,6 +146,18 @@ export const server = {
         throw new ActionError({ code: "BAD_REQUEST", message: result.error });
       }
       if (result.session) {
+        // Sign-up only makes the auth user; the profiles row is what the
+        // directory, notifications, and RLS policies read.
+        const user = await fetchUser(context.locals.env, result.session.access_token);
+        if (user?.id) {
+          await ensureProfileRow(
+            context.locals.env,
+            user.id,
+            user.email ?? email,
+            name,
+            roleForEmail(email) === "admin" ? "admin" : "user",
+          );
+        }
         setSessionCookies(context.cookies, result.session, false);
         return { redirect: "/" };
       }
