@@ -1162,9 +1162,40 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         // Show success confirmation
         const successMsg = document.getElementById("report-success-msg");
         if (successMsg) successMsg.classList.remove("hidden");
+
+        // Show the reference code with a copy button so the reporter can save
+        // the tag code they must write on the item before turning it in.
+        const refRow = document.getElementById("report-success-ref");
+        const refCodeEl = document.getElementById("report-success-ref-code");
+        const copyRefBtn = document.getElementById("report-copy-ref-btn");
+        const hasRef = reportType === "found" && refCode;
+        if (refRow) refRow.classList.toggle("hidden", !hasRef);
+        if (hasRef && refCodeEl) refCodeEl.textContent = refCode;
+
+        if (copyRefBtn) {
+          copyRefBtn.onclick = async () => {
+            try {
+              await navigator.clipboard.writeText(refCode);
+              const tooltip = copyRefBtn.querySelector(".copy-ref-tooltip");
+              const copyLabel = copyRefBtn.querySelector(".copy-label");
+              if (tooltip) tooltip.classList.add("visible");
+              if (copyLabel) copyLabel.textContent = "Copied!";
+              showToast("Reference code " + refCode + " copied!", "success");
+              setTimeout(() => {
+                if (tooltip) tooltip.classList.remove("visible");
+                if (copyLabel) copyLabel.textContent = "Copy";
+              }, 2000);
+            } catch (err) {
+              console.warn("Clipboard copy failed:", err);
+              showToast("Copy failed. Code: " + refCode, "error");
+            }
+          };
+        }
+
         showToast("Report posted to Campus Feed! Ref: " + refCode, "success");
 
-        setTimeout(hideReportModal, 1600);
+        // Give the reporter time to read and copy the code before auto-closing.
+        setTimeout(hideReportModal, hasRef ? 6000 : 1600);
       };
 
       // Parse search from URL params if arriving from another page

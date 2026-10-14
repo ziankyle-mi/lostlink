@@ -342,6 +342,29 @@ const presets = CAMPUS_LOCATIONS;
           Report and photos uploaded to secure storage! Live on campus feed.
         </span>
       </div>
+
+      <!-- Reference code + copy button (revealed for Found items after a successful post) -->
+      <div id="report-success-ref" class="hidden mt-3 pt-3 border-t border-emerald-600/25">
+        <div class="flex items-center justify-center gap-1.5">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Tag code</span>
+          <span id="report-success-ref-code" class="font-mono text-lg font-black text-forest-900 tracking-wider">LL-0000</span>
+          <button
+            type="button"
+            id="report-copy-ref-btn"
+            data-ref=""
+            class="copy-ref-btn"
+            aria-label="Copy reference tag code"
+            title="Copy code"
+          >
+            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span class="copy-label">Copy</span>
+            <span class="copy-ref-tooltip">Copied!</span>
+          </button>
+        </div>
+        <p class="mt-1.5 text-[11px] text-emerald-800 font-medium">Write this code on the item tag before turning it in.</p>
+      </div>
     </div>
   </div>
 </div>
