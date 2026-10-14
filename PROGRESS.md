@@ -18,6 +18,24 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Feed grid fix — filtering no longer leaves empty gaps in "Latest on campus".
+- Root cause: cards 9+ are wrapped in an `.extra-item` div that is itself the CSS-grid
+  child. The filter script only toggled `hidden` on the inner `<article>`, so every
+  filtered-out extra left its transparent wrapper behind as an empty grid cell (the
+  blank holes in the user's screenshot).
+- `src/pages/index.astro` `updateGrid()` now toggles `hidden` on the grid child
+  (the `.extra-item` wrapper when present, otherwise the article) and keeps the
+  article's own `hidden` state in sync so counters/subtitles stay correct.
+- "Load more" / "View all" now mark extras with an `is-loaded` class; `hidden` on a
+  wrapper can no longer mean both "not loaded yet" and "filtered out".
+- `ItemCard.astro` (+ the JS-built quick-report card): long location text gets
+  `min-w-0` and the date gets `shrink-0 whitespace-nowrap`, so dates like "Oct 13"
+  no longer wrap to two lines and misalign card rows.
+- Verified: simulated old vs new filter behavior — old code left 6 empty cells after
+  a "Past 7 days" filter + Load more, new code leaves 0 (both filter-first and
+  load-first orders). `astro check` 0 errors / 0 warnings (2 pre-existing hints);
+  `npm test` 74/74; `npm run build` success.
+
 Done: UI polish — removed sparkles/asterisk glyphs, replaced with on-theme elements.
 - Removed the 4-point lime sparkle SVG from the login/`AuthShell` green panel and replaced it with a subtle dotted lime trail (SVG path, `non-scaling-stroke`) that arcs from the badge into the existing ambient glow, ending in a soft glowing dot. Reuses the panel's own light language instead of a floating decoration.
 - Replaced the sparkle next to the "Campus Handover Protocol" pill on `/profile` with the shared Lucide `shield` (shield-check) icon via `Icon.astro` — matches the secure-custody meaning and the existing icon set.

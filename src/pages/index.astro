@@ -230,19 +230,28 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
           const matches = matchesType && matchesCategory && matchesLocation && matchesDateRange && matchesSearch;
 
-          const isExtra = card.parentElement.classList.contains("extra-item");
-          const isExtraHidden = isExtra && card.parentElement.classList.contains("hidden");
+          // The grid's direct children are the <article> for the first 8 cards
+          // and an ".extra-item" wrapper <div> for the rest. Hiding only the
+          // article inside a visible wrapper still leaves that wrapper in the
+          // grid as an empty cell, which shows up as a gap in the card grid.
+          // Always toggle visibility on the element that is the grid child,
+          // and keep the article's own hidden state in sync for the counters.
+          const parent = card.parentElement;
+          const isExtra = !!parent && parent.classList.contains("extra-item");
+          // Extras are only eligible once "Load more" / "View all" revealed them.
+          const isExtraLoaded = !isExtra || parent.classList.contains("is-loaded");
 
           if (matches) {
             totalMatches++;
-            if (!isExtraHidden) {
-              card.classList.remove("hidden");
-              visibleCount++;
-            } else {
-              card.classList.add("hidden");
-            }
+          }
+
+          if (matches && isExtraLoaded) {
+            card.classList.remove("hidden");
+            if (isExtra) parent.classList.remove("hidden");
+            visibleCount++;
           } else {
             card.classList.add("hidden");
+            if (isExtra) parent.classList.add("hidden");
           }
         });
 
@@ -417,7 +426,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         viewAllBtn.addEventListener("click", () => {
           resetAllFilters();
           const extraItems = document.querySelectorAll(".extra-item");
-          extraItems.forEach((item) => item.classList.remove("hidden"));
+          extraItems.forEach((item) => {
+            item.classList.add("is-loaded");
+            item.classList.remove("hidden");
+          });
           updateGrid();
           if (loadMoreBtn) {
             loadMoreBtn.textContent = `All ${cardTotal()} items displayed`;
@@ -433,7 +445,8 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           const extraItems = document.querySelectorAll(".extra-item");
           let unhiddenCount = 0;
           extraItems.forEach((item) => {
-            if (item.classList.contains("hidden")) {
+            if (!item.classList.contains("is-loaded")) {
+              item.classList.add("is-loaded");
               item.classList.remove("hidden");
               unhiddenCount++;
             }
@@ -1120,11 +1133,11 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               <h3 class="mt-1 text-base sm:text-lg lg:text-xl font-bold tracking-tight text-forest-900 line-clamp-1">${safeName}</h3>
             </div>
             <div class="mt-5 flex items-end justify-between gap-3">
-              <div>
+              <div class="min-w-0 flex-1">
                 <p class="text-xs font-medium leading-none text-stone-400">${safeLocationPrefix}</p>
                 <p class="mt-1.5 text-sm sm:text-base font-bold text-forest-900 line-clamp-1">${safeLocation}</p>
               </div>
-              <p class="font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">${safeDate}</p>
+              <p class="shrink-0 whitespace-nowrap font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">${safeDate}</p>
             </div>
             <div class="mt-4 flex items-center justify-between border-t border-line/60 pt-4 text-sm font-bold text-forest-900 group-hover:text-forest-700">
               <span>${safeActionLabel}</span>

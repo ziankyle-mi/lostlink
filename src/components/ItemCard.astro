@@ -120,7 +120,7 @@ const { item, isAdmin = false } = Astro.props;
     </div>
 
     <div class="mt-5 flex items-end justify-between gap-3">
-      <div>
+      <div class="min-w-0 flex-1">
         <p class="text-xs font-medium leading-none text-stone-400">
           {item.locationPrefix}
         </p>
@@ -128,7 +128,7 @@ const { item, isAdmin = false } = Astro.props;
           {item.location}
         </p>
       </div>
-      <p class="font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">
+      <p class="shrink-0 whitespace-nowrap font-serif text-xl sm:text-2xl font-black leading-none text-forest-900">
         {item.date}
       </p>
     </div>
