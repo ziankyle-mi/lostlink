@@ -68,8 +68,9 @@ if (id && env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLI
   }
 }
 
-// 2. Fallback: Check mock items array if not found in Supabase (supports demo feed items)
-if (!item && id) {
+// 2. Fallback: Only check mock items array if live Supabase is not configured
+const isDbConfigured = Boolean(env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY));
+if (!item && id && !isDbConfigured) {
   const mock = ALL_ITEMS.find((m) => m.id === id);
   if (mock) {
     item = {

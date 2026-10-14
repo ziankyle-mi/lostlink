@@ -49,8 +49,8 @@ const mappedLiveLogs = liveLogs && liveLogs.length > 0
     }))
   : [];
 
-const logs = mappedLiveLogs.length > 0
-  ? [...mappedLiveLogs, ...(isAdmin ? adminLogs.slice(0, Math.max(0, 4 - mappedLiveLogs.length)) : studentLogs.slice(0, Math.max(0, 4 - mappedLiveLogs.length)))]
+const logs = liveLogs !== undefined
+  ? mappedLiveLogs
   : (isAdmin ? adminLogs : studentLogs);
 ---
 
@@ -68,7 +68,13 @@ const logs = mappedLiveLogs.length > 0
 
     <!-- Feed List -->
     <div class="mt-4 divide-y divide-stone-100">
-      {logs.map((log) => (
+      {logs.length === 0 ? (
+        <div class="py-8 text-center text-stone-500">
+          <p class="text-sm font-semibold text-stone-600">No activity recorded today</p>
+          <p class="mt-1 text-xs text-stone-400">Actions taken by staff and students will appear here in real time.</p>
+        </div>
+      ) : (
+        logs.map((log) => (
         <div class="flex items-center justify-between gap-4 py-4 first:pt-2 last:pb-0 hover:bg-stone-50/50 rounded-lg px-1 transition-colors">
           <div class="flex items-center gap-3 min-w-0">
             <span class="size-2 rounded-full bg-[#164f38] shrink-0"></span>
@@ -80,16 +86,26 @@ const logs = mappedLiveLogs.length > 0
             {log.time}
           </span>
         </div>
-      ))}
+      )))}
     </div>
   </div>
 
   <div class="mt-6 pt-4 border-t border-stone-100">
-    <a
-      href={isAdmin ? "/admin#audit-log" : "/profile#history"}
-      class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 hover:text-forest-700 transition-colors"
-    >
-      <span>{isAdmin ? "View full audit log \u2192" : "View complete activity history \u2192"}</span>
-    </a>
+    {isAdmin ? (
+      <button
+        type="button"
+        id="open-audit-log-btn"
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 transition-colors cursor-pointer"
+      >
+        <span>View full audit log &rarr;</span>
+      </button>
+    ) : (
+      <a
+        href="/profile#history"
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 transition-colors"
+      >
+        <span>View complete activity history &rarr;</span>
+      </a>
+    )}
   </div>
 </section>

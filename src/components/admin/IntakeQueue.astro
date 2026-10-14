@@ -51,8 +51,8 @@ const mappedLiveIntake = liveIntake && liveIntake.length > 0
     }))
   : [];
 
-const queueItems = mappedLiveIntake.length > 0
-  ? [...mappedLiveIntake, ...intakeItems.slice(0, Math.max(0, 3 - mappedLiveIntake.length))]
+const queueItems = liveIntake !== undefined
+  ? mappedLiveIntake
   : intakeItems;
 ---
 
@@ -73,7 +73,18 @@ const queueItems = mappedLiveIntake.length > 0
     <!-- Items List -->
     {isAdmin ? (
       <div class="mt-6 divide-y divide-stone-100">
-        {queueItems.map((item) => (
+        {queueItems.length === 0 ? (
+          <div class="py-10 text-center text-stone-500">
+            <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+              <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p class="mt-3 text-sm font-bold text-forest-900">Intake queue is clear</p>
+            <p class="mt-1 text-xs text-stone-400">All submitted found items have been confirmed into custody.</p>
+          </div>
+        ) : (
+          queueItems.map((item) => (
           <div class="flex items-center justify-between gap-3 py-4 first:pt-2 last:pb-0">
             <div class="flex items-center gap-3.5 min-w-0">
               <div class={`size-11 shrink-0 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
@@ -131,7 +142,7 @@ const queueItems = mappedLiveIntake.length > 0
               </button>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     ) : (
       <div class="mt-6 space-y-3.5">
@@ -169,11 +180,21 @@ const queueItems = mappedLiveIntake.length > 0
   </div>
 
   <div class="mt-6 pt-4 border-t border-stone-100">
-    <a
-      href={isAdmin ? "/admin#intake-guidelines" : "/help#claiming"}
-      class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 hover:text-forest-700 transition-colors"
-    >
-      <span>{isAdmin ? "Campus intake guidelines \u2192" : "View complete release policies \u2192"}</span>
-    </a>
+    {isAdmin ? (
+      <button
+        type="button"
+        id="open-intake-guidelines-btn"
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 transition-colors cursor-pointer"
+      >
+        <span>Campus intake guidelines &rarr;</span>
+      </button>
+    ) : (
+      <a
+        href="/help#claiming"
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 transition-colors"
+      >
+        <span>View complete release policies &rarr;</span>
+      </a>
+    )}
   </div>
 </section>

@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         claim_id: claimId,
       });
 
-      return new Response(JSON.stringify({ ok: true, status: newStatus }), {
+      return new Response(JSON.stringify({ ok: true, status: newStatus, itemId: targetClaim.item_id }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });

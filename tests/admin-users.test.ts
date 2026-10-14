@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { POST as adminActionsPost } from "~/pages/api/admin/actions";
 import { INITIAL_CAMPUS_USERS } from "~/data/mockUsers";
 import { readEnv } from "~/lib/env";
+import { enrichCampusUser, COLLEGES, DEGREE_PROGRAMS } from "~/data/campusPrograms";
 
 describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
   const env = readEnv();
@@ -198,4 +199,129 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(data.ok).toBe(true);
     expect(data.message).toContain("juan.reyes@dlsau.edu.ph");
   });
+
+  it("prevents administrators from deleting their own active account", async () => {
+    const adminUser = {
+      id: "admin-uuid-1",
+      email: "dlsau.lostlink@dlsau.edu.ph",
+      role: "admin" as const,
+    };
+
+    const req = new Request("http://localhost:4321/api/admin/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "delete_user",
+        userId: "admin-uuid-1",
+        email: "dlsau.lostlink@dlsau.edu.ph",
+      }),
+    });
+
+    const res = await adminActionsPost({
+      request: req,
+      locals: { user: adminUser, env },
+    } as any);
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.ok).toBe(false);
+    expect(data.error).toContain("Administrators cannot delete their own active account");
+  });
+
+  it("handles delete_user action for student account successfully", async () => {
+    const adminUser = {
+      id: "admin-uuid-1",
+      email: "dlsau.lostlink@dlsau.edu.ph",
+      role: "admin" as const,
+    };
+
+    const req = new Request("http://localhost:4321/api/admin/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "delete_user",
+        userId: "demo-student-id-99",
+        email: "student.testdelete@dlsau.edu.ph",
+      }),
+    });
+
+    const res = await adminActionsPost({
+      request: req,
+      locals: { user: adminUser, env },
+    } as any);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(data.message).toContain("successfully removed");
+  });
+
+  it("validates 4 official DLSAU colleges and degree programs mapping", () => {
+    // 1. CAST
+    expect(COLLEGES.CAST.name).toContain("Arts, Sciences");
+    expect(DEGREE_PROGRAMS["BSCS"].collegeCode).toBe("CAST");
+    expect(DEGREE_PROGRAMS["BSCpE"].collegeCode).toBe("CAST");
+    expect(DEGREE_PROGRAMS["AB Psych"].collegeCode).toBe("CAST");
+
+    // 2. CVMAS
+    expect(COLLEGES.CVMAS.name).toContain("Veterinary Medicine");
+    expect(DEGREE_PROGRAMS["DVM"].collegeCode).toBe("CVMAS");
+    expect(DEGREE_PROGRAMS["BSA"].collegeCode).toBe("CVMAS");
+    expect(DEGREE_PROGRAMS["BSA"].campus).toContain("Salikneta Farm");
+    expect(DEGREE_PROGRAMS["BSFT"].collegeCode).toBe("CVMAS");
+
+    // 3. CBMA
+    expect(COLLEGES.CBMA.name).toContain("Business");
+    expect(DEGREE_PROGRAMS["BSA-Act"].collegeCode).toBe("CBMA");
+    expect(DEGREE_PROGRAMS["BSBA-FM"].collegeCode).toBe("CBMA");
+    expect(DEGREE_PROGRAMS["BSBA-MM"].collegeCode).toBe("CBMA");
+    expect(DEGREE_PROGRAMS["BSHM"].collegeCode).toBe("CBMA");
+    expect(DEGREE_PROGRAMS["BSTM"].collegeCode).toBe("CBMA");
+
+    // 4. COED
+    expect(COLLEGES.COED.name).toContain("Education");
+    expect(DEGREE_PROGRAMS["BEEd"].collegeCode).toBe("COED");
+    expect(DEGREE_PROGRAMS["BSEd"].collegeCode).toBe("COED");
+  });
+
+  it("enriches campus users and designates faculty with standard student privileges", () => {
+    const facultyUser = enrichCampusUser({
+      id: "fac-1",
+      email: "engr.corpuz@dlsau.edu.ph",
+      full_name: "Engr. Danilo Corpuz",
+      user_metadata: {
+        college: "CAST",
+        program: "BSCS",
+        is_faculty: true,
+        student_id: "2018-F102",
+      },
+    });
+
+    expect(facultyUser.isFaculty).toBe(true);
+    expect(facultyUser.collegeCode).toBe("CAST");
+    expect(facultyUser.programCode).toBe("BSCS");
+    expect(facultyUser.studentId).toBe("2018-F102");
+    // Standard privileges - no special elevated admin rights
+    expect(facultyUser.role).toBe("user");
+    expect(facultyUser.portalLevel).toContain("Faculty Member (Standard Privileges)");
+
+    const studentUser = enrichCampusUser({
+      id: "std-1",
+      email: "rene.baterbonia@dlsau.edu.ph",
+      full_name: "Rene Baterbonia",
+      user_metadata: {
+        college: "CAST",
+        program: "BSCS",
+        is_faculty: false,
+        student_id: "2024-10144",
+      },
+    });
+
+    expect(studentUser.isFaculty).toBe(false);
+    expect(studentUser.studentId).toBe("2024-10144");
+    expect(studentUser.role).toBe("user");
+    expect(studentUser.portalLevel).toBe("Student");
+  });
 });
+
+

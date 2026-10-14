@@ -110,8 +110,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const isClaimUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claimId);
       if (!isClaimUuid) {
-        // Fallback demo claim item
-        return new Response(JSON.stringify({ ok: true, status: "verified" }), {
+        // Fallback demo claim item: map demo claims to item IDs
+        const demoClaimToItem: Record<string, string> = {
+          "claim-1": "item-1",
+          "claim-2": "item-2",
+          "claim-3": "item-3",
+          "claim-4": "item-4",
+          "claim-5": "item-5",
+        };
+        const mappedItemId = demoClaimToItem[claimId] || null;
+        return new Response(JSON.stringify({ ok: true, status: "verified", itemId: mappedItemId }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -174,7 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      return new Response(JSON.stringify({ ok: true, status: "verified" }), {
+      return new Response(JSON.stringify({ ok: true, status: "verified", itemId: claim.item_id }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -472,6 +480,78 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ok: true,
         email: cleanEmail,
         message: `Password reset link dispatched to ${cleanEmail}.`,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: Delete / Remove Account
+    if (action === "delete_user") {
+      if (!userId && !email) {
+        return new Response(JSON.stringify({ ok: false, error: "User ID or email required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      let targetProfileId = userId;
+      let targetEmail = email;
+
+      if (!targetProfileId && targetEmail) {
+        const { data: p } = await supabase.from("profiles").select("id, email").eq("email", targetEmail.toLowerCase().trim()).maybeSingle();
+        targetProfileId = p?.id;
+      } else if (targetProfileId && !targetEmail) {
+        const { data: p } = await supabase.from("profiles").select("id, email").eq("id", targetProfileId).maybeSingle();
+        targetEmail = p?.email;
+      }
+
+      // Prevent self-deletion of current acting admin account
+      if ((targetProfileId && targetProfileId === user.id) || (targetEmail && targetEmail.toLowerCase() === userEmail.toLowerCase())) {
+        return new Response(JSON.stringify({ ok: false, error: "Administrators cannot delete their own active account." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // 1. Delete associated claims
+      if (targetProfileId) {
+        await supabase.from("claims").delete().eq("claimant_id", targetProfileId);
+      }
+
+      // 2. Delete auth user (cascades to profiles)
+      if (targetProfileId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetProfileId)) {
+        try {
+          await supabase.auth.admin.deleteUser(targetProfileId);
+        } catch (e) {
+          console.warn("[admin/actions] auth.admin.deleteUser note:", e);
+        }
+      }
+
+      // Fallback: Delete from profiles directly
+      if (targetProfileId) {
+        await supabase.from("profiles").delete().eq("id", targetProfileId);
+      } else if (targetEmail) {
+        await supabase.from("profiles").delete().eq("email", targetEmail.toLowerCase().trim());
+      }
+
+      // 3. Log to admin_log
+      if (adminProfileId) {
+        try {
+          await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `user_deleted: ${targetEmail || targetProfileId}`,
+          });
+        } catch (logErr) {
+          console.warn("[admin/actions] Delete log note:", logErr);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        userId: targetProfileId,
+        email: targetEmail,
+        message: `Account ${targetEmail || targetProfileId} has been successfully removed from campus records.`,
       }), {
         status: 200,
         headers: { "Content-Type": "application/json" },

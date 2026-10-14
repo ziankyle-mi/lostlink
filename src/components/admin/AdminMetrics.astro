@@ -1,6 +1,5 @@
 ---
-import { DEMO_STATS, FOUND_COUNT, LOST_COUNT } from "~/data/mockItems";
-import { adminClaims, studentClaims } from "~/components/admin/ClaimsVerificationTable.astro";
+import { FOUND_COUNT, LOST_COUNT } from "~/data/mockItems";
 
 interface Props {
   role?: "admin" | "student";
@@ -15,26 +14,21 @@ interface Props {
 const { role = "admin", metrics } = Astro.props;
 const isAdmin = role === "admin";
 
-const officeNowCount = adminClaims.filter((claim) => claim.statusText === "At the office now").length;
-const readyForPickupCount = studentClaims.filter(
-  (claim) => claim.statusText === "At the office now" || claim.statusText === "In DO custody",
-).length;
-
-const custodyCount = metrics?.itemsInCustody !== undefined && metrics.itemsInCustody > 0
+const custodyCount = metrics?.itemsInCustody !== undefined
   ? metrics.itemsInCustody
-  : (isAdmin ? FOUND_COUNT : DEMO_STATS.myActiveReports);
+  : (isAdmin ? FOUND_COUNT : 0);
 
-const lostCount = metrics?.activeLostReports !== undefined && metrics.activeLostReports > 0
+const lostCount = metrics?.activeLostReports !== undefined
   ? metrics.activeLostReports
-  : (isAdmin ? LOST_COUNT : studentClaims.length);
+  : (isAdmin ? LOST_COUNT : 0);
 
-const claimsCount = metrics?.claimsToVerify !== undefined && metrics.claimsToVerify > 0
+const claimsCount = metrics?.claimsToVerify !== undefined
   ? metrics.claimsToVerify
-  : (isAdmin ? adminClaims.length : readyForPickupCount);
+  : 0;
 
-const returnedCount = metrics?.returnedThisMonth !== undefined && metrics.returnedThisMonth > 0
+const returnedCount = metrics?.returnedThisMonth !== undefined
   ? metrics.returnedThisMonth
-  : (isAdmin ? DEMO_STATS.returnedThisMonth : DEMO_STATS.campusRecovered);
+  : 0;
 ---
 
 <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5" aria-label="Key Performance Metrics">
@@ -48,7 +42,7 @@ const returnedCount = metrics?.returnedThisMonth !== undefined && metrics.return
         {custodyCount}
       </p>
       <p class="mt-3 text-xs text-stone-500 font-medium">
-        {isAdmin ? `+${DEMO_STATS.itemsInCustodyDelta} this week` : DEMO_STATS.myActiveReportsNote}
+        {isAdmin ? `${custodyCount} held in custody` : "Active submissions"}
       </p>
     </div>
   </div>
@@ -63,7 +57,7 @@ const returnedCount = metrics?.returnedThisMonth !== undefined && metrics.return
         {lostCount}
       </p>
       <p class="mt-3 text-xs text-stone-500 font-medium">
-        {isAdmin ? `+${DEMO_STATS.lostDelta} this week` : "Under office verification"}
+        {isAdmin ? `${lostCount} active reports` : "Under office verification"}
       </p>
     </div>
   </div>
@@ -78,7 +72,7 @@ const returnedCount = metrics?.returnedThisMonth !== undefined && metrics.return
         {claimsCount}
       </p>
       <p class="mt-3 text-xs font-semibold text-forest-800">
-        {isAdmin ? `${officeNowCount} student at the office now` : "Visit Disciplinary Office"}
+        {isAdmin ? (claimsCount > 0 ? `${claimsCount} pending verification` : "No pending claims") : "Visit Disciplinary Office"}
       </p>
     </div>
   </div>
@@ -93,7 +87,7 @@ const returnedCount = metrics?.returnedThisMonth !== undefined && metrics.return
         {returnedCount}
       </p>
       <p class="mt-3 text-xs font-semibold text-[#d8ef8c]">
-        {isAdmin ? `+${DEMO_STATS.returnedDelta} vs last month` : "Campus reunited this term"}
+        {isAdmin ? `${returnedCount} items returned` : "Campus reunited this term"}
       </p>
     </div>
   </div>

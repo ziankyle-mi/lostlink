@@ -21,12 +21,20 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
   const supabase = getAdminClient(locals.env);
   const typeFilter = url.searchParams.get("type"); // "lost" | "found" | null
+  const statusFilter = url.searchParams.get("status"); // "approved" | "claimed" | "all" | null
 
   try {
     let query = supabase.from("items").select("*").order("created_at", { ascending: false });
 
     if (typeFilter && (typeFilter === "lost" || typeFilter === "found")) {
       query = query.eq("type", typeFilter);
+    }
+
+    if (statusFilter && statusFilter !== "all") {
+      query = query.eq("status", statusFilter);
+    } else if (!statusFilter) {
+      // Default to approved active items so claimed and resolved items are not returned publicly
+      query = query.eq("status", "approved");
     }
 
     const { data, error } = await query;

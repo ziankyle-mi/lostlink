@@ -127,7 +127,7 @@ Details and "done" checks are in [docs/steps.md](docs/steps.md).
 
 1. Secure web development. Use the OWASP Top 10 as the review list. See [docs/security.md](docs/security.md).
 2. Supabase and RLS. Write policies first, test them, then build on top.
-3. Frontend design. Match the screenshots. See [docs/polish.md](docs/polish.md).
+3. Frontend design. Match the screenshots. See [docs/polish.md](docs/polish.md) and read [.opencode/skills/ui-design-system/SKILL.md](.opencode/skills/ui-design-system/SKILL.md) before building or restyling ANY UI. The skill holds the design tokens, component class recipes, and the do-not list; copy from it instead of inventing new styles.
 4. Accessibility. WCAG 2.2 AA.
 5. Astro Actions and Zod for all mutations.
 6. Testing. Vitest for Zod schemas and helpers. Playwright for login, report, approve, claim, and resolve. One test per RLS rule.

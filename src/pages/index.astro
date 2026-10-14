@@ -37,9 +37,10 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
       .from("items")
       .select("*")
       .order("created_at", { ascending: false });
-
+    // Campus feed only displays active, approved items waiting to be claimed or found.
+    // When an item is claimed, resolved, or rejected, it is automatically hidden from this public feed.
     const visibleDbItems = (dbItems || []).filter(
-      (item) => item.status !== "rejected" && item.status !== "archived",
+      (item) => item.status === "approved",
     );
 
     if (visibleDbItems.length > 0) {
@@ -97,7 +98,8 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
   }
 }
 
-const allFeedItems: DashboardItem[] = [...liveItems, ...ALL_ITEMS];
+const isDbConfigured = Boolean(env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY));
+const allFeedItems: DashboardItem[] = isDbConfigured ? liveItems : ALL_ITEMS;
 const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
 const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 ---
@@ -195,11 +197,13 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         return true;
       }
 
-      // Prune previously removed demo/mock items in this session
+      // Prune previously removed or claimed demo/mock items in this session
       try {
         const storedRemoved = JSON.parse(sessionStorage.getItem("lostlink_removed_items") || "[]");
-        storedRemoved.forEach((removedId) => {
-          const remCard = document.querySelector(`.item-card[data-item-id="${removedId}"]`);
+        const storedClaimed = JSON.parse(sessionStorage.getItem("lostlink_claimed_items") || "[]");
+        const allPruned = [...new Set([...storedRemoved, ...storedClaimed])];
+        allPruned.forEach((prunedId) => {
+          const remCard = document.querySelector(`.item-card[data-item-id="${prunedId}"]`);
           if (remCard) {
             const p = remCard.parentElement;
             if (p && p.classList.contains("extra-item")) p.remove();

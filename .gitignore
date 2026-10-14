@@ -27,4 +27,12 @@ Thumbs.db
 !.vscode/extensions.json
 
 .dev.vars
-.opencode/
+.opencode/*
+!.opencode/skills/
+
+# Demo login databases. Never commit: ACCOUNTS_CREDENTIALS.md holds real
+# plaintext passwords, and the .xlsx files are raw login sheets.
+database/
+account_credentials.md
+public/items-originals-backup/
+context/

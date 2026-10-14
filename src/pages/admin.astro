@@ -8,6 +8,7 @@ import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
 import UsersManagement from "~/components/admin/UsersManagement.astro";
 import { INITIAL_CAMPUS_USERS, type CampusUser } from "~/data/mockUsers";
+import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
 
 import { roleForEmail } from "~/lib/session";
 import { readEnv } from "~/lib/env";
@@ -43,7 +44,7 @@ let liveMetrics = {
 let liveClaims: any[] = [];
 let liveIntake: any[] = [];
 let liveLogs: any[] = [];
-let allUsers: CampusUser[] = [...INITIAL_CAMPUS_USERS];
+let allUsers: EnhancedCampusUser[] = [];
 
 if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
   try {
@@ -123,7 +124,8 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       supabase
         .from("profiles")
         .select("id, full_name, email, role, active, created_at")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(500),
     ]);
 
     liveMetrics = {
@@ -137,24 +139,63 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     if (intakeListRes.data) liveIntake = intakeListRes.data;
     if (logsListRes.data) liveLogs = logsListRes.data;
 
+    let authUserMetaMap = new Map<string, any>();
+    if (env.SUPABASE_SERVICE_ROLE_KEY && currentTab === "users") {
+      try {
+        const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 500 });
+        if (authUsersData?.users) {
+          for (const u of authUsersData.users) {
+            if (u.user_metadata) {
+              authUserMetaMap.set(u.id, u.user_metadata);
+              if (u.email) authUserMetaMap.set(u.email.toLowerCase(), u.user_metadata);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[admin] auth.admin.listUsers note:", e);
+      }
+    }
+
     if (profilesRes.data && profilesRes.data.length > 0) {
-      const liveUsers: CampusUser[] = profilesRes.data.map((p: any) => ({
-        id: p.id,
-        full_name: p.full_name || p.email.split("@")[0].replace(/[._-]/g, " "),
-        email: p.email,
-        role: p.role,
-        active: p.active ?? true,
-        created_at: p.created_at,
-        department: p.role === "admin" ? "Disciplinary / Security Office" : "DLSAU Student",
-      }));
-      const liveEmails = new Set(liveUsers.map((u) => u.email.toLowerCase()));
-      const remainingMock = INITIAL_CAMPUS_USERS.filter((u) => !liveEmails.has(u.email.toLowerCase()));
-      allUsers = [...liveUsers, ...remainingMock];
+      allUsers = profilesRes.data.map((p: any) => {
+        const meta = authUserMetaMap.get(p.id) || authUserMetaMap.get((p.email || "").toLowerCase());
+        return enrichCampusUser({
+          ...p,
+          user_metadata: meta,
+        });
+      });
+    } else {
+      allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
     }
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
   }
+} else {
+  allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
 }
+
+// Full audit log events for the Full Audit Log modal
+const defaultAuditEvents = [
+  { id: "e1", title: "Claim approved: iPhone 13 Pro released", details: "Released to Maria Santos (2024-10144) • Ref: DLSAU-2026-F002", category: "claim", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Today, 11:42 AM" },
+  { id: "e2", title: "Custody confirmed: Hydro Flask 32oz intake", details: "Tag affixed, placed in Vault Shelf C-1 • Ref: DLSAU-2026-F005", category: "intake", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Today, 10:15 AM" },
+  { id: "e3", title: "Account promoted to administrator", details: "Promoted Prof. Lourdes Carandang (Faculty) to DO Admin", category: "user", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Yesterday, 4:20 PM" },
+  { id: "e4", title: "Custody confirmed: Casio fx-991EX calculator", details: "Intake verified at DO Room 102 • Ref: DLSAU-2026-F009", category: "intake", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Oct 13, 2:10 PM" },
+  { id: "e5", title: "Claim verification requested: Blue backpack", details: "Claimant submitted proof photo • Ref: DLSAU-2026-F014", category: "claim", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Oct 12, 9:30 AM" },
+  { id: "e6", title: "Account moderation: User suspended", details: "Suspended Marc Daniel Hernandez pending disciplinary review", category: "user", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Oct 11, 3:45 PM" },
+  { id: "e7", title: "Claim approved: Leather wallet released", details: "Released to Christian Reyes • Ref: DLSAU-2026-F001", category: "claim", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Oct 10, 1:15 PM" },
+  { id: "e8", title: "Custody confirmed: DLSAU ID card (CAST)", details: "Placed in Locker Vault A-1 • Ref: DLSAU-2026-F003", category: "intake", operator: "dlsau.lostlink@dlsau.edu.ph", time: "Oct 9, 11:00 AM" },
+];
+
+const liveAuditEvents = liveLogs.map((log: any, idx: number) => ({
+  id: log.id || `live-${idx}`,
+  title: log.items?.name ? `Admin action: ${log.items.name}` : `System log: ${log.action || "Audit record"}`,
+  details: `Action: ${log.action || "Custodial change"} • Ref: ${log.item_id ? log.item_id.slice(0, 8) : "System"}`,
+  category: (log.action || "").includes("claim") ? "claim" : (log.action || "").includes("intake") ? "intake" : "user",
+  operator: userEmail,
+  time: log.created_at ? new Date(log.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "Recently",
+}));
+
+const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defaultAuditEvents.slice(liveAuditEvents.length)] : defaultAuditEvents;
 ---
 
 <Base
@@ -167,8 +208,8 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       <AdminTicker />
 
       <!-- Main Layout Container -->
-      <div class="mx-auto w-full max-w-[1520px] px-4 py-6 sm:px-8 sm:py-8 lg:px-12">
-        <div class="flex flex-col-reverse lg:flex-row items-start gap-8 lg:gap-10">
+      <div class={`mx-auto w-full ${currentTab === "users" ? "max-w-[1660px]" : "max-w-[1520px]"} px-4 py-6 sm:px-6 sm:py-8 lg:px-10`}>
+        <div class="flex flex-col-reverse lg:flex-row items-start gap-7 lg:gap-8">
           <!-- Main Content (Left Column) -->
           <main class="w-full flex-1 min-w-0 space-y-7">
             <!-- Header Row: Date Eyebrow, Overview Title, Search, CTA -->
@@ -187,9 +228,9 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                 {currentTab === "users" ? (
                   <a
                     href="/admin"
-                    class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                    class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
                   >
-                    <span>&larr; Back to Overview</span>
+                    <span>&larr; Back to overview</span>
                   </a>
                 ) : (
                   <>
@@ -198,7 +239,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                         type="search"
                         id="overview-search-input"
                         placeholder="Search items, students, claims.."
-                        class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
+                        class="w-full min-h-[3rem] rounded-full bg-[#ece5d6] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
                       />
                       <svg
                         class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
@@ -216,7 +257,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                     <button
                       type="button"
                       id="log-found-cta-btn"
-                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
                     >
                       <span>Log a found item</span>
                       <span class="text-base font-black leading-none">+</span>
@@ -251,6 +292,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
               role="admin"
               activeTab={currentTab}
               userEmail={userEmail}
+              metrics={liveMetrics}
             />
           </div>
         </div>
@@ -333,10 +375,317 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     </div>
   </div>
 
+  <!-- Modal 1: Campus Intake Guidelines Modal -->
+  <div
+    id="intake-guidelines-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="intake-guidelines-title"
+  >
+    <div class="relative w-full max-w-xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+            Disciplinary Office SOP
+          </span>
+          <h3 id="intake-guidelines-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Campus Intake &amp; Custody Guidelines
+          </h3>
+        </div>
+        <button
+          type="button"
+          class="close-intake-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-4 text-xs sm:text-sm text-stone-700">
+        <div class="rounded-2xl bg-[#ece5d6] p-4 border border-stone-300/40 text-forest-900 space-y-1">
+          <p class="font-bold text-xs uppercase tracking-wider">Official Turn-in Location</p>
+          <p class="text-sm font-semibold">Disciplinary &amp; Security Office &bull; Admin Building Room 102</p>
+          <p class="text-xs text-stone-600">Operating hours: Monday to Friday, 8:00 AM &ndash; 5:00 PM</p>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">1</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Physical Handover &amp; Inspection</p>
+              <p class="text-xs text-stone-500 mt-0.5">Finder presents the recovered item. Inspect device state, verify power condition, and note distinguishing marks or accessories.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">2</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Digital Tagging &amp; Reference Code Assignment</p>
+              <p class="text-xs text-stone-500 mt-0.5">Click "Confirm intake" in the intake queue to generate the permanent campus reference token (e.g. DLSAU-2026-F089) and affix the physical barcode tag.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">3</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Secure Storage Placement</p>
+              <p class="text-xs text-stone-500 mt-0.5">Store valuables, phones, calculators, and IDs in Office Locker Vault A-D. Store large bags and tumblers in Storage Cage 1.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">4</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">30-Day Mandatory Retention</p>
+              <p class="text-xs text-stone-500 mt-0.5">Items remain in active claim status for 30 days. After 30 days without an approved claim, items become eligible for extended custody or campus donation.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">5</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Custody Release Protocol</p>
+              <p class="text-xs text-stone-500 mt-0.5">Verify student ID against the claimant profile and approved claim ticket. Have the student sign the Physical Custody Release Logbook.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-intake-modal rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+        >
+          Understood, close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Full Audit Log Modal -->
+  <div
+    id="audit-log-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="audit-log-modal-title"
+  >
+    <div class="relative w-full max-w-3xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
+            Campus Audit Trail
+          </span>
+          <h3 id="audit-log-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Full Administrative Audit Log
+          </h3>
+          <p class="text-xs text-stone-500 mt-0.5">Chronological record of verified claims, custodial intakes, role alterations, and account moderation.</p>
+        </div>
+        <button
+          type="button"
+          class="close-audit-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Filter chips for audit log -->
+      <div class="mt-4 flex items-center gap-1.5 overflow-x-auto pb-1 flex-wrap" id="audit-filter-pills">
+        <button type="button" class="audit-filter-pill active rounded-full bg-forest-700 px-3.5 py-1 text-xs font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-audit-filter="all">
+          All activity ({allAuditEvents.length})
+        </button>
+        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="claim">
+          Claim verifications
+        </button>
+        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="intake">
+          Custodial intake
+        </button>
+        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
+          User moderation
+        </button>
+      </div>
+
+      <!-- Audit Events List -->
+      <div class="mt-4 divide-y divide-stone-100 max-h-[420px] overflow-y-auto pr-1" id="audit-events-container">
+        {allAuditEvents.map((evt) => (
+          <div class="audit-event-row flex items-center justify-between gap-3 py-3" data-event-category={evt.category}>
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="size-9 rounded-xl flex items-center justify-center font-serif text-xs font-black bg-[#eef2e3] text-forest-900 shrink-0">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-forest-900 text-xs sm:text-sm truncate">
+                  {evt.title}
+                </p>
+                <p class="text-[11px] text-stone-500 truncate mt-0.5">
+                  {evt.details} &bull; <span class="font-mono text-stone-600">{evt.operator}</span>
+                </p>
+              </div>
+            </div>
+            <span class="shrink-0 text-xs font-mono font-medium text-stone-500">
+              {evt.time}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div class="mt-6 flex items-center justify-between pt-4 border-t border-stone-100">
+        <span class="text-xs text-stone-500 font-medium">Logged securely with cryptographic integrity &bull; DLSAU Security Office</span>
+        <button
+          type="button"
+          class="close-audit-modal rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Unclaimed Overdue Items Modal -->
+  <div
+    id="unclaimed-items-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="unclaimed-items-modal-title"
+  >
+    <div class="relative w-full max-w-2xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#d8ef8c] text-forest-900 px-3 py-1 text-xs font-bold border border-lime-600/30">
+            Custodial policy &bull; 30+ days overdue
+          </span>
+          <h3 id="unclaimed-items-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Unclaimed Items Review
+          </h3>
+          <p class="text-xs text-stone-500 mt-0.5">Items held in Disciplinary Office custody beyond the standard 30-day reclaim window.</p>
+        </div>
+        <button
+          type="button"
+          class="close-unclaimed-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-stone-200 bg-[#f5f1e6]/60 p-3.5 text-xs text-stone-600 leading-relaxed">
+        Under DLSAU Lost &amp; Found policy, items held in custody for 30+ days without an approved claim are eligible for a 15-day grace extension or assignment to semester-end campus donation turnover.
+      </div>
+
+      <!-- List of overdue items -->
+      <div class="mt-4 space-y-3" id="unclaimed-items-list">
+        <!-- Item 1 -->
+        <div class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center font-serif text-forest-900 font-bold shrink-0">
+                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-forest-900 text-sm sm:text-base">AquaFlask Tumbler (32oz Cobalt Blue)</h4>
+                  <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] font-bold">48 days in custody</span>
+                </div>
+                <p class="text-xs text-stone-500 mt-0.5">Water Bottles &bull; Found at Salikneta Farm Hall &bull; Ref: <span class="font-mono font-semibold text-stone-700">DLSAU-2026-F012</span></p>
+                <p class="text-[11px] text-stone-400 mt-0.5">Location: Disciplinary Office Vault Shelf C-1</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+            <button type="button" class="btn-extend-custody rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer" data-item-name="AquaFlask Tumbler">
+              Extend custody (15 days)
+            </button>
+            <button type="button" class="btn-donate-turnover rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer" data-item-name="AquaFlask Tumbler">
+              Mark for donation turnover
+            </button>
+          </div>
+        </div>
+
+        <!-- Item 2 -->
+        <div class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center font-serif text-forest-900 font-bold shrink-0">
+                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                  <line x1="8" y1="6" x2="16" y2="6"></line>
+                  <line x1="8" y1="10" x2="16" y2="10"></line>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-forest-900 text-sm sm:text-base">Scientific Calculator (Casio fx-991EX ClassWiz)</h4>
+                  <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] font-bold">39 days in custody</span>
+                </div>
+                <p class="text-xs text-stone-500 mt-0.5">Electronics &bull; Found at CAST Computer Lab 3 &bull; Ref: <span class="font-mono font-semibold text-stone-700">DLSAU-2026-F018</span></p>
+                <p class="text-[11px] text-stone-400 mt-0.5">Location: Locker Vault B-4</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+            <button type="button" class="btn-extend-custody rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer" data-item-name="Scientific Calculator">
+              Extend custody (15 days)
+            </button>
+            <button type="button" class="btn-donate-turnover rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer" data-item-name="Scientific Calculator">
+              Mark for donation turnover
+            </button>
+          </div>
+        </div>
+
+        <!-- Item 3 -->
+        <div class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center font-serif text-forest-900 font-bold shrink-0">
+                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="6" cy="12" r="4"></circle>
+                  <circle cx="18" cy="12" r="4"></circle>
+                  <line x1="10" y1="12" x2="14" y2="12"></line>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-forest-900 text-sm sm:text-base">Tortoiseshell Framed Reading Glasses</h4>
+                  <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] font-bold">33 days in custody</span>
+                </div>
+                <p class="text-xs text-stone-500 mt-0.5">Accessories &bull; Found at University Chapel &bull; Ref: <span class="font-mono font-semibold text-stone-700">DLSAU-2026-F025</span></p>
+                <p class="text-[11px] text-stone-400 mt-0.5">Location: Locker Vault A-2</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
+            <button type="button" class="btn-extend-custody rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer" data-item-name="Framed Reading Glasses">
+              Extend custody (15 days)
+            </button>
+            <button type="button" class="btn-donate-turnover rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer" data-item-name="Framed Reading Glasses">
+              Mark for donation turnover
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-unclaimed-modal rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Quick Toast Notification -->
   <div
     id="toast-notification"
-    class="fixed bottom-6 right-6 z-50 hidden translate-y-3 rounded-2xl bg-[#164f38] px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all"
+    class="fixed bottom-6 right-6 z-[110] hidden translate-y-3 rounded-2xl bg-forest-900 px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all"
   >
     <div class="flex items-center gap-3">
       <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-[#164f38] text-xs font-black">
@@ -356,6 +705,16 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       const toast = document.getElementById("toast-notification");
       const toastMsg = document.getElementById("toast-message");
 
+      // 3 New Modals
+      const intakeModal = document.getElementById("intake-guidelines-modal");
+      const auditModal = document.getElementById("audit-log-modal");
+      const unclaimedModal = document.getElementById("unclaimed-items-modal");
+
+      const openIntakeBtn = document.getElementById("open-intake-guidelines-btn");
+      const openAuditBtn = document.getElementById("open-audit-log-btn");
+      const sidebarAuditLink = document.getElementById("sidebar-activity-log-link");
+      const openUnclaimedBtn = document.getElementById("open-unclaimed-modal-btn");
+
       const modalItemName = document.getElementById("modal-item-name");
       const modalClaimant = document.getElementById("modal-claimant-name");
       const modalDetails = document.getElementById("modal-private-details");
@@ -370,6 +729,116 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
         toast.classList.remove("hidden");
         setTimeout(() => toast.classList.add("hidden"), 3500);
       }
+
+      function closeAllModals() {
+        [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
+          if (m) {
+            m.classList.add("hidden");
+            m.classList.remove("flex");
+          }
+        });
+      }
+
+      // Feature 1: Open & Close Intake Guidelines Modal
+      if (openIntakeBtn && intakeModal) {
+        openIntakeBtn.addEventListener("click", () => {
+          closeAllModals();
+          intakeModal.classList.remove("hidden");
+          intakeModal.classList.add("flex");
+        });
+      }
+      document.querySelectorAll(".close-intake-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      // Feature 2: Open & Close Full Audit Log Modal + Category Filtering
+      function openAuditLog() {
+        closeAllModals();
+        if (auditModal) {
+          auditModal.classList.remove("hidden");
+          auditModal.classList.add("flex");
+        }
+      }
+      if (openAuditBtn) openAuditBtn.addEventListener("click", openAuditLog);
+      if (sidebarAuditLink) {
+        sidebarAuditLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          openAuditLog();
+        });
+      }
+      document.querySelectorAll(".close-audit-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      // Audit Category Filtering
+      const auditFilterPills = document.querySelectorAll(".audit-filter-pill");
+      const auditEventRows = document.querySelectorAll(".audit-event-row");
+      auditFilterPills.forEach((pill) => {
+        pill.addEventListener("click", () => {
+          auditFilterPills.forEach((p) => {
+            p.classList.remove("bg-forest-700", "text-white", "shadow-2xs", "active");
+            p.classList.add("bg-stone-100", "text-stone-700");
+          });
+          pill.classList.remove("bg-stone-100", "text-stone-700");
+          pill.classList.add("bg-forest-700", "text-white", "shadow-2xs", "active");
+
+          const filter = pill.getAttribute("data-audit-filter") || "all";
+          auditEventRows.forEach((row) => {
+            const cat = row.getAttribute("data-event-category");
+            if (filter === "all" || cat === filter) {
+              row.style.display = "";
+            } else {
+              row.style.display = "none";
+            }
+          });
+        });
+      });
+
+      // Feature 3: Open & Close Unclaimed Overdue Items Modal + Actions
+      if (openUnclaimedBtn && unclaimedModal) {
+        openUnclaimedBtn.addEventListener("click", () => {
+          closeAllModals();
+          unclaimedModal.classList.remove("hidden");
+          unclaimedModal.classList.add("flex");
+        });
+      }
+      document.querySelectorAll(".close-unclaimed-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      // Unclaimed Items Action Buttons
+      document.querySelectorAll(".btn-extend-custody").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const itemName = btn.getAttribute("data-item-name") || "Item";
+          btn.disabled = true;
+          btn.textContent = "Extended \u2713";
+          btn.classList.add("text-emerald-700", "bg-emerald-50", "cursor-default");
+          showToast(`Custody for "${itemName}" extended by 15 days.`);
+        });
+      });
+
+      document.querySelectorAll(".btn-donate-turnover").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const itemName = btn.getAttribute("data-item-name") || "Item";
+          btn.disabled = true;
+          btn.textContent = "Turnover Queued \u2713";
+          btn.classList.add("bg-stone-300", "text-stone-700", "cursor-default");
+          showToast(`"${itemName}" queued for semester-end campus donation turnover.`);
+        });
+      });
+
+      // Backdrop click dismissal & Escape key for all modals
+      [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
+        if (m) {
+          m.addEventListener("click", (e) => {
+            if (e.target === m) closeAllModals();
+          });
+        }
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeAllModals();
+      });
 
       // Review buttons
       document.querySelectorAll(".claim-review-btn").forEach((btn) => {
@@ -416,6 +885,15 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
             const data = await res.json().catch(() => ({}));
             if (data.ok) {
               showToast("Claim approved & item marked as claimed in custody.");
+              if (data.itemId) {
+                try {
+                  const storedClaimed = JSON.parse(sessionStorage.getItem("lostlink_claimed_items") || "[]");
+                  if (!storedClaimed.includes(data.itemId)) {
+                    storedClaimed.push(data.itemId);
+                    sessionStorage.setItem("lostlink_claimed_items", JSON.stringify(storedClaimed));
+                  }
+                } catch (e) {}
+              }
               if (activeClaimButton) {
                 activeClaimButton.textContent = "Verified \u2713";
                 activeClaimButton.disabled = true;

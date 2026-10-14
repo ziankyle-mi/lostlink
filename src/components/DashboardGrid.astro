@@ -8,7 +8,7 @@ interface Props {
 }
 
 const { items, isAdmin = false } = Astro.props;
-const displayItems = items && items.length > 0 ? items : [...INITIAL_ITEMS, ...EXTRA_ITEMS];
+const displayItems = items !== undefined ? items : [...INITIAL_ITEMS, ...EXTRA_ITEMS];
 const initialDisplay = displayItems.slice(0, 8);
 const extraDisplay = displayItems.slice(8);
 const totalCount = displayItems.length;
