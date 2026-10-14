@@ -172,10 +172,13 @@ function parsePhotos(photoPath?: string | null): string[] {
             {isUserAdmin && (
               <a
                 href="/admin"
-                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#164f38] px-5 py-2.5 text-xs font-bold text-[#d8ef8c] hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-full sm:w-auto cursor-pointer"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-stone-200/90 bg-white px-5 py-2.5 text-sm font-bold text-forest-900 shadow-2xs hover:bg-stone-50 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
               >
+                <svg class="size-4 text-forest-700/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
                 <span>Admin Console</span>
-                <span aria-hidden="true">&rarr;</span>
+                <span aria-hidden="true" class="text-xs text-stone-400">&rarr;</span>
               </a>
             )}
           </div>

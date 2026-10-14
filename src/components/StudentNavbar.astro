@@ -157,10 +157,12 @@ const initials = getInitials(userEmail);
           {isAdmin && (
             <a
               href="/admin"
-              class="flex items-center gap-1.5 rounded-full bg-[#164f38] px-3.5 py-1 text-xs font-bold text-[#d8ef8c] hover:bg-[#123e2c] transition-colors shadow-2xs"
+              class="inline-flex items-center gap-1.5 text-[0.9375rem] font-semibold text-forest-900/80 hover:text-forest-900 transition-colors"
             >
-              <span class="size-2 rounded-full bg-[#d8ef8c]"></span>
-              Admin Console
+              <svg class="size-3.5 text-forest-700/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Admin Console</span>
             </a>
           )}
         </nav>
@@ -356,10 +358,15 @@ const initials = getInitials(userEmail);
               {isAdmin && (
                 <a
                   href="/admin"
-                  class="flex items-center justify-between rounded-xl bg-[#164f38]/10 px-3 py-2 text-sm font-bold text-[#164f38] hover:bg-[#164f38]/20 transition-colors"
+                  class="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-[#f5f1e6] transition-colors"
                 >
-                  <span>Admin Console</span>
-                  <span class="rounded-full bg-[#d8ef8c] px-2 py-0.5 text-[10px] font-black text-[#164f38]">DO</span>
+                  <div class="flex items-center gap-2">
+                    <svg class="size-4 text-forest-700/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <span>Admin Console</span>
+                  </div>
+                  <span class="rounded-full border border-forest-900/15 bg-forest-900/5 px-2 py-0.5 text-[10px] font-semibold text-forest-800">DO</span>
                 </a>
               )}
               <a
