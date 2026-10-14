@@ -18,6 +18,12 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Responsive device adaptation and notification bell placement fix.
+- Reordered right-hand navbar utility controls to `[Post an item]` -> `[Notification Bell]` -> `[User Avatar]` so the bell naturally sits with user tools on the right rather than awkward left placement.
+- Fixed notification popover positioning: on mobile (`<640px`), it renders centered with `fixed inset-x-3 top-16` within screen bounds; on tablets/PC (`>=640px`), it anchors cleanly with `sm:absolute sm:right-0 sm:top-14 sm:w-80`.
+- Eliminated 1024px flex blowout by adapting nav links to `hidden xl:flex` and search bar to `min-w-0 max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg`.
+- Synchronized horizontal container padding (`px-4 sm:px-6 md:px-8 lg:px-10 xl:px-14`) across `StudentNavbar`, `FilterBar`, `HeroFeed`, `DashboardGrid`, and `profile.astro`.
+
 Done: Unclaimed Items Review is now a real feature, not a mockup.
 - **Removed the fake parts:** the three hardcoded item rows in `admin.astro`
   (AquaFlask 48 days / Calculator 39 / Glasses 33), the two `button` click
