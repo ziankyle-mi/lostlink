@@ -108,8 +108,11 @@ const defaultSelectedUser = users[0] || null;
       </p>
     </div>
 
-    <!-- College Filter Pills Bar matching FilterBar recipe in SKILL.md -->
-    <div class="relative flex flex-wrap items-center gap-2 rounded-2xl sm:rounded-full bg-[#ece5d6] p-1.5 sm:p-2 shadow-2xs border border-stone-300/50" id="college-pills-row">
+    <!-- College Filter Pills Bar: rounded-2xl only (never sm:rounded-full).
+         This bar always wraps to 2 rows at admin widths, and rounded-full on a
+         tall wrapped box resolves to ~50px corner arcs that cut into the first
+         row, so the active "All accounts" pill overlapped the bar's left edge. -->
+    <div class="relative flex flex-wrap items-center gap-2 rounded-2xl bg-[#ece5d6] p-1.5 sm:p-2 shadow-2xs border border-stone-300/50" id="college-pills-row">
       <button
         type="button"
         class="college-filter-pill active min-h-10 rounded-full bg-forest-700 px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"

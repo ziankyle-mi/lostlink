@@ -18,6 +18,21 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Bug fix — admin college filter bar no longer clips the active pill.
+- `UsersManagement.astro` filter bar had `rounded-2xl sm:rounded-full` on a
+  `flex-wrap` container. Its 5 long pills always wrap to 2 rows at admin
+  widths, and `rounded-full` resolves to half the shorter side (~50px arcs on
+  a ~100px-tall box), so the corner curves cut into the first row and the
+  active "All accounts" pill sat outside the bar's left border (the overlap
+  in the owner's screenshot).
+- Fix: `rounded-2xl` only on the wrapping bar; each pill keeps its own
+  `rounded-full`. Matches the skill's `rounded-2xl` = panels/menus radius.
+  No JS, copy, or data change. Counts verified (45+35+64+25 = 169).
+- Verified: `astro check` 0 errors / 0 warnings (7 pre-existing hints);
+  `npm test` 78/78.
+- Same latent pattern still exists in `FilterBar.astro:13` (safe today, its
+  pills fit one row) — left alone, that file has uncommitted owner work.
+
 Done: UI polish — item-card photo sliders restyled onto the design tokens.
 - Card carousel prev/next arrows and the `1/3` counter badge were the last
   controls off-theme (`bg-black/60` / `bg-black/65` translucent black).
