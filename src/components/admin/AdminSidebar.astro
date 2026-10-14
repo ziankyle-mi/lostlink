@@ -313,7 +313,7 @@ const userName = isAdmin
           title={isAdmin ? "Switch to Student View" : "Switch to Admin Console"}
           class="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-white/10 px-3 text-sm font-bold text-white transition-colors hover:bg-white/20"
         >
-          {isAdmin ? "Student" : "Admin"}
+          {isAdmin ? "Student View" : "Admin"}
         </a>
         <form method="POST" action={actions.logout} class="flex-1">
           <button
