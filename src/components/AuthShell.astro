@@ -12,6 +12,20 @@ interface Props {
 }
 
 const { title, heading, subheading, description } = Astro.props;
+
+/** Rotating stories in the lime callout. First entry is the brand tagline;
+    the rest are short campus stories that give it a human payoff. */
+const stories = [
+  { text: "A little thing,<br>can mean a lot.", name: null },
+  {
+    text: "Got my ID back in 20 minutes.",
+    name: "Maria, 2nd year AB Political Science",
+  },
+  {
+    text: "Returned a laptop I found at the canteen.",
+    name: "Joel, security office staff",
+  },
+];
 ---
 
 <Base title={title} description={description}>
@@ -80,10 +94,43 @@ const { title, heading, subheading, description } = Astro.props;
           <span class="font-bold text-[#d8ef8c]">you Found.</span>
         </p>
 
-        <div class="relative rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs">
-          <p class="text-xl sm:text-2xl leading-snug font-bold text-forest-900 xl:text-[1.625rem]">
-            A little thing,<br />can mean a lot.
-          </p>
+        <div
+          class="relative rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs"
+          data-story-carousel
+        >
+          <div class="grid">
+            {
+              stories.map((story, i) => (
+                <div
+                  class:list={["story-slide", i === 0 && "is-active"]}
+                  data-story-slide
+                  aria-hidden={i === 0 ? "false" : "true"}
+                >
+                  <p class="text-xl sm:text-2xl leading-snug font-bold text-forest-900 xl:text-[1.625rem]">
+                    <span set:html={story.text} />
+                  </p>
+                  {story.name && (
+                    <p class="mt-2 text-[0.8125rem] font-semibold leading-snug text-forest-900/70">
+                      &mdash; {story.name}
+                    </p>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+          <div class="mt-4 flex items-center gap-2" aria-label="Campus stories">
+            {
+              stories.map((_, i) => (
+                <button
+                  type="button"
+                  class="story-dot"
+                  data-story-dot={i}
+                  aria-current={i === 0 ? "true" : "false"}
+                  aria-label={`Show story ${i + 1}`}
+                />
+              ))
+            }
+          </div>
         </div>
       </aside>
 
@@ -104,4 +151,66 @@ const { title, heading, subheading, description } = Astro.props;
 
     <SiteFooter />
   </div>
+
+  <script is:inline>
+    (function () {
+      var root = document.querySelector("[data-story-carousel]");
+      if (!root) return;
+      var slides = Array.prototype.slice.call(root.querySelectorAll("[data-story-slide]"));
+      var dots = Array.prototype.slice.call(root.querySelectorAll("[data-story-dot]"));
+      if (slides.length < 2) return;
+
+      var index = 0;
+      var timer = null;
+      var paused = false;
+      var INTERVAL = 4500;
+
+      var reduceMotion = false;
+      try {
+        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      } catch (e) {}
+
+      function show(i) {
+        index = (i + slides.length) % slides.length;
+        slides.forEach(function (slide, n) {
+          var active = n === index;
+          slide.classList.toggle("is-active", active);
+          slide.setAttribute("aria-hidden", active ? "false" : "true");
+        });
+        dots.forEach(function (dot, n) {
+          dot.setAttribute("aria-current", n === index ? "true" : "false");
+        });
+      }
+
+      function tick() {
+        if (!paused) show(index + 1);
+      }
+
+      function start() {
+        if (reduceMotion || timer) return;
+        timer = setInterval(tick, INTERVAL);
+      }
+      function stop() {
+        if (timer) { clearInterval(timer); timer = null; }
+      }
+
+      dots.forEach(function (dot, n) {
+        dot.addEventListener("click", function () {
+          show(n);
+          // Nudge the interval so a click doesn't immediately get overridden.
+          stop();
+          start();
+        });
+      });
+
+      // Pause while the user is hovering / focused, so they can read a story.
+      root.addEventListener("mouseenter", function () { paused = true; });
+      root.addEventListener("mouseleave", function () { paused = false; });
+      root.addEventListener("focusin", function () { paused = true; });
+      root.addEventListener("focusout", function () { paused = false; });
+
+      // Only auto-rotate for users who haven't asked for reduced motion.
+      if (!reduceMotion) start();
+    })();
+  </script>
 </Base>

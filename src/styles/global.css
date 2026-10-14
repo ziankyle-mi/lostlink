@@ -230,6 +230,41 @@
   animation-play-state: paused;
 }
 
+/* ── Auth story carousel (login/register green panel) ──────────── */
+/* Slides stack in one grid cell so the lime box keeps a stable height.
+   Rotation is JS-driven (see AuthShell) so reduced-motion users get a
+   static first story with manual dots instead of auto-rotation. */
+.story-slide {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+}
+.story-slide.is-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.story-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(13, 50, 34, 0.25);
+  cursor: pointer;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+.story-dot[aria-current="true"] {
+  width: 22px;
+  background: #0d3222;
+}
+.story-dot:focus-visible {
+  outline: 2px solid #0d3222;
+  outline-offset: 2px;
+}
+
 /* ── Toast Notification System ─────────────────────────────────── */
 .ll-toast-container {
   position: fixed;

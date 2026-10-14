@@ -151,6 +151,20 @@ const { totalCount = TOTAL } = Astro.props;
         {totalCount}
       </span>
 
+      <!-- Campus Map Button -->
+      <a
+        href="/help#campus-map"
+        class="flex min-h-10 sm:min-h-11 items-center gap-1.5 rounded-full border border-stone-200/90 bg-white px-3.5 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-[0.9375rem] font-semibold text-forest-900 shadow-2xs transition-all hover:bg-stone-50 cursor-pointer"
+        title="View DLSAU Campus Map and Custody Office (LSB)"
+      >
+        <svg class="size-4 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+          <line x1="9" y1="3" x2="9" y2="18"></line>
+          <line x1="15" y1="6" x2="15" y2="21"></line>
+        </svg>
+        <span class="hidden md:inline">Campus Map</span>
+      </a>
+
       <!-- Reset Filters Pill Button -->
       <button
         type="button"

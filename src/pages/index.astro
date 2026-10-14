@@ -151,6 +151,25 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         action();
       }
 
+      // The search box lives in the navbar, far above the item grid, so a
+      // search used to filter cards invisibly below the fold — the user had
+      // no idea anything happened unless they scrolled. When a query appears
+      // (empty -> non-empty), bring the grid into view so results are seen.
+      let lastSearchQuery = "";
+      function scrollResultsIntoView() {
+        const feed = document.getElementById("feed");
+        if (!feed) return;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        feed.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      }
+      function maybeScrollOnSearch(value) {
+        const wasEmpty = lastSearchQuery.trim() === "";
+        const isEmpty = value.trim() === "";
+        lastSearchQuery = value;
+        // Only on the transition into an active search, not every keystroke.
+        if (wasEmpty && !isEmpty) scrollResultsIntoView();
+      }
+
       // Date-range match against the card's ISO eventDate (data-item-event-date).
       function matchesDate(eventDate, range) {
         if (range === "all") return true;
@@ -286,6 +305,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           searchQuery = e.target.value;
           if (mobileSearchInput) mobileSearchInput.value = searchQuery;
           updateGrid();
+          maybeScrollOnSearch(searchQuery);
         });
       }
       if (mobileSearchInput) {
@@ -293,6 +313,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           searchQuery = e.target.value;
           if (searchInput) searchInput.value = searchQuery;
           updateGrid();
+          maybeScrollOnSearch(searchQuery);
         });
       }
 
@@ -905,6 +926,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           searchInput.value = searchParam;
           searchQuery = searchParam;
           updateGrid();
+          maybeScrollOnSearch(searchParam);
         }
       } catch (e) {}
 

@@ -1,55 +1,174 @@
 ---
 import InfoPage from "~/components/InfoPage.astro";
 import AboutTeam from "~/components/AboutTeam.astro";
+import { CAMPUS_BUILDINGS } from "~/data/campusBuildings";
 
 const faqs = [
   {
-    q: "I cannot log in.",
-    a: "LostLink only accepts DLSAU email accounts (@dlsau.edu.ph). Use Forget Password on the login page to reset your password. If it still does not work, visit the security office.",
+    q: "Where is the official Lost & Found office on campus?",
+    a: "The Disciplinary & Security Office is located at the Life Science Building (LSB, Building #3). All physical found items are held here in secure custody, and all approved claims must be collected from this office.",
   },
   {
     q: "How do I report a lost item?",
-    a: "Log in, open Post an item, choose Lost, and fill in the item name, category, location, date, and description. An admin reviews it before it appears publicly.",
+    a: "Log in with your DLSAU account, click 'Post an item', choose 'Lost', and fill in the item name, category, campus location, date, and description. An admin reviews it before it appears publicly on the campus feed.",
   },
   {
     q: "How do I report a found item?",
-    a: "Same steps, but choose Found. Bring the item to the security office. You will get a reference code to write on the item tag.",
+    a: "Choose 'Found' in the report form and describe the item. Bring the physical item to the security office at Life Science Building (LSB, Building #3). You will be issued a reference code to write on the item tag.",
   },
   {
     q: "How do I claim an item?",
-    a: "Open the item and click Claim. Describe unique marks, contents, and when and where you lost it. The admin compares your proof with the item held at the security office.",
-  },
-  {
-    q: "What do the statuses mean?",
-    a: "Pending means an admin is reviewing it. Approved means it is public. Claimed or Resolved means it is done. Rejected shows a reason; you can edit and resubmit.",
+    a: "Open the item card on the feed and click 'Claim this item'. Provide unique private details, markings, or contents that only the owner would know. Security staff compare your proof with the physical item held at LSB.",
   },
   {
     q: "Where do I pick up a verified item?",
-    a: "At the security office. Bring your claim reference code and your DLSAU ID.",
+    a: "Once your claim status updates to 'Verified', visit the Disciplinary & Security Office at Life Science Building (LSB, Building #3). Bring your claim reference code (e.g. LL-4821) and your valid DLSAU student/staff ID.",
   },
   {
-    q: "Who handles decisions about items?",
-    a: "The security office (admin accounts). Visit them in person for questions about a specific item or claim.",
+    q: "What are the office hours for drop-off and pickup?",
+    a: "The LostLink Custody & Security Office at LSB is open Monday to Friday, 8:00 AM to 5:00 PM (excluding university holidays).",
+  },
+  {
+    q: "What do the item statuses mean?",
+    a: "Pending means security staff are reviewing the report. Approved means it is visible on the campus feed. Claimed or Resolved means the item has been returned to its rightful owner. Rejected includes an explanation from the office.",
   },
 ];
 ---
 
 <InfoPage
-  title="Help | LostLink"
-  heading="Help Center"
-  subheading="How LostLink works, step by step."
-  description="Help and frequently asked questions for the DLSAU lost and found system."
+  title="Help & Campus Map | LostLink"
+  heading="Help & Campus Directory"
+  subheading="Everything you need to know about reporting, claiming, and navigating DLSAU lost & found custody."
+  description="Help guidelines, FAQs, and campus map for De La Salle Araneta University LostLink system."
 >
-  <dl class="mt-8 space-y-6">
-    {
-      faqs.map((faq) => (
-        <div>
-          <dt class="text-[0.9375rem] font-bold text-forest-900">{faq.q}</dt>
-          <dd class="mt-1.5 text-[0.9375rem] leading-relaxed text-sage-700">{faq.a}</dd>
-        </div>
-      ))
-    }
-  </dl>
+  <!-- Primary Custody Office Callout Banner -->
+  <section class="mt-8 rounded-3xl p-6 sm:p-7 text-white shadow-md border border-white/10" style="background: linear-gradient(145deg, #164f38 0%, #0d3222 100%);">
+    <div class="flex items-center gap-2">
+      <span class="inline-block rounded-full bg-[#d8ef8c] px-3 py-1 text-[11px] font-black tracking-wider text-[#164f38] uppercase shadow-xs">
+        OFFICIAL CLAIM &amp; CUSTODY OFFICE
+      </span>
+      <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
+    </div>
+
+    <h2 class="mt-3 font-serif text-2xl sm:text-3xl font-black text-white leading-tight">
+      Life Science Building (LSB) — Building #3
+    </h2>
+
+    <p class="mt-2 text-sm text-stone-200/95 leading-relaxed max-w-2xl">
+      The university's centralized lost and found custody intake and verification office is stationed on the ground floor of the <strong>Life Science Building (LSB)</strong>. All physical items must be turned in and claimed here.
+    </p>
+
+    <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
+      <div>
+        <p class="text-stone-400 font-bold uppercase tracking-wider text-[10px]">Office Location</p>
+        <p class="mt-0.5 font-bold text-white">LSB Building #3, Ground Floor</p>
+      </div>
+      <div>
+        <p class="text-stone-400 font-bold uppercase tracking-wider text-[10px]">Operating Hours</p>
+        <p class="mt-0.5 font-bold text-white">Mon – Fri, 8:00 AM – 5:00 PM</p>
+      </div>
+      <div>
+        <p class="text-stone-400 font-bold uppercase tracking-wider text-[10px]">Pickup Requirements</p>
+        <p class="mt-0.5 font-bold text-white">DLSAU ID + Claim Reference Code</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Campus Map Section -->
+  <section class="mt-10 rounded-3xl bg-white border border-stone-200/70 p-6 sm:p-8 shadow-xs" id="campus-map">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-stone-100">
+      <div>
+        <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
+          DLSAU Campus Map &amp; Facilities
+        </h2>
+        <p class="mt-1 text-sm text-stone-500">
+          Official masterplan of university buildings, roads, and designated custody drop-off points.
+        </p>
+      </div>
+
+      <a
+        href="/campus-map.jpg"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-stone-100 hover:bg-stone-200 px-4 py-2 text-xs font-bold text-forest-900 transition-all shrink-0 cursor-pointer"
+      >
+        <span>Open Full Map ↗</span>
+      </a>
+    </div>
+
+    <!-- Map Image Container -->
+    <div class="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-[#fbf9f4] shadow-inner group relative">
+      <img
+        src="/campus-map.jpg"
+        alt="De La Salle Araneta University Illustrated Top-Down Campus Map"
+        class="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.01]"
+        loading="lazy"
+      />
+      <div class="absolute bottom-3 right-3 rounded-full bg-forest-900/80 backdrop-blur-xs px-3.5 py-1.5 text-[11px] font-bold text-white shadow-md">
+        Click 'Open Full Map' to zoom
+      </div>
+    </div>
+
+    <!-- Campus Directory Grid (1 to 17) -->
+    <div class="mt-8">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+        <h3 class="font-bold text-sm text-forest-900 uppercase tracking-wider">
+          Campus Directory (17 Official Locations)
+        </h3>
+        <span class="text-xs text-stone-500 font-medium">Pin numbers match the map above</span>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {CAMPUS_BUILDINGS.map((b) => (
+          <div
+            class={`flex items-start gap-3 rounded-2xl p-3.5 border transition-all ${
+              b.isClaimOffice
+                ? "bg-[#d8ef8c]/25 border-lime-600/40 shadow-xs"
+                : "bg-stone-50/70 hover:bg-stone-100/70 border-stone-200/60"
+            }`}
+          >
+            <span
+              class={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-black shadow-xs ${
+                b.isClaimOffice
+                  ? "bg-[#164f38] text-[#d8ef8c]"
+                  : "bg-amber-600 text-white"
+              }`}
+            >
+              {b.id}
+            </span>
+            <div class="min-w-0">
+              <p class="font-bold text-forest-900 text-xs sm:text-sm truncate">
+                {b.name}
+              </p>
+              {b.subtitle && (
+                <p class={`text-[11px] truncate mt-0.5 ${b.isClaimOffice ? "text-forest-800 font-bold" : "text-stone-500"}`}>
+                  {b.subtitle}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="mt-10 rounded-3xl bg-white border border-stone-200/70 p-6 sm:p-8 shadow-xs">
+    <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight pb-4 border-b border-stone-100">
+      Frequently Asked Questions
+    </h2>
+
+    <dl class="mt-6 space-y-6">
+      {
+        faqs.map((faq) => (
+          <div class="border-b border-stone-100/80 pb-5 last:border-b-0 last:pb-0">
+            <dt class="text-[0.9375rem] font-bold text-forest-900">{faq.q}</dt>
+            <dd class="mt-1.5 text-[0.9375rem] leading-relaxed text-sage-700">{faq.a}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
 
   <AboutTeam />
 </InfoPage>
