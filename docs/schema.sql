@@ -29,8 +29,16 @@ create table items (
   reference_code text unique,                  -- short tag code, found items only
   hide_photo boolean not null default false,   -- true for the "IDs and Cards" category
   reporter_id uuid not null references profiles(id),
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  -- Unclaimed Items Review: the custody clock runs from created_at. A grace
+  -- extension pushes the deadline out, donation turnover closes the case.
+  custody_extended_until timestamptz,
+  donation_turnover boolean not null default false
 );
+
+create index items_unclaimed_review
+  on items (created_at)
+  where type = 'found' and status = 'approved' and donation_turnover = false;
 
 create table claims (
   id uuid primary key default gen_random_uuid(),

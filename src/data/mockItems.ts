@@ -202,7 +202,6 @@ export const DEMO_STATS = {
   campusRecovered: 128,
   myActiveReports: 2,
   myActiveReportsNote: "1 lost, 1 found posted",
-  unclaimed30Days: 3,
 } as const;
 
 export const CATEGORIES = [

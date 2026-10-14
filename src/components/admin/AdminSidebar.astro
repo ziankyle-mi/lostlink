@@ -14,6 +14,8 @@ interface Props {
     claimsToVerify?: number;
     returnedThisMonth?: number;
   };
+  /** Live count of found items past the custody window, passed by the admin page. */
+  unclaimedCount?: number;
 }
 
 const {
@@ -21,6 +23,7 @@ const {
   activeTab = "overview",
   userEmail = "dlsau.lostlink@dlsau.edu.ph",
   metrics,
+  unclaimedCount = 0,
 } = Astro.props;
 
 const isAdmin = role === "admin";
@@ -261,14 +264,16 @@ const userName = isAdmin
       {isAdmin ? (
         <>
           <p class="text-sm font-bold leading-snug">
-            {DEMO_STATS.unclaimed30Days} items unclaimed for 30+ days.
+            {unclaimedCount === 0
+              ? "No items unclaimed past the 30-day window."
+              : `${unclaimedCount} ${unclaimedCount === 1 ? "item" : "items"} unclaimed for 30+ days.`}
           </p>
           <button
             type="button"
             id="open-unclaimed-modal-btn"
             class="mt-2.5 inline-flex items-center gap-1 text-xs font-black underline underline-offset-2 hover:opacity-80 transition-opacity cursor-pointer text-left"
           >
-            Review them &rarr;
+            {unclaimedCount === 0 ? "Open the review" : "Review them"} &rarr;
           </button>
         </>
       ) : (

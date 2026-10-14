@@ -57,6 +57,12 @@ export const resetPasswordSchema = z
 
 export const emptySchema = z.object({}).passthrough();
 
+/** Office decision on an item that has been unclaimed past the custody window. */
+export const custodyDecisionSchema = z.object({
+  itemId: z.string().uuid("That item reference is not valid."),
+  decision: z.enum(["extend_custody", "mark_donation"]),
+});
+
 /** Local dev only: auto-login test button signs in this address. */
 export const devLoginSchema = z.object({
   email: emailSchema.optional().default("firstname.lastname@dlsau.edu.ph"),

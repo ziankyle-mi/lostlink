@@ -1,6 +1,4 @@
 ---
-import { DEMO_STATS } from "~/data/mockItems";
-
 interface Props {
   role?: "admin" | "student";
   liveLogs?: any[];
@@ -13,7 +11,7 @@ const adminLogs = [
   { text: "Umbrella logged into custody", time: "2:45 PM" },
   { text: "Earbuds case flagged: two claimants", time: "1:30 PM" },
   { text: "Backpack released to owner", time: "11:20 AM" },
-  { text: `${DEMO_STATS.unclaimed30Days} items unclaimed for 30+ days`, time: "8:00 AM" },
+  { text: "Daily custody sweep completed", time: "8:00 AM" },
 ];
 
 const studentLogs = [

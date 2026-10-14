@@ -9,6 +9,14 @@ import RecentActivity from "~/components/admin/RecentActivity.astro";
 import UsersManagement from "~/components/admin/UsersManagement.astro";
 import { INITIAL_CAMPUS_USERS, type CampusUser } from "~/data/mockUsers";
 import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
+import { actions } from "astro:actions";
+import {
+  CUSTODY_EXTENSION_DAYS,
+  CUSTODY_OVERDUE_DAYS,
+  custodyAgeLabel,
+  daysInCustody,
+  isCustodyOverdue,
+} from "~/lib/custody";
 
 import { roleForEmail } from "~/lib/session";
 import { readEnv } from "~/lib/env";
@@ -45,6 +53,30 @@ let liveClaims: any[] = [];
 let liveIntake: any[] = [];
 let liveLogs: any[] = [];
 let allUsers: EnhancedCampusUser[] = [];
+
+interface OverdueCustodyItem {
+  id: string;
+  name: string;
+  category: string;
+  location: string;
+  referenceCode: string | null;
+  days: number;
+  extendedUntil: string | null;
+  reporterName: string;
+}
+let unclaimedOverdue: OverdueCustodyItem[] = [];
+let custodyColumnsMissing = false;
+
+// Office decision posted from the Unclaimed Items Review (real DB write).
+const custodyResult = Astro.getActionResult(actions.custodyDecision);
+const custodyNotice = custodyResult
+  ? custodyResult.error
+    ? custodyResult.error.message
+    : custodyResult.data?.message
+  : undefined;
+const custodyNoticeOk = Boolean(custodyResult?.data?.ok);
+// Keep the modal open after a decision so the officer can continue working.
+const custodyModalReopen = Boolean(custodyResult);
 
 if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
   try {
@@ -138,6 +170,50 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     if (claimsListRes.data) liveClaims = claimsListRes.data;
     if (intakeListRes.data) liveIntake = intakeListRes.data;
     if (logsListRes.data) liveLogs = logsListRes.data;
+
+    // Unclaimed Items Review: real scan of found items still in office custody
+    // past the 30-day window. Needs the two custody columns; see
+    // docs/migrations.sql. A missing column degrades to the empty state
+    // instead of breaking the admin console.
+    {
+      const cutoff = new Date(Date.now() - CUSTODY_OVERDUE_DAYS * 86400000).toISOString();
+      const { data: overdueData, error: overdueError } = await supabase
+        .from("items")
+        .select(`
+          id,
+          name,
+          category,
+          location,
+          reference_code,
+          created_at,
+          custody_extended_until,
+          donation_turnover,
+          profiles ( full_name )
+        `)
+        .eq("type", "found")
+        .eq("status", "approved")
+        .eq("donation_turnover", false)
+        .lt("created_at", cutoff)
+        .order("created_at", { ascending: true });
+
+      if (overdueError) {
+        custodyColumnsMissing = true;
+        console.warn("[admin] unclaimed review needs docs/migrations.sql:", overdueError.message);
+      } else if (overdueData) {
+        unclaimedOverdue = overdueData
+          .filter((row: any) => isCustodyOverdue(row))
+          .map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            category: row.category,
+            location: row.location,
+            referenceCode: row.reference_code,
+            days: daysInCustody(row.created_at),
+            extendedUntil: row.custody_extended_until,
+            reporterName: row.profiles?.full_name ?? "Unknown reporter",
+          }));
+      }
+    }
 
     let authUserMetaMap = new Map<string, any>();
     if (env.SUPABASE_SERVICE_ROLE_KEY && currentTab === "users") {
@@ -562,6 +638,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
               activeTab={currentTab}
               userEmail={userEmail}
               metrics={liveMetrics}
+              unclaimedCount={unclaimedOverdue.length}
             />
           </div>
         </div>
@@ -924,7 +1001,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
   <!-- Modal 3: Unclaimed Overdue Items Modal -->
   <div
     id="unclaimed-items-modal"
-    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    class={`fixed inset-0 z-[100] ${custodyModalReopen ? "flex" : "hidden"} items-center justify-center bg-black/50 p-4 backdrop-blur-sm`}
     role="dialog"
     aria-modal="true"
     aria-labelledby="unclaimed-items-modal-title"
@@ -933,12 +1010,16 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div>
           <span class="rounded-full bg-[#d8ef8c] text-forest-900 px-3 py-1 text-xs font-bold border border-lime-600/30">
-            Custodial policy &bull; 30+ days overdue
+            Custodial policy &bull; {CUSTODY_OVERDUE_DAYS}+ days overdue
           </span>
           <h3 id="unclaimed-items-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
             Unclaimed Items Review
           </h3>
-          <p class="text-xs text-stone-500 mt-0.5">Items held in Disciplinary Office custody beyond the standard 30-day reclaim window.</p>
+          <p class="text-xs text-stone-500 mt-0.5">
+            {unclaimedOverdue.length === 0
+              ? `Found items still in office custody past the ${CUSTODY_OVERDUE_DAYS}-day reclaim window.`
+              : `${unclaimedOverdue.length} found ${unclaimedOverdue.length === 1 ? "item is" : "items are"} still in office custody past the ${CUSTODY_OVERDUE_DAYS}-day reclaim window.`}
+          </p>
         </div>
         <button
           type="button"
@@ -950,101 +1031,113 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       </div>
 
       <div class="mt-4 rounded-xl border border-stone-200 bg-[#f5f1e6]/60 p-3.5 text-xs text-stone-600 leading-relaxed">
-        Under DLSAU Lost &amp; Found policy, items held in custody for 30+ days without an approved claim are eligible for a 15-day grace extension or assignment to semester-end campus donation turnover.
+        Found items unclaimed for more than {CUSTODY_OVERDUE_DAYS} days can be given one
+        {CUSTODY_EXTENSION_DAYS}-day grace extension, or assigned to the semester-end campus
+        donation turnover. Every decision is saved and recorded in the audit log.
       </div>
 
-      <!-- List of overdue items -->
+<!-- Overdue items: live query, never hardcoded -->
       <div class="mt-4 space-y-3" id="unclaimed-items-list">
-        <!-- Item 1 -->
-        <div class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center font-serif text-forest-900 font-bold shrink-0">
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-                </svg>
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h4 class="font-bold text-forest-900 text-sm sm:text-base">AquaFlask Tumbler (32oz Cobalt Blue)</h4>
-                  <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] font-bold">48 days in custody</span>
-                </div>
-                <p class="text-xs text-stone-500 mt-0.5">Water Bottles &bull; Found at Salikneta Farm Hall &bull; Ref: <span class="font-mono font-semibold text-stone-700">DLSAU-2026-F012</span></p>
-                <p class="text-[11px] text-stone-400 mt-0.5">Location: Disciplinary Office Vault Shelf C-1</p>
-              </div>
+        {
+          custodyColumnsMissing ? (
+            <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900">
+              <p class="font-bold">Database update needed</p>
+              <p class="mt-1 leading-relaxed">
+                Run the statements in <span class="font-mono">docs/migrations.sql</span> in the
+                Supabase SQL editor to turn on custody tracking.
+              </p>
             </div>
-          </div>
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
-            <button type="button" class="btn-extend-custody rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer" data-item-name="AquaFlask Tumbler">
-              Extend custody (15 days)
-            </button>
-            <button type="button" class="btn-donate-turnover rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer" data-item-name="AquaFlask Tumbler">
-              Mark for donation turnover
-            </button>
-          </div>
-        </div>
+          ) : unclaimedOverdue.length === 0 ? (
+            <div class="rounded-2xl border border-stone-200/80 bg-[#f5f1e6]/40 p-6 text-center">
+              <p class="text-sm font-bold text-forest-900">Nothing is overdue</p>
+              <p class="mt-1 text-xs text-stone-500">
+                No found item has been unclaimed for more than {CUSTODY_OVERDUE_DAYS} days.
+              </p>
+            </div>
+          ) : (
+            unclaimedOverdue.map((item) => (
+              <article class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
+                <div class="flex items-center gap-3">
+                  <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center text-forest-900 shrink-0">
+                    <svg
+                      class="size-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      />
+                    </svg>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h4 class="font-bold text-forest-900 text-sm sm:text-base">{item.name}</h4>
+                      <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-xs font-bold">
+                        {custodyAgeLabel(item.days)}
+                      </span>
+                    </div>
+                    <p class="text-xs text-stone-500 mt-0.5">
+                      {item.category} &bull; Found at {item.location}
+                      {
+                        item.referenceCode && (
+                          <>
+                            {" "}&bull; Ref:{" "}
+                            <span class="font-mono font-semibold text-stone-700">
+                              {item.referenceCode}
+                            </span>
+                          </>
+                        )
+                      }
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Reported by {item.reporterName}
+                      {
+                        item.extendedUntil && (
+                          <>
+                            {" "}&bull; Grace extension lapsed{" "}
+                            {new Date(item.extendedUntil).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </>
+                        )
+                      }
+                    </p>
+                  </div>
+                </div>
 
-        <!-- Item 2 -->
-        <div class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center font-serif text-forest-900 font-bold shrink-0">
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-                  <line x1="8" y1="6" x2="16" y2="6"></line>
-                  <line x1="8" y1="10" x2="16" y2="10"></line>
-                </svg>
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h4 class="font-bold text-forest-900 text-sm sm:text-base">Scientific Calculator (Casio fx-991EX ClassWiz)</h4>
-                  <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] font-bold">39 days in custody</span>
-                </div>
-                <p class="text-xs text-stone-500 mt-0.5">Electronics &bull; Found at CAST Computer Lab 3 &bull; Ref: <span class="font-mono font-semibold text-stone-700">DLSAU-2026-F018</span></p>
-                <p class="text-[11px] text-stone-400 mt-0.5">Location: Locker Vault B-4</p>
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
-            <button type="button" class="btn-extend-custody rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer" data-item-name="Scientific Calculator">
-              Extend custody (15 days)
-            </button>
-            <button type="button" class="btn-donate-turnover rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer" data-item-name="Scientific Calculator">
-              Mark for donation turnover
-            </button>
-          </div>
-        </div>
-
-        <!-- Item 3 -->
-        <div class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center font-serif text-forest-900 font-bold shrink-0">
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="6" cy="12" r="4"></circle>
-                  <circle cx="18" cy="12" r="4"></circle>
-                  <line x1="10" y1="12" x2="14" y2="12"></line>
-                </svg>
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h4 class="font-bold text-forest-900 text-sm sm:text-base">Tortoiseshell Framed Reading Glasses</h4>
-                  <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-[10px] font-bold">33 days in custody</span>
-                </div>
-                <p class="text-xs text-stone-500 mt-0.5">Accessories &bull; Found at University Chapel &bull; Ref: <span class="font-mono font-semibold text-stone-700">DLSAU-2026-F025</span></p>
-                <p class="text-[11px] text-stone-400 mt-0.5">Location: Locker Vault A-2</p>
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
-            <button type="button" class="btn-extend-custody rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer" data-item-name="Framed Reading Glasses">
-              Extend custody (15 days)
-            </button>
-            <button type="button" class="btn-donate-turnover rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer" data-item-name="Framed Reading Glasses">
-              Mark for donation turnover
-            </button>
-          </div>
-        </div>
+                <form
+                  method="POST"
+                  action={actions.custodyDecision}
+                  class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100"
+                >
+                  <input type="hidden" name="itemId" value={item.id} />
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="extend_custody"
+                    class="rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer"
+                  >
+                    Extend custody ({CUSTODY_EXTENSION_DAYS} days)
+                  </button>
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="mark_donation"
+                    class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer"
+                  >
+                    Mark for donation turnover
+                  </button>
+                </form>
+              </article>
+            ))
+          )
+        }
       </div>
 
       <div class="mt-6 flex items-center justify-end pt-4 border-t border-stone-100">
@@ -1061,13 +1154,15 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
   <!-- Quick Toast Notification -->
   <div
     id="toast-notification"
-    class="fixed bottom-6 right-6 z-[110] hidden translate-y-3 rounded-2xl bg-forest-900 px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all"
+    class={`fixed bottom-6 right-6 z-[110] translate-y-3 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all ${custodyNotice ? (custodyNoticeOk ? "block bg-forest-900" : "block bg-[#9b2c1f]") : "hidden"}`}
   >
     <div class="flex items-center gap-3">
-      <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-[#164f38] text-xs font-black">
-        &#10003;
+      <span
+        class={`flex size-6 items-center justify-center rounded-full text-xs font-black ${custodyNoticeOk ? "bg-[#d8ef8c] text-[#164f38]" : "bg-white/20 text-white"}`}
+      >
+        {custodyNoticeOk ? "&#10003;" : "!"}
       </span>
-      <span id="toast-message">Action processed successfully.</span>
+      <span id="toast-message">{custodyNotice ?? "Action processed successfully."}</span>
     </div>
   </div>
 
@@ -1220,27 +1315,8 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         btn.addEventListener("click", closeAllModals);
       });
 
-      // Unclaimed Items Action Buttons
-      document.querySelectorAll(".btn-extend-custody").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const itemName = btn.getAttribute("data-item-name") || "Item";
-          btn.disabled = true;
-          btn.textContent = "Extended \u2713";
-          btn.classList.add("text-emerald-700", "bg-emerald-50", "cursor-default");
-          showToast(`Custody for "${itemName}" extended by 15 days.`);
-        });
-      });
-
-      document.querySelectorAll(".btn-donate-turnover").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const itemName = btn.getAttribute("data-item-name") || "Item";
-          btn.disabled = true;
-          btn.textContent = "Turnover Queued \u2713";
-          btn.classList.add("bg-stone-300", "text-stone-700", "cursor-default");
-          showToast(`"${itemName}" queued for semester-end campus donation turnover.`);
-        });
-      });
-
+      // Unclaimed Items Review: Extend and Mark for donation are real forms
+      // posting to actions.custodyDecision, so nothing is faked in the browser.
       // Backdrop click dismissal & Escape key for all modals
       [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
         if (m) {

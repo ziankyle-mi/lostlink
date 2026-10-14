@@ -1,4 +1,6 @@
 import { ActionError, defineAction } from "astro:actions";
+import { createClient } from "@supabase/supabase-js";
+import { CUSTODY_EXTENSION_DAYS, extensionDeadline } from "~/lib/custody";
 import {
   DEV_SESSION_COOKIE,
   PKCE_VERIFIER_COOKIE,
@@ -8,6 +10,7 @@ import {
 } from "~/lib/auth";
 import { hasSupabase } from "~/lib/env";
 import {
+  custodyDecisionSchema,
   devLoginSchema,
   emptySchema,
   forgotPasswordSchema,
@@ -45,6 +48,16 @@ function requireSupabase(locals: { env: import("~/lib/env").Env }): void {
       message: "Sign-in is not set up yet. Add the Supabase keys to .env.",
     });
   }
+}
+
+/**
+ * Server-side client that bypasses RLS. Only used by admin actions, always
+ * after an explicit admin check.
+ */
+function serviceClient(env: import("~/lib/env").Env) {
+  return createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
+  });
 }
 
 function assertDomain(locals: { env: import("~/lib/env").Env }, email: string): void {
@@ -260,6 +273,96 @@ export const server = {
     handler: async (_input, context) => {
       clearSessionCookies(context.cookies);
       return { redirect: "/login" };
+    },
+  }),
+
+  /**
+   * Disciplinary Office decision on an item that has been unclaimed past the
+   * 30-day custody window: grant one grace extension, or mark it for donation
+   * turnover. Writes the item, an admin_log entry, and a notification to the
+   * reporter. Students can never reach this: the admin check is server-side.
+   */
+  custodyDecision: defineAction({
+    accept: "form",
+    input: custodyDecisionSchema,
+    handler: async ({ itemId, decision }, context) => {
+      requireSupabase(context.locals);
+      const actor = context.locals.user;
+      if (!actor) {
+        throw new ActionError({ code: "UNAUTHORIZED", message: "Sign in to continue." });
+      }
+      const actorEmail = actor.email.toLowerCase().trim();
+      const isAdmin = actor.role === "admin" || roleForEmail(actorEmail) === "admin";
+      if (!isAdmin) {
+        throw new ActionError({ code: "FORBIDDEN", message: "Admin access required." });
+      }
+
+      const supabase = serviceClient(context.locals.env);
+
+      const { data: item } = await supabase
+        .from("items")
+        .select("id, name, type, status, reporter_id, donation_turnover")
+        .eq("id", itemId)
+        .maybeSingle();
+
+      if (!item || item.type !== "found" || item.status !== "approved") {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "That item is not held in office custody.",
+        });
+      }
+      if (item.donation_turnover) {
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "That item was already marked for donation turnover.",
+        });
+      }
+
+      const extending = decision === "extend_custody";
+      const patch = extending
+        ? { custody_extended_until: extensionDeadline() }
+        : { donation_turnover: true };
+
+      const { error: updateError } = await supabase.from("items").update(patch).eq("id", itemId);
+      if (updateError) {
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not save that decision. Try again.",
+        });
+      }
+
+      // Audit trail for the office, best effort: a missing admin profile row
+      // must not undo a decision that was already saved on the item.
+      const { data: adminProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", actorEmail)
+        .maybeSingle();
+      if (adminProfile?.id) {
+        await supabase.from("admin_log").insert({
+          admin_id: adminProfile.id,
+          action: extending ? "custody_extended" : "marked_donation",
+          item_id: itemId,
+        });
+      }
+
+      // The reporter is the one who cares about the outcome.
+      await supabase.from("notifications").insert({
+        user_id: item.reporter_id,
+        message: extending
+          ? `Custody for "${item.name}" was extended by ${CUSTODY_EXTENSION_DAYS} days.`
+          : `"${item.name}" was marked for donation turnover.`,
+        link: `/item/${itemId}`,
+      });
+
+      return {
+        ok: true,
+        itemId,
+        decision,
+        message: extending
+          ? `Custody for "${item.name}" extended by ${CUSTODY_EXTENSION_DAYS} days.`
+          : `"${item.name}" marked for donation turnover.`,
+      };
     },
   }),
 };
