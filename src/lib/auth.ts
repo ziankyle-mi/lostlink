@@ -3,6 +3,38 @@ export const REFRESH_COOKIE = "ll_refresh_token";
 export const OAUTH_STATE_COOKIE = "ll_oauth_state";
 export const PKCE_VERIFIER_COOKIE = "ll_pkce_verifier";
 export const DEV_SESSION_COOKIE = "ll_dev_session";
+export const LAST_ACTIVE_COOKIE = "ll_last_active";
+
+/** Campus standard inactivity idle timeout (15 minutes). */
+export const INACTIVITY_TIMEOUT_SECONDS = 15 * 60;
+/** Grace warning window shown before auto-logout (60 seconds). */
+export const INACTIVITY_WARNING_SECONDS = 60;
+
+/**
+ * Checks whether an activity timestamp has passed the idle timeout threshold.
+ */
+export function isSessionExpired(
+  lastActiveTimestampMs: number,
+  timeoutSeconds = INACTIVITY_TIMEOUT_SECONDS,
+  nowMs = Date.now(),
+): boolean {
+  if (!lastActiveTimestampMs || Number.isNaN(lastActiveTimestampMs)) return false;
+  const elapsedSeconds = (nowMs - lastActiveTimestampMs) / 1000;
+  return elapsedSeconds > timeoutSeconds;
+}
+
+/**
+ * Calculates remaining active session seconds before idle timeout.
+ */
+export function remainingSessionSeconds(
+  lastActiveTimestampMs: number,
+  timeoutSeconds = INACTIVITY_TIMEOUT_SECONDS,
+  nowMs = Date.now(),
+): number {
+  if (!lastActiveTimestampMs || Number.isNaN(lastActiveTimestampMs)) return timeoutSeconds;
+  const elapsedSeconds = Math.floor((nowMs - lastActiveTimestampMs) / 1000);
+  return Math.max(0, timeoutSeconds - elapsedSeconds);
+}
 
 export type Role = "user" | "admin";
 

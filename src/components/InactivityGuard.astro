@@ -1,0 +1,245 @@
+---
+interface Props {
+  /** Inactivity threshold in seconds before logout (default: 15 minutes = 900s). */
+  timeoutSeconds?: number;
+  /** Warning threshold in seconds to display countdown modal (default: 60s). */
+  warningSeconds?: number;
+}
+
+const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
+---
+
+<div
+  id="inactivity-backdrop"
+  data-open="false"
+  class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-forest-950/70 backdrop-blur-xs transition-opacity duration-300"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="inactivity-title"
+  aria-describedby="inactivity-desc"
+>
+  <div
+    id="inactivity-card"
+    class="w-full max-w-md rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-stone-200/90 text-left transition-transform duration-300 scale-95"
+  >
+    <div class="flex items-center gap-3">
+      <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 border border-amber-200/60 shadow-2xs">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <div>
+        <span class="inline-block rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+          Security Timeout
+        </span>
+        <h2 id="inactivity-title" class="font-serif text-xl sm:text-2xl font-bold text-forest-900 tracking-tight leading-tight mt-0.5">
+          Inactivity Warning
+        </h2>
+      </div>
+    </div>
+
+    <p id="inactivity-desc" class="mt-3.5 text-sm text-stone-600 leading-relaxed">
+      For your account security on campus terminals, your session will automatically end in
+      <strong id="inactivity-countdown" class="font-bold text-forest-900 tabular-nums">60</strong>
+      seconds due to inactivity.
+    </p>
+
+    <!-- Visual Countdown Progress Bar -->
+    <div class="mt-4 h-2 w-full rounded-full bg-stone-100 overflow-hidden" aria-hidden="true">
+      <div
+        id="inactivity-progress-bar"
+        class="h-full rounded-full bg-amber-500 transition-all duration-1000 ease-linear"
+        style="width: 100%;"
+      ></div>
+    </div>
+
+    <div class="mt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 sm:gap-3">
+      <button
+        type="button"
+        id="inactivity-logout-btn"
+        class="inline-flex min-h-11 items-center justify-center rounded-full border border-stone-200/90 bg-white px-5 py-2.5 text-sm font-bold text-forest-900 shadow-2xs hover:bg-stone-50 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
+      >
+        Sign out now
+      </button>
+      <button
+        type="button"
+        id="inactivity-stay-btn"
+        class="inline-flex min-h-11 items-center justify-center rounded-full bg-forest-900 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-forest-800 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
+      >
+        Stay signed in
+      </button>
+    </div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ timeoutSeconds, warningSeconds }}>
+  (function () {
+    const STORAGE_KEY = "lostlink_last_active";
+    const LOGOUT_KEY = "lostlink_logged_out";
+    const THROTTLE_MS = 3000;
+
+    const backdrop = document.getElementById("inactivity-backdrop");
+    const card = document.getElementById("inactivity-card");
+    const countdownEl = document.getElementById("inactivity-countdown");
+    const progressBar = document.getElementById("inactivity-progress-bar");
+    const stayBtn = document.getElementById("inactivity-stay-btn");
+    const logoutBtn = document.getElementById("inactivity-logout-btn");
+
+    if (!backdrop || !countdownEl || !progressBar || !stayBtn || !logoutBtn) return;
+
+    let isWarningOpen = false;
+    let isLoggingOut = false;
+    let lastRecordedActivity = Date.now();
+
+    function getStoredLastActive() {
+      try {
+        const val = localStorage.getItem(STORAGE_KEY);
+        if (val) {
+          const parsed = parseInt(val, 10);
+          if (!Number.isNaN(parsed)) return parsed;
+        }
+      } catch {
+        // LocalStorage disabled or blocked
+      }
+      return Date.now();
+    }
+
+    function recordActivity(force = false) {
+      if (isLoggingOut) return;
+      const now = Date.now();
+      if (!force && now - lastRecordedActivity < THROTTLE_MS) return;
+
+      lastRecordedActivity = now;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(now));
+      } catch {
+        // Fallback in-memory
+      }
+
+      if (isWarningOpen) {
+        closeWarning();
+      }
+    }
+
+    function openWarning(remainingSec) {
+      if (isWarningOpen || isLoggingOut) return;
+      isWarningOpen = true;
+      backdrop.classList.remove("hidden");
+      backdrop.classList.add("flex");
+      // Trigger smooth transition
+      requestAnimationFrame(() => {
+        backdrop.setAttribute("data-open", "true");
+        card?.classList.remove("scale-95");
+        card?.classList.add("scale-100");
+      });
+      updateCountdownDisplay(remainingSec);
+    }
+
+    function closeWarning() {
+      if (!isWarningOpen) return;
+      isWarningOpen = false;
+      backdrop.setAttribute("data-open", "false");
+      card?.classList.remove("scale-100");
+      card?.classList.add("scale-95");
+      setTimeout(() => {
+        if (!isWarningOpen) {
+          backdrop.classList.add("hidden");
+          backdrop.classList.remove("flex");
+        }
+      }, 300);
+    }
+
+    function updateCountdownDisplay(sec) {
+      countdownEl.textContent = String(Math.max(0, sec));
+      const percentage = Math.max(0, Math.min(100, (sec / warningSeconds) * 100));
+      progressBar.style.width = percentage + "%";
+    }
+
+    async function performLogout() {
+      if (isLoggingOut) return;
+      isLoggingOut = true;
+      openWarning(0);
+      countdownEl.textContent = "0";
+      progressBar.style.width = "0%";
+
+      const desc = document.getElementById("inactivity-desc");
+      if (desc) desc.textContent = "Signing you out for account security...";
+
+      try {
+        localStorage.setItem(LOGOUT_KEY, String(Date.now()));
+      } catch {}
+
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      } catch {}
+
+      window.location.replace("/login?timeout=1");
+    }
+
+    async function keepSessionAlive() {
+      recordActivity(true);
+      closeWarning();
+      try {
+        await fetch("/api/auth/ping", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      } catch {}
+    }
+
+    // Attach user activity listeners
+    const activityEvents = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, () => recordActivity(false), { passive: true });
+    });
+
+    // Cross-tab synchronization via storage event
+    window.addEventListener("storage", (e) => {
+      if (e.key === STORAGE_KEY) {
+        lastRecordedActivity = getStoredLastActive();
+        if (isWarningOpen) {
+          closeWarning();
+        }
+      } else if (e.key === LOGOUT_KEY) {
+        window.location.replace("/login?timeout=1");
+      }
+    });
+
+    // Button interactions
+    stayBtn.addEventListener("click", () => {
+      keepSessionAlive();
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      performLogout();
+    });
+
+    // Check inactivity periodically
+    recordActivity(true);
+
+    const checkInterval = setInterval(() => {
+      if (isLoggingOut) {
+        clearInterval(checkInterval);
+        return;
+      }
+
+      const lastActive = getStoredLastActive();
+      const elapsedSeconds = Math.floor((Date.now() - lastActive) / 1000);
+      const remainingSeconds = timeoutSeconds - elapsedSeconds;
+
+      if (remainingSeconds <= 0) {
+        clearInterval(checkInterval);
+        performLogout();
+      } else if (remainingSeconds <= warningSeconds) {
+        openWarning(remainingSeconds);
+        updateCountdownDisplay(remainingSeconds);
+      } else if (isWarningOpen) {
+        closeWarning();
+      }
+    }, 1000);
+  })();
+</script>

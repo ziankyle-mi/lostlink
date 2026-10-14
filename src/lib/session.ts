@@ -3,6 +3,7 @@ import type { Env } from "./env";
 import {
   ACCESS_COOKIE,
   DEV_SESSION_COOKIE,
+  LAST_ACTIVE_COOKIE,
   REFRESH_COOKIE,
   type DomainPolicy,
   type SessionUser,
@@ -30,6 +31,10 @@ export function sessionCookieOptions(maxAge = 60 * 60) {
   } as const;
 }
 
+export function touchActivityCookie(cookies: AstroCookies): void {
+  cookies.set(LAST_ACTIVE_COOKIE, Date.now().toString(), sessionCookieOptions());
+}
+
 export function setSessionCookies(
   cookies: AstroCookies,
   session: { access_token: string; refresh_token: string },
@@ -38,6 +43,7 @@ export function setSessionCookies(
   const accessMaxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60;
   cookies.set(ACCESS_COOKIE, session.access_token, sessionCookieOptions(accessMaxAge));
   cookies.set(REFRESH_COOKIE, session.refresh_token, sessionCookieOptions(60 * 60 * 24 * 30));
+  touchActivityCookie(cookies);
 }
 
 export function setAccessCookie(cookies: AstroCookies, accessToken: string): void {
@@ -49,6 +55,7 @@ export function clearSessionCookies(cookies: AstroCookies): void {
   cookies.delete(ACCESS_COOKIE, options);
   cookies.delete(REFRESH_COOKIE, options);
   cookies.delete(DEV_SESSION_COOKIE, options);
+  cookies.delete(LAST_ACTIVE_COOKIE, options);
 }
 
 export const ADMIN_EMAILS = new Set([

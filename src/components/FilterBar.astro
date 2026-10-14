@@ -1,5 +1,6 @@
 ---
-import { CATEGORIES, LOCATIONS, TOTAL } from "~/data/mockItems";
+import { CATEGORIES, TOTAL } from "~/data/mockItems";
+import { LOCATION_FILTER_OPTIONS } from "~/data/campusBuildings";
 
 interface Props {
   totalCount?: number;
@@ -92,7 +93,7 @@ const { totalCount = TOTAL } = Astro.props;
           role="listbox"
           class="absolute left-0 top-13 z-40 hidden min-w-[220px] rounded-2xl border border-line bg-white p-2 shadow-xl"
         >
-          {LOCATIONS.map((loc) => (
+          {LOCATION_FILTER_OPTIONS.map((loc) => (
             <button
               type="button"
               role="option"

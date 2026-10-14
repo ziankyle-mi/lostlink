@@ -47,7 +47,7 @@ const mappedLiveIntake = liveIntake && liveIntake.length > 0
       name: item.name,
       meta: `Posted by ${item.profiles?.full_name ?? "Student"} \u00b7 ${item.reference_code ?? "Ref LL-Item"}`,
       iconBg: "bg-[#dde6de]",
-      iconType: item.category === "Bottles" ? "bottle" : (item.category === "Bags" ? "bag" : "calculator"),
+      iconType: item.category === "Water Bottles & Tumblers" ? "bottle" : (item.category === "Bags & Backpacks" ? "bag" : "calculator"),
     }))
   : [];
 

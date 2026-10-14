@@ -1,6 +1,7 @@
 ---
 import "~/styles/global.css";
 import Toast from "~/components/Toast.astro";
+import InactivityGuard from "~/components/InactivityGuard.astro";
 
 interface Props {
   title: string;
@@ -32,6 +33,7 @@ const {
   <body>
     <slot />
     <Toast />
+    {Astro.locals.user && <InactivityGuard />}
   </body>
   <script>
     // The browser can restore a signed-in page from the back/forward cache

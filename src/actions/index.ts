@@ -28,6 +28,7 @@ import {
   roleForEmail,
   sessionCookieOptions,
   setSessionCookies,
+  touchActivityCookie,
 } from "~/lib/session";
 import {
   clearRateLimit,
@@ -232,6 +233,7 @@ export const server = {
         env.DEV_SESSION_SECRET,
       );
       context.cookies.set(DEV_SESSION_COOKIE, token, sessionCookieOptions(8 * 60 * 60));
+      touchActivityCookie(context.cookies);
       return { redirect: safeNextPath(next) };
     },
   }),

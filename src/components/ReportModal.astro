@@ -1,8 +1,11 @@
 ---
-import { CATEGORIES, LOCATIONS } from "~/data/mockItems";
+import { CATEGORIES } from "~/data/mockItems";
+import { CAMPUS_LOCATIONS } from "~/data/campusBuildings";
 import BrandMark from "~/components/BrandMark.astro";
 
-const presets = LOCATIONS.filter((l) => l !== "All Locations");
+// Location presets come from the single shared campus location list, so the
+// report form always matches the /help campus map exactly.
+const presets = CAMPUS_LOCATIONS;
 ---
 
 <div

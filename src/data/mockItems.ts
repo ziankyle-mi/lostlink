@@ -2,7 +2,16 @@ export interface DashboardItem {
   id: string;
   type: "found" | "lost";
   name: string;
-  category: "Wallets & IDs" | "Bottles" | "Keys" | "Electronics" | "Bags" | "Accessories";
+  category:
+    | "IDs, Cards & Wallets"
+    | "Keys & Keychains"
+    | "Electronics"
+    | "Bags & Backpacks"
+    | "Water Bottles & Tumblers"
+    | "Clothing & Apparel"
+    | "Books, Stationery & School Supplies"
+    | "Accessories, Jewelry & Eyewear"
+    | "Personal Care & Miscellaneous";
   location: string;
   locationPrefix: "Found at" | "Last seen at";
   date: string; // e.g. "Oct 9"
@@ -20,7 +29,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     id: "item-1",
     type: "found",
     name: "Black bifold wallet",
-    category: "Wallets & IDs",
+    category: "IDs, Cards & Wallets",
     location: "Library, 2F",
     locationPrefix: "Found at",
     date: "Oct 9",
@@ -36,7 +45,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     id: "item-2",
     type: "lost",
     name: "Blue insulated water bottle",
-    category: "Bottles",
+    category: "Water Bottles & Tumblers",
     location: "Gym Building",
     locationPrefix: "Last seen at",
     date: "Oct 8",
@@ -51,7 +60,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     id: "item-3",
     type: "found",
     name: "Student ID card",
-    category: "Wallets & IDs",
+    category: "IDs, Cards & Wallets",
     location: "Main Gate",
     locationPrefix: "Found at",
     date: "Oct 9",
@@ -67,7 +76,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     id: "item-4",
     type: "found",
     name: "Keys with a green lanyard",
-    category: "Keys",
+    category: "Keys & Keychains",
     location: "Engineering Building",
     locationPrefix: "Found at",
     date: "Oct 7",
@@ -114,7 +123,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     id: "item-7",
     type: "lost",
     name: "Navy blue backpack",
-    category: "Bags",
+    category: "Bags & Backpacks",
     location: "Chapel steps",
     locationPrefix: "Last seen at",
     date: "Oct 6",
@@ -129,7 +138,7 @@ export const INITIAL_ITEMS: DashboardItem[] = [
     id: "item-8",
     type: "found",
     name: "Folding umbrella",
-    category: "Accessories",
+    category: "Accessories, Jewelry & Eyewear",
     location: "Covered court",
     locationPrefix: "Found at",
     date: "Oct 5",
@@ -164,7 +173,7 @@ export const EXTRA_ITEMS: DashboardItem[] = [
     id: "item-10",
     type: "lost",
     name: "Black Rimmed Eyeglasses",
-    category: "Accessories",
+    category: "Accessories, Jewelry & Eyewear",
     location: "Library, 1F",
     locationPrefix: "Last seen at",
     date: "Oct 3",
@@ -198,35 +207,17 @@ export const DEMO_STATS = {
 
 export const CATEGORIES = [
   "All Categories",
-  "Wallets & IDs",
-  "Bottles",
-  "Keys",
+  "IDs, Cards & Wallets",
+  "Keys & Keychains",
   "Electronics",
-  "Bags",
-  "Accessories",
+  "Bags & Backpacks",
+  "Water Bottles & Tumblers",
+  "Clothing & Apparel",
+  "Books, Stationery & School Supplies",
+  "Accessories, Jewelry & Eyewear",
+  "Personal Care & Miscellaneous",
 ] as const;
 
-export const LOCATIONS = [
-  "All Locations",
-  "LSB (Claim & Security Office)",
-  "DVM Building",
-  "Gate 2",
-  "Golden Pavilion",
-  "Cabanas",
-  "Grandstand",
-  "Oval",
-  "Open Court (TAFO)",
-  "Amphitheatre",
-  "Performing Arts Hall",
-  "P.E. Building",
-  "Salikneta Mart",
-  "Administrative Office",
-  "Highschool Building",
-  "IAC",
-  "2nd Cafeteria",
-  "Gradeschool Building",
-  "Library, 2F",
-  "Gym Building",
-  "Main Gate",
-  "Covered court",
-] as const;
+// Location options are shared with the /help campus map so both stay in sync.
+// Imported from the single source of truth in ~/data/campusBuildings.
+export { CAMPUS_LOCATIONS, LOCATION_FILTER_OPTIONS } from "./campusBuildings";

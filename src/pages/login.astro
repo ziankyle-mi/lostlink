@@ -16,7 +16,9 @@ const notice =
     ? "Check your email to confirm your account, then sign in."
     : params.get("updated") === "1"
       ? "Password updated. Sign in with your new password."
-      : undefined;
+      : params.get("timeout") === "1"
+        ? "Your session expired due to inactivity for your account security. Please sign in again."
+        : undefined;
 
 // Form actions cannot redirect on their own in Astro 5, so they return a path
 // and the page sends the redirect.

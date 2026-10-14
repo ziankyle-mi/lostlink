@@ -141,7 +141,7 @@ const mappedLiveClaims = liveClaims && liveClaims.length > 0
       name: c.items?.name ?? "Reported Item",
       location: c.items?.location ? `Found at ${c.items.location}` : "Campus grounds",
       iconBg: "bg-[#e5ecdc]",
-      iconType: c.items?.category === "Wallets & IDs" ? "wallet" : "id-card",
+      iconType: c.items?.category === "IDs, Cards & Wallets" ? "wallet" : "id-card",
       claimant: c.profiles?.full_name ?? "Student Claimant",
       studentId: c.profiles?.email ? c.profiles.email.split("@")[0] : "Verified Student",
       statusText: c.status === "verified" ? "Verified" : (c.status === "denied" ? "Denied" : "Awaiting visit"),

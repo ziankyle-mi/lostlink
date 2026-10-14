@@ -1,6 +1,14 @@
 import { defineMiddleware } from "astro:middleware";
 import { readEnv } from "~/lib/env";
-import { clearSessionCookies, resolveUser } from "~/lib/session";
+import {
+  clearSessionCookies,
+  resolveUser,
+  touchActivityCookie,
+} from "~/lib/session";
+import {
+  INACTIVITY_TIMEOUT_SECONDS,
+  LAST_ACTIVE_COOKIE,
+} from "~/lib/auth";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -83,6 +91,43 @@ export const onRequest = defineMiddleware(async (context, next) => {
     clearSessionCookies(context.cookies);
     const nextPath = encodeURIComponent(pathname + context.url.search);
     return context.redirect(`/login?next=${nextPath}`, 302);
+  }
+
+  // Inactivity timeout defense-in-depth:
+  // If the user has been inactive for longer than INACTIVITY_TIMEOUT_SECONDS,
+  // invalidate the session and redirect or return 401.
+  if (pathname !== "/api/auth/logout") {
+    const lastActiveStr = context.cookies.get(LAST_ACTIVE_COOKIE)?.value;
+    if (lastActiveStr) {
+      const lastActiveTime = parseInt(lastActiveStr, 10);
+      if (!Number.isNaN(lastActiveTime)) {
+        const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
+        if (elapsedSeconds > INACTIVITY_TIMEOUT_SECONDS) {
+          clearSessionCookies(context.cookies);
+          context.locals.user = null;
+          if (isAction || pathname.startsWith("/api/")) {
+            return withSecurityHeaders(
+              new Response(
+                JSON.stringify({
+                  ok: false,
+                  error: "Session timed out due to inactivity. Please sign in again.",
+                  timeout: true,
+                }),
+                {
+                  status: 401,
+                  headers: { "Content-Type": "application/json" },
+                },
+              ),
+              "no-store",
+            );
+          }
+          return context.redirect("/login?timeout=1", 302);
+        }
+      }
+    }
+
+    // Slide active window forward for authenticated activity
+    touchActivityCookie(context.cookies);
   }
 
   // Signed-in pages must never be replayed from the browser's back/forward

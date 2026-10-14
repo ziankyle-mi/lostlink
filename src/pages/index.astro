@@ -63,19 +63,22 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
           : "Recently";
 
         const iconMap: Record<string, DashboardItem["icon"]> = {
-          "Wallets & IDs": "wallet",
-          "Bottles": "bottle",
-          "Keys": "keys",
+          "IDs, Cards & Wallets": "wallet",
+          "Keys & Keychains": "keys",
           "Electronics": "laptop",
-          "Bags": "backpack",
-          "Accessories": "umbrella",
+          "Bags & Backpacks": "backpack",
+          "Water Bottles & Tumblers": "bottle",
+          "Clothing & Apparel": "umbrella",
+          "Books, Stationery & School Supplies": "id-card",
+          "Accessories, Jewelry & Eyewear": "earbuds",
+          "Personal Care & Miscellaneous": "wallet",
         };
 
         return {
           id: row.id,
           type: (row.type === "found" || row.type === "lost") ? row.type : "found",
           name: row.name,
-          category: (row.category || "Accessories") as DashboardItem["category"],
+          category: (row.category || "Personal Care & Miscellaneous") as DashboardItem["category"],
           location: row.location || "Campus",
           locationPrefix: row.type === "found" ? "Found at" : "Last seen at",
           date: formattedDate,
@@ -970,7 +973,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         }
 
         const itemName = nameInput ? nameInput.value.trim() : "Reported Item";
-        const itemCategory = catSelect ? catSelect.value : "Accessories";
+        const itemCategory = catSelect ? catSelect.value : "Personal Care & Miscellaneous";
         const itemLocation = (locSelect && locSelect.value === "__other__")
           ? (otherInput ? otherInput.value.trim() : "Campus")
           : (locSelect ? locSelect.value : "Campus");

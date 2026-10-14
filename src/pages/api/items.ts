@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const hidePhoto = category === "Wallets & IDs" || category.toLowerCase().includes("id");
+    const hidePhoto = category === "IDs, Cards & Wallets" || category.toLowerCase().includes("id");
     const refCode = type === "found" ? `LL-${Math.floor(4000 + Math.random() * 900)}` : null;
     const photoPath = allPhotos.length > 0 ? (allPhotos.length === 1 ? allPhotos[0] : JSON.stringify(allPhotos)) : null;
     const today = new Date().toISOString().split("T")[0];

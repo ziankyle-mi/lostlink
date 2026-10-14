@@ -24,3 +24,13 @@ export const CAMPUS_BUILDINGS: CampusBuilding[] = [
   { id: 16, name: "2nd Cafeteria", subtitle: "Campus Food Hall & Dining" },
   { id: 17, name: "Gradeschool Building", subtitle: "Basic Education Department" },
 ];
+
+/**
+ * Single source of truth for selectable campus locations.
+ * Derived from CAMPUS_BUILDINGS so the /help map and the report/filter
+ * dropdowns can never drift apart.
+ */
+export const CAMPUS_LOCATIONS: string[] = CAMPUS_BUILDINGS.map((b) => b.name);
+
+/** Location filter options: sentinel "All Locations" + every official building. */
+export const LOCATION_FILTER_OPTIONS: string[] = ["All Locations", ...CAMPUS_LOCATIONS];
