@@ -18,6 +18,27 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: UI polish — removed sparkles/asterisk glyphs, replaced with on-theme elements.
+- Removed the 4-point lime sparkle SVG from the login/`AuthShell` green panel and replaced it with a subtle dotted lime trail (SVG path, `non-scaling-stroke`) that arcs from the badge into the existing ambient glow, ending in a soft glowing dot. Reuses the panel's own light language instead of a floating decoration.
+- Replaced the sparkle next to the "Campus Handover Protocol" pill on `/profile` with the shared Lucide `shield` (shield-check) icon via `Icon.astro` — matches the secure-custody meaning and the existing icon set.
+- Replaced the lime `*` asterisk separators in `AdminTicker.astro` with small lime diamonds (`size-1.5 rotate-45`), removing the raw-keyboard-character look under the marquee animation.
+- Left functional `*` required-field markers (ReportModal) and `ItemIllustration` art untouched.
+- Verified: `astro check` 0 errors / 0 warnings (2 pre-existing `event` hints); `npm test` 64/64; `npm run build` success.
+
+Done: Phase 1 — Designer-Grade Admin Users Management Feature.
+- Implemented dedicated Users Management console (`src/components/admin/UsersManagement.astro`) adhering 100% to LostLink design tokens: DLSAU forest green palette (`#164f38`, `#d8ef8c`, `#f5f1e6`), Fraunces serif typography, generous `rounded-[2rem]` card containers, and touch-friendly control heights.
+- Added top KPI metrics summary cards: Total Accounts, Active Students, Administrators (Security / DO Staff), and Suspended Accounts.
+- Built real-time user directory with search by student name/ID/email, and filter pills ("All Accounts", "Students", "Administrators", "Suspended").
+- Connected seamless tabbed navigation in `AdminSidebar.astro` (`href="/admin?tab=users"` and active lime pill styling) and dynamic tab routing in `src/pages/admin.astro`.
+- Implemented secure account moderation actions via `/api/admin/actions`:
+  - Role switching: Student <-> Admin with safety guardrails preventing logged-in admins from self-demoting.
+  - Account suspension & reactivation with confirmation modal dialogues.
+  - Secure password reset dispatcher through Supabase Auth (cryptographically compliant; never exposing plaintext passwords).
+  - Complete audit logging in `admin_log` for all administrative role/status changes.
+- Added comprehensive unit and integration test suite in `tests/admin-users.test.ts`.
+- Cleaned up navigation in `AdminSidebar.astro` by removing unused Settings anchors, keeping the console lean, focused, and 100% functional.
+- Verified: `astro check` with 0 errors, 0 warnings; `npm test` 64/64 tests passing across 6 suites.
+
 Done: Cloudflare Deployment & Interactive Buttons Fix.
 - Resolved fatal JavaScript duplicate `itemsGrid` declaration in `src/pages/index.astro`, restoring all interactive buttons across the dashboard (report modals, claim modals, filter pills, dropdowns, and search).
 - Moved self-contained interactive scripts for Avatar menu, Sign Out, Notification bell, and outside click handlers into `StudentNavbar.astro` so they function across all pages (`/`, `/profile`, `/item/[id]`).

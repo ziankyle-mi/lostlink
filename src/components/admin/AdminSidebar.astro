@@ -148,8 +148,12 @@ const userName = isAdmin
 
           <!-- Users (Admin) -->
           <a
-            href="/admin#users"
-            class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/10 hover:text-white transition-all"
+            href={isAdmin ? "/admin?tab=users" : "/profile"}
+            class={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
+              activeTab === "users"
+                ? "bg-[#d8ef8c] text-[#164f38] shadow-xs font-bold"
+                : "text-white/85 hover:bg-white/10 hover:text-white"
+            }`}
           >
             <span class="flex items-center gap-3.5">
               <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -173,20 +177,6 @@ const userName = isAdmin
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
               Activity log
-            </span>
-          </a>
-
-          <!-- Settings (Admin) -->
-          <a
-            href="/admin#settings"
-            class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/10 hover:text-white transition-all"
-          >
-            <span class="flex items-center gap-3.5">
-              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              Settings
             </span>
           </a>
         </>
@@ -250,20 +240,6 @@ const userName = isAdmin
                 <path d="M12 17h.01"></path>
               </svg>
               Help & Guidelines
-            </span>
-          </a>
-
-          <!-- Settings (Student) -->
-          <a
-            href="/profile#settings"
-            class="flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/10 hover:text-white transition-all"
-          >
-            <span class="flex items-center gap-3.5">
-              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              Settings
             </span>
           </a>
         </>

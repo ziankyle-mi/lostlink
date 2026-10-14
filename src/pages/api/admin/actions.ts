@@ -32,19 +32,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Resolve admin profile ID
   let adminProfileId: string | null = null;
-  const { data: adminProf } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
-  if (adminProf?.id) {
-    adminProfileId = adminProf.id;
-  } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
     adminProfileId = user.id;
   } else {
-    const { data: anyProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
-    adminProfileId = anyProf?.id ?? null;
+    const { data: adminProf } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
+    if (adminProf?.id) {
+      adminProfileId = adminProf.id;
+    } else {
+      const { data: anyProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
+      adminProfileId = anyProf?.id ?? null;
+    }
   }
 
   try {
     const body = await request.json();
-    const { action, itemId, claimId } = body;
+    const { action, itemId, claimId, userId, newRole, active, email } = body;
 
     // ACTION: Confirm Intake (Move found item from pending to approved in DO custody)
     if (action === "confirm_intake") {
@@ -319,6 +321,161 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // ACTION: Toggle User Role (Student <-> Admin)
+    if (action === "toggle_user_role") {
+      if (!userId || !newRole || !["admin", "user"].includes(newRole)) {
+        return new Response(JSON.stringify({ ok: false, error: "Valid User ID and target role ('admin' | 'user') required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Query target user profile if email not already provided
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+      let targetEmail = email ? String(email).toLowerCase().trim() : "";
+      if (!targetEmail && isUuid) {
+        const { data: targetProf } = await supabase.from("profiles").select("id, email, role").eq("id", userId).maybeSingle();
+        targetEmail = targetProf?.email?.toLowerCase().trim() || "";
+      }
+
+      // Guard: Prevent self-demotion from admin
+      if ((targetEmail === userEmail || userId === adminProfileId) && newRole === "user") {
+        return new Response(JSON.stringify({ ok: false, error: "You cannot demote your own administrator account." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (isUuid) {
+        const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
+        if (updateErr) {
+          return new Response(JSON.stringify({ ok: false, error: updateErr.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (adminProfileId) {
+        try {
+          await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `role_updated: ${targetEmail || userId} set to ${newRole}`,
+          });
+        } catch (logErr) {
+          console.warn("[admin/actions] Log warning:", logErr);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        userId,
+        newRole,
+        message: `User role successfully updated to ${newRole === "admin" ? "Administrator" : "Student"}.`,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: Toggle User Status (Active <-> Suspended)
+    if (action === "toggle_user_status") {
+      if (!userId || typeof active !== "boolean") {
+        return new Response(JSON.stringify({ ok: false, error: "User ID and boolean status required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Query target user profile if email not already provided
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+      let targetEmail = email ? String(email).toLowerCase().trim() : "";
+      if (!targetEmail && isUuid) {
+        const { data: targetProf } = await supabase.from("profiles").select("id, email").eq("id", userId).maybeSingle();
+        targetEmail = targetProf?.email?.toLowerCase().trim() || "";
+      }
+
+      // Guard: Prevent self-suspension
+      if ((targetEmail === userEmail || userId === adminProfileId) && !active) {
+        return new Response(JSON.stringify({ ok: false, error: "You cannot suspend your own administrator account." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (isUuid) {
+        const { error: statusErr } = await supabase.from("profiles").update({ active }).eq("id", userId);
+        if (statusErr) {
+          return new Response(JSON.stringify({ ok: false, error: statusErr.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      if (adminProfileId) {
+        try {
+          await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `status_updated: ${targetEmail || userId} set to ${active ? "active" : "suspended"}`,
+          });
+        } catch (logErr) {
+          console.warn("[admin/actions] Log warning:", logErr);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        userId,
+        active,
+        message: `User account is now ${active ? "active" : "suspended"}.`,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: Send Password Reset Link
+    if (action === "reset_user_password") {
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return new Response(JSON.stringify({ ok: false, error: "Valid email address required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanEmail = email.toLowerCase().trim();
+      const origin = new URL(request.url).origin;
+
+      try {
+        await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: `${origin}/reset-password`,
+        });
+      } catch (authErr) {
+        console.warn("[admin/actions] Password reset note:", authErr);
+      }
+
+      if (adminProfileId) {
+        try {
+          await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `password_reset_sent: ${cleanEmail}`,
+          });
+        } catch (logErr) {
+          console.warn("[admin/actions] Log warning:", logErr);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        email: cleanEmail,
+        message: `Password reset link dispatched to ${cleanEmail}.`,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({ ok: false, error: "Unknown admin action." }), {

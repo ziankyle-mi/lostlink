@@ -2,6 +2,7 @@
 import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
 import DashboardFooter from "~/components/DashboardFooter.astro";
+import Icon from "~/components/Icon.astro";
 import { roleForEmail } from "~/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
@@ -244,9 +245,7 @@ function parsePhotos(photoPath?: string | null): string[] {
               <span class="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#d8ef8c] border border-white/10">
                 CAMPUS HANDOVER PROTOCOL
               </span>
-              <svg viewBox="0 0 24 24" class="size-4 text-[#d8ef8c] opacity-80" fill="currentColor" aria-hidden="true">
-                <path d="M12 2c.4 4.8 5.2 9.6 10 10-4.8.4-9.6 5.2-10 10-.4-4.8-5.2-9.6-10-10 4.8-.4 9.6-5.2 10-10z"></path>
-              </svg>
+              <Icon name="shield" class="size-4 text-[#d8ef8c] opacity-80" />
             </div>
             <h3 class="font-serif text-xl sm:text-2xl font-black text-white leading-tight">
               Have an item to drop off or retrieve?

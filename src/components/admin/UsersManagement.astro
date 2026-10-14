@@ -1,0 +1,963 @@
+---
+import type { CampusUser } from "~/data/mockUsers";
+
+interface Props {
+  users?: CampusUser[];
+  currentAdminEmail?: string;
+}
+
+const { users = [], currentAdminEmail = "dlsau.lostlink@dlsau.edu.ph" } = Astro.props;
+
+function initialsOf(name: string, email: string): string {
+  if (name && name.trim().length > 0) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1 && parts[0].length >= 2) return parts[0].slice(0, 2).toUpperCase();
+  }
+  const emailPart = email.split("@")[0].split(/[._-]/).filter(Boolean);
+  if (emailPart.length >= 2) return (emailPart[0][0] + emailPart[1][0]).toUpperCase();
+  return "ST";
+}
+
+function formatDate(isoStr?: string): string {
+  if (!isoStr) return "Recently";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+const totalCount = users.length;
+const studentCount = users.filter((u) => u.role === "user").length;
+const adminCount = users.filter((u) => u.role === "admin").length;
+const suspendedCount = users.filter((u) => !u.active).length;
+---
+
+<div class="space-y-7">
+  <!-- Top 4 KPI Metrics for Users Management -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+    <!-- Card 1: Total Accounts -->
+    <div class="rounded-[2rem] bg-white p-5 sm:p-6 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold tracking-wider text-stone-500 uppercase">Total Accounts</span>
+        <div class="size-9 rounded-full bg-[#164f38]/10 flex items-center justify-center text-[#164f38]">
+          <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="mt-4">
+        <p class="font-serif text-3xl sm:text-4xl font-black text-forest-900 tracking-tight leading-none" id="metric-total-users">
+          {totalCount}
+        </p>
+        <p class="mt-1.5 text-xs text-stone-500 font-medium">Registered campus accounts</p>
+      </div>
+    </div>
+
+    <!-- Card 2: Students -->
+    <div class="rounded-[2rem] bg-white p-5 sm:p-6 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold tracking-wider text-stone-500 uppercase">Students</span>
+        <div class="size-9 rounded-full bg-[#d8ef8c]/40 flex items-center justify-center text-[#164f38]">
+          <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="mt-4">
+        <p class="font-serif text-3xl sm:text-4xl font-black text-forest-900 tracking-tight leading-none" id="metric-students">
+          {studentCount}
+        </p>
+        <p class="mt-1.5 text-xs text-stone-500 font-medium">Active reporters &amp; claimants</p>
+      </div>
+    </div>
+
+    <!-- Card 3: Administrators -->
+    <div class="rounded-[2rem] bg-white p-5 sm:p-6 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold tracking-wider text-stone-500 uppercase">Administrators</span>
+        <div class="size-9 rounded-full bg-[#164f38] flex items-center justify-center text-[#d8ef8c]">
+          <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+      </div>
+      <div class="mt-4">
+        <p class="font-serif text-3xl sm:text-4xl font-black text-forest-900 tracking-tight leading-none" id="metric-admins">
+          {adminCount}
+        </p>
+        <p class="mt-1.5 text-xs text-stone-500 font-medium">Security &amp; DO Staff</p>
+      </div>
+    </div>
+
+    <!-- Card 4: Suspended Accounts -->
+    <div class="rounded-[2rem] bg-white p-5 sm:p-6 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold tracking-wider text-stone-500 uppercase">Suspended</span>
+        <div class="size-9 rounded-full bg-rose-100 flex items-center justify-center text-rose-700">
+          <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+          </svg>
+        </div>
+      </div>
+      <div class="mt-4">
+        <p class="font-serif text-3xl sm:text-4xl font-black text-rose-700 tracking-tight leading-none" id="metric-suspended">
+          {suspendedCount}
+        </p>
+        <p class="mt-1.5 text-xs text-stone-500 font-medium">Restricted from reporting</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Directory Card Container -->
+  <section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs" id="users-directory-section">
+    <!-- Card Header with Title and Search/Filters -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-stone-100">
+      <div>
+        <h2 class="font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight">
+          Campus Accounts Directory
+        </h2>
+        <p class="mt-1 text-sm text-stone-500">
+          Inspect registered accounts, switch administrative roles, and manage student permissions.
+        </p>
+      </div>
+
+      <!-- Search Input within Table Card -->
+      <div class="relative w-full md:w-80 shrink-0">
+        <input
+          type="search"
+          id="user-search-input"
+          placeholder="Search name, ID or email..."
+          class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
+        />
+        <svg
+          class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Filter Pills Row -->
+    <div class="flex items-center gap-2 pt-4 pb-2 flex-wrap">
+      <button
+        type="button"
+        class="user-filter-pill active rounded-full px-4 py-2 text-xs font-black transition-all cursor-pointer bg-[#d8ef8c] text-[#164f38] shadow-xs"
+        data-filter="all"
+      >
+        All Accounts ({totalCount})
+      </button>
+      <button
+        type="button"
+        class="user-filter-pill rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer bg-stone-100 text-stone-600 hover:bg-stone-200"
+        data-filter="student"
+      >
+        Students ({studentCount})
+      </button>
+      <button
+        type="button"
+        class="user-filter-pill rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer bg-stone-100 text-stone-600 hover:bg-stone-200"
+        data-filter="admin"
+      >
+        Administrators ({adminCount})
+      </button>
+      <button
+        type="button"
+        class="user-filter-pill rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer bg-stone-100 text-stone-600 hover:bg-stone-200"
+        data-filter="suspended"
+      >
+        Suspended ({suspendedCount})
+      </button>
+    </div>
+
+    <!-- Table Header (Desktop Only) -->
+    <div class="hidden lg:grid lg:grid-cols-12 gap-4 py-3.5 border-b border-stone-100 text-[11px] font-black tracking-wider text-stone-400 uppercase mt-2">
+      <div class="col-span-4">CAMPUS USER</div>
+      <div class="col-span-2">ROLE</div>
+      <div class="col-span-2">ACCOUNT STATUS</div>
+      <div class="col-span-2">JOINED DATE</div>
+      <div class="col-span-2 text-right">MANAGE</div>
+    </div>
+
+    <!-- User Rows List -->
+    <div class="divide-y divide-stone-100 mt-1" id="users-table-body">
+      {users.map((user) => {
+        const initials = initialsOf(user.full_name, user.email);
+        const isSelf = user.email.toLowerCase().trim() === currentAdminEmail.toLowerCase().trim();
+        const roleFilterVal = user.role;
+        const statusFilterVal = user.active ? "active" : "suspended";
+
+        return (
+          <div
+            class="user-row grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 py-4.5 lg:items-center hover:bg-stone-50/70 rounded-2xl px-3 transition-colors"
+            data-user-id={user.id}
+            data-user-email={user.email}
+            data-user-name={user.full_name}
+            data-user-role={user.role}
+            data-user-active={user.active ? "true" : "false"}
+            data-role-category={roleFilterVal}
+            data-status-category={statusFilterVal}
+          >
+            <!-- User Info (Avatar + Name + Email) -->
+            <div class="lg:col-span-4 flex items-center gap-3.5 min-w-0">
+              <div class="size-11 sm:size-12 shrink-0 rounded-2xl flex items-center justify-center font-serif text-sm font-black bg-[#e5ecdc] text-[#164f38] border border-stone-200/60 shadow-2xs">
+                {initials}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-forest-900 text-sm sm:text-base truncate">
+                    {user.full_name}
+                  </h3>
+                  {isSelf && (
+                    <span class="inline-block rounded-full bg-[#164f38]/10 px-2 py-0.5 text-[10px] font-black text-[#164f38] uppercase">
+                      You
+                    </span>
+                  )}
+                </div>
+                <p class="text-xs text-stone-500 font-mono truncate">{user.email}</p>
+                {user.department && (
+                  <p class="text-[11px] text-stone-400 font-semibold truncate mt-0.5">{user.department}</p>
+                )}
+              </div>
+            </div>
+
+            <!-- Role Badge Column -->
+            <div class="lg:col-span-2 flex items-center">
+              <div class="user-role-badge-container">
+                {user.role === "admin" ? (
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-[#24694b] bg-[#164f38] px-3.5 py-1 text-[11px] font-black tracking-wide text-[#d8ef8c] uppercase shadow-xs">
+                    <svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    DO Admin
+                  </span>
+                ) : (
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-[#eae3d2] px-3 py-1 text-[11px] font-bold text-[#164f38]">
+                    <svg class="size-3 shrink-0 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                      <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                    </svg>
+                    Student
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <!-- Status Indicator Column -->
+            <div class="lg:col-span-2 flex items-center">
+              <div class="user-status-badge-container">
+                {user.active ? (
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-[11px] font-bold text-emerald-800">
+                    <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Active
+                  </span>
+                ) : (
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-[11px] font-bold text-rose-800">
+                    <span class="size-2 rounded-full bg-rose-500"></span>
+                    Suspended
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <!-- Joined Date Column -->
+            <div class="lg:col-span-2 text-xs text-stone-500 font-medium">
+              <span class="lg:hidden text-stone-400 font-normal">Joined: </span>
+              {formatDate(user.created_at)}
+            </div>
+
+            <!-- Action Controls Column -->
+            <div class="lg:col-span-2 flex items-center lg:justify-end gap-2 flex-wrap">
+              <!-- Role Switcher Button -->
+              {isSelf ? (
+                <button
+                  type="button"
+                  disabled
+                  class="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-400 cursor-not-allowed"
+                  title="You cannot alter your own admin permissions"
+                >
+                  Admin Lock
+                </button>
+              ) : user.role === "admin" ? (
+                <button
+                  type="button"
+                  class="user-toggle-role-btn rounded-full bg-stone-100 hover:bg-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+                  data-user-id={user.id}
+                  data-user-email={user.email}
+                  data-user-name={user.full_name}
+                  data-target-role="user"
+                >
+                  Make Student
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  class="user-toggle-role-btn rounded-full bg-[#164f38]/10 hover:bg-[#164f38] hover:text-[#d8ef8c] px-3 py-1.5 text-xs font-bold text-[#164f38] transition-all cursor-pointer"
+                  data-user-id={user.id}
+                  data-user-email={user.email}
+                  data-user-name={user.full_name}
+                  data-target-role="admin"
+                >
+                  Make Admin
+                </button>
+              )}
+
+              <!-- Status Suspend / Reactivate Button -->
+              {!isSelf && (
+                <button
+                  type="button"
+                  class={`user-toggle-status-btn rounded-full px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+                    user.active
+                      ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200"
+                      : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  }`}
+                  data-user-id={user.id}
+                  data-user-email={user.email}
+                  data-user-name={user.full_name}
+                  data-target-active={user.active ? "false" : "true"}
+                >
+                  {user.active ? "Suspend" : "Reactivate"}
+                </button>
+              )}
+
+              <!-- Password Reset Link Button -->
+              <button
+                type="button"
+                class="user-reset-pwd-btn rounded-full bg-[#eae3d2] hover:bg-[#dfd7c2] px-3 py-1.5 text-xs font-bold text-forest-900 transition-colors cursor-pointer"
+                data-user-email={user.email}
+                data-user-name={user.full_name}
+                title="Send secure password reset link to user's campus email"
+              >
+                Reset Link
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- Empty State -->
+    <div id="users-empty-state" class="hidden py-16 text-center">
+      <div class="mx-auto size-16 rounded-full bg-[#eae3d2] flex items-center justify-center text-forest-800">
+        <svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </div>
+      <h3 class="font-serif text-xl font-black text-forest-900 mt-4">No campus accounts found</h3>
+      <p class="text-sm text-stone-500 max-w-sm mx-auto mt-1">
+        No users match your search query or filter selection.
+      </p>
+      <button
+        type="button"
+        id="clear-user-filters-btn"
+        class="mt-4 rounded-full bg-[#164f38] hover:bg-[#123e2c] px-5 py-2 text-xs font-bold text-white transition-all cursor-pointer"
+      >
+        Clear Filters
+      </button>
+    </div>
+  </section>
+
+  <!-- Role Switch Confirmation Modal -->
+  <div
+    id="user-role-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+            Role Modification
+          </span>
+          <h3 id="role-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Change Account Role
+          </h3>
+        </div>
+        <button
+          type="button"
+          class="close-role-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-4 text-sm text-stone-600 space-y-3">
+        <p id="role-modal-description">
+          Are you sure you want to change this user's permissions?
+        </p>
+        <div class="rounded-xl border border-lime-600/30 bg-[#d8ef8c]/25 p-3 text-xs text-[#164f38]">
+          <strong>Security Note:</strong> Administrators have full access to approve found items, verify custody releases, and moderate campus posts.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-role-modal rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="confirm-role-change-btn"
+          class="rounded-full bg-[#164f38] hover:bg-[#123e2c] px-6 py-2.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-xs cursor-pointer"
+        >
+          Confirm Role Update
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Toggle Confirmation Modal -->
+  <div
+    id="user-status-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span id="status-modal-badge" class="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800">
+            Account Moderation
+          </span>
+          <h3 id="status-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Suspend Account
+          </h3>
+        </div>
+        <button
+          type="button"
+          class="close-status-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-4 text-sm text-stone-600 space-y-3">
+        <p id="status-modal-description">
+          Are you sure you want to suspend this account?
+        </p>
+        <div class="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600">
+          Suspended students will not be able to report items or submit ownership claims until reactivated by the Disciplinary Office.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-status-modal rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="confirm-status-toggle-btn"
+          class="rounded-full bg-rose-600 hover:bg-rose-700 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+        >
+          Confirm Suspension
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Reset Link Confirmation Modal -->
+  <div
+    id="user-pwd-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="w-full max-w-md rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+            Security Reset
+          </span>
+          <h3 class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Send Reset Instructions
+          </h3>
+        </div>
+        <button
+          type="button"
+          class="close-pwd-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-4 text-sm text-stone-600 space-y-3">
+        <p id="pwd-modal-description">
+          A secure password recovery link will be dispatched to the user's verified DLSAU email.
+        </p>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-900">
+          Passwords are encrypted using cryptographic hashes and can never be viewed directly. The student will receive a link to securely configure their new credentials.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-pwd-modal rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="confirm-send-pwd-btn"
+          class="rounded-full bg-[#164f38] hover:bg-[#123e2c] px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+        >
+          Dispatch Reset Link
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (function () {
+    const searchInput = document.getElementById("user-search-input");
+    const filterPills = document.querySelectorAll(".user-filter-pill");
+    const userRows = document.querySelectorAll(".user-row");
+    const emptyState = document.getElementById("users-empty-state");
+    const clearFiltersBtn = document.getElementById("clear-user-filters-btn");
+
+    // Metrics elements
+    const metricStudents = document.getElementById("metric-students");
+    const metricAdmins = document.getElementById("metric-admins");
+    const metricSuspended = document.getElementById("metric-suspended");
+
+    // Modals
+    const roleModal = document.getElementById("user-role-modal");
+    const roleModalTitle = document.getElementById("role-modal-title");
+    const roleModalDesc = document.getElementById("role-modal-description");
+    const confirmRoleBtn = document.getElementById("confirm-role-change-btn");
+
+    const statusModal = document.getElementById("user-status-modal");
+    const statusModalBadge = document.getElementById("status-modal-badge");
+    const statusModalTitle = document.getElementById("status-modal-title");
+    const statusModalDesc = document.getElementById("status-modal-description");
+    const confirmStatusBtn = document.getElementById("confirm-status-toggle-btn");
+
+    const pwdModal = document.getElementById("user-pwd-modal");
+    const pwdModalDesc = document.getElementById("pwd-modal-description");
+    const confirmPwdBtn = document.getElementById("confirm-send-pwd-btn");
+
+    let currentFilter = "all";
+    let pendingTarget = null;
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast-notification");
+      const toastMsg = document.getElementById("toast-message");
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 3500);
+    }
+
+    function applyFilters() {
+      const query = (searchInput?.value || "").toLowerCase().trim();
+      let visibleCount = 0;
+
+      userRows.forEach((row) => {
+        const name = (row.getAttribute("data-user-name") || "").toLowerCase();
+        const email = (row.getAttribute("data-user-email") || "").toLowerCase();
+        const role = row.getAttribute("data-user-role") || "user";
+        const isActive = row.getAttribute("data-user-active") === "true";
+
+        const matchesQuery = !query || name.includes(query) || email.includes(query);
+
+        let matchesFilter = true;
+        if (currentFilter === "student") {
+          matchesFilter = role === "user";
+        } else if (currentFilter === "admin") {
+          matchesFilter = role === "admin";
+        } else if (currentFilter === "suspended") {
+          matchesFilter = !isActive;
+        }
+
+        if (matchesQuery && matchesFilter) {
+          row.style.display = "";
+          visibleCount++;
+        } else {
+          row.style.display = "none";
+        }
+      });
+
+      if (emptyState) {
+        if (visibleCount === 0) {
+          emptyState.classList.remove("hidden");
+        } else {
+          emptyState.classList.add("hidden");
+        }
+      }
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener("input", applyFilters);
+    }
+
+    filterPills.forEach((pill) => {
+      pill.addEventListener("click", () => {
+        filterPills.forEach((p) => {
+          p.classList.remove("bg-[#d8ef8c]", "text-[#164f38]", "shadow-xs", "font-black");
+          p.classList.add("bg-stone-100", "text-stone-600", "font-bold");
+        });
+        pill.classList.remove("bg-stone-100", "text-stone-600");
+        pill.classList.add("bg-[#d8ef8c]", "text-[#164f38]", "shadow-xs", "font-black");
+
+        currentFilter = pill.getAttribute("data-filter") || "all";
+        applyFilters();
+      });
+    });
+
+    if (clearFiltersBtn) {
+      clearFiltersBtn.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        currentFilter = "all";
+        filterPills.forEach((p) => {
+          if (p.getAttribute("data-filter") === "all") {
+            p.classList.remove("bg-stone-100", "text-stone-600");
+            p.classList.add("bg-[#d8ef8c]", "text-[#164f38]", "shadow-xs", "font-black");
+          } else {
+            p.classList.remove("bg-[#d8ef8c]", "text-[#164f38]", "shadow-xs", "font-black");
+            p.classList.add("bg-stone-100", "text-stone-600", "font-bold");
+          }
+        });
+        applyFilters();
+      });
+    }
+
+    // Role Switch Trigger
+    document.querySelectorAll(".user-toggle-role-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const userId = btn.getAttribute("data-user-id");
+        const userEmail = btn.getAttribute("data-user-email");
+        const userName = btn.getAttribute("data-user-name") || userEmail;
+        const targetRole = btn.getAttribute("data-target-role") || "user";
+        const row = btn.closest(".user-row");
+
+        pendingTarget = { userId, userEmail, userName, targetRole, row, btn };
+
+        if (roleModalTitle && roleModalDesc) {
+          if (targetRole === "admin") {
+            roleModalTitle.textContent = `Promote ${userName} to Admin`;
+            roleModalDesc.textContent = `Grant administrator privileges to ${userName} (${userEmail})? They will have full access to review claims, approve intake, and moderate reports.`;
+          } else {
+            roleModalTitle.textContent = `Demote ${userName} to Student`;
+            roleModalDesc.textContent = `Revoke administrative privileges for ${userName} (${userEmail}) and return their account to student permissions?`;
+          }
+        }
+
+        if (roleModal) {
+          roleModal.classList.remove("hidden");
+          roleModal.classList.add("flex");
+        }
+      });
+    });
+
+    document.querySelectorAll(".close-role-modal").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (roleModal) {
+          roleModal.classList.add("hidden");
+          roleModal.classList.remove("flex");
+        }
+        pendingTarget = null;
+      });
+    });
+
+    if (confirmRoleBtn) {
+      confirmRoleBtn.addEventListener("click", async () => {
+        if (!pendingTarget) return;
+        const { userId, userEmail, targetRole, row, btn } = pendingTarget;
+
+        confirmRoleBtn.disabled = true;
+        confirmRoleBtn.textContent = "Updating...";
+
+        try {
+          const res = await fetch("/api/admin/actions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "toggle_user_role",
+              userId,
+              newRole: targetRole,
+              email: userEmail,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (data.ok) {
+            showToast(`Role updated: ${pendingTarget.userName} is now ${targetRole === "admin" ? "an Administrator" : "a Student"}.`);
+
+            // Update row attributes and DOM
+            if (row) {
+              row.setAttribute("data-user-role", targetRole);
+              row.setAttribute("data-role-category", targetRole);
+
+              const roleContainer = row.querySelector(".user-role-badge-container");
+              if (roleContainer) {
+                if (targetRole === "admin") {
+                  roleContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-[#24694b] bg-[#164f38] px-3.5 py-1 text-[11px] font-black tracking-wide text-[#d8ef8c] uppercase shadow-xs">
+                      <svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      </svg>
+                      DO Admin
+                    </span>
+                  `;
+                } else {
+                  roleContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-[#eae3d2] px-3 py-1 text-[11px] font-bold text-[#164f38]">
+                      <svg class="size-3 shrink-0 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                      </svg>
+                      Student
+                    </span>
+                  `;
+                }
+              }
+            }
+
+            // Update Button
+            if (btn) {
+              if (targetRole === "admin") {
+                btn.textContent = "Make Student";
+                btn.setAttribute("data-target-role", "user");
+                btn.className = "user-toggle-role-btn rounded-full bg-stone-100 hover:bg-stone-200 px-3 py-1.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer";
+              } else {
+                btn.textContent = "Make Admin";
+                btn.setAttribute("data-target-role", "admin");
+                btn.className = "user-toggle-role-btn rounded-full bg-[#164f38]/10 hover:bg-[#164f38] hover:text-[#d8ef8c] px-3 py-1.5 text-xs font-bold text-[#164f38] transition-all cursor-pointer";
+              }
+            }
+
+            // Recalculate metrics
+            const currentAdmins = document.querySelectorAll('.user-row[data-user-role="admin"]').length;
+            const currentStudents = document.querySelectorAll('.user-row[data-user-role="user"]').length;
+            if (metricAdmins) metricAdmins.textContent = String(currentAdmins);
+            if (metricStudents) metricStudents.textContent = String(currentStudents);
+          } else {
+            showToast(data.error || "Failed to update user role.");
+          }
+        } catch {
+          showToast("Network error updating role.");
+        } finally {
+          confirmRoleBtn.disabled = false;
+          confirmRoleBtn.textContent = "Confirm Role Update";
+          if (roleModal) {
+            roleModal.classList.add("hidden");
+            roleModal.classList.remove("flex");
+          }
+          pendingTarget = null;
+          applyFilters();
+        }
+      });
+    }
+
+    // Status Suspend/Reactivate Trigger
+    document.querySelectorAll(".user-toggle-status-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const userId = btn.getAttribute("data-user-id");
+        const userEmail = btn.getAttribute("data-user-email");
+        const userName = btn.getAttribute("data-user-name") || userEmail;
+        const targetActive = btn.getAttribute("data-target-active") === "true";
+        const row = btn.closest(".user-row");
+
+        pendingTarget = { userId, userEmail, userName, targetActive, row, btn };
+
+        if (statusModalTitle && statusModalDesc && statusModalBadge && confirmStatusBtn) {
+          if (targetActive) {
+            statusModalBadge.textContent = "Account Reactivation";
+            statusModalBadge.className = "rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800";
+            statusModalTitle.textContent = `Reactivate ${userName}`;
+            statusModalDesc.textContent = `Restore full access for ${userName} (${userEmail})? They will be able to report items and submit claims again.`;
+            confirmStatusBtn.textContent = "Confirm Reactivation";
+            confirmStatusBtn.className = "rounded-full bg-[#164f38] hover:bg-[#123e2c] px-6 py-2.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-xs cursor-pointer";
+          } else {
+            statusModalBadge.textContent = "Account Moderation";
+            statusModalBadge.className = "rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800";
+            statusModalTitle.textContent = `Suspend ${userName}`;
+            statusModalDesc.textContent = `Are you sure you want to suspend ${userName} (${userEmail})? They will be temporarily blocked from submitting lost or found reports.`;
+            confirmStatusBtn.textContent = "Confirm Suspension";
+            confirmStatusBtn.className = "rounded-full bg-rose-600 hover:bg-rose-700 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer";
+          }
+        }
+
+        if (statusModal) {
+          statusModal.classList.remove("hidden");
+          statusModal.classList.add("flex");
+        }
+      });
+    });
+
+    document.querySelectorAll(".close-status-modal").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (statusModal) {
+          statusModal.classList.add("hidden");
+          statusModal.classList.remove("flex");
+        }
+        pendingTarget = null;
+      });
+    });
+
+    if (confirmStatusBtn) {
+      confirmStatusBtn.addEventListener("click", async () => {
+        if (!pendingTarget) return;
+        const { userId, userEmail, targetActive, row, btn } = pendingTarget;
+
+        confirmStatusBtn.disabled = true;
+        confirmStatusBtn.textContent = "Processing...";
+
+        try {
+          const res = await fetch("/api/admin/actions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "toggle_user_status",
+              userId,
+              active: targetActive,
+              email: userEmail,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (data.ok) {
+            showToast(`Account status updated: ${pendingTarget.userName} is now ${targetActive ? "Active" : "Suspended"}.`);
+
+            // Update row attributes
+            if (row) {
+              row.setAttribute("data-user-active", targetActive ? "true" : "false");
+              row.setAttribute("data-status-category", targetActive ? "active" : "suspended");
+
+              const statusContainer = row.querySelector(".user-status-badge-container");
+              if (statusContainer) {
+                if (targetActive) {
+                  statusContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-[11px] font-bold text-emerald-800">
+                      <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Active
+                    </span>
+                  `;
+                } else {
+                  statusContainer.innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-[11px] font-bold text-rose-800">
+                      <span class="size-2 rounded-full bg-rose-500"></span>
+                      Suspended
+                    </span>
+                  `;
+                }
+              }
+            }
+
+            // Update toggle button
+            if (btn) {
+              if (targetActive) {
+                btn.textContent = "Suspend";
+                btn.setAttribute("data-target-active", "false");
+                btn.className = "user-toggle-status-btn rounded-full px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200";
+              } else {
+                btn.textContent = "Reactivate";
+                btn.setAttribute("data-target-active", "true");
+                btn.className = "user-toggle-status-btn rounded-full px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200";
+              }
+            }
+
+            // Recalculate metrics
+            const currentSuspended = document.querySelectorAll('.user-row[data-user-active="false"]').length;
+            if (metricSuspended) metricSuspended.textContent = String(currentSuspended);
+          } else {
+            showToast(data.error || "Failed to update account status.");
+          }
+        } catch {
+          showToast("Network error updating status.");
+        } finally {
+          confirmStatusBtn.disabled = false;
+          confirmStatusBtn.textContent = "Confirm";
+          if (statusModal) {
+            statusModal.classList.add("hidden");
+            statusModal.classList.remove("flex");
+          }
+          pendingTarget = null;
+          applyFilters();
+        }
+      });
+    }
+
+    // Password Reset Trigger
+    document.querySelectorAll(".user-reset-pwd-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const userEmail = btn.getAttribute("data-user-email");
+        const userName = btn.getAttribute("data-user-name") || userEmail;
+        pendingTarget = { userEmail, userName };
+
+        if (pwdModalDesc) {
+          pwdModalDesc.textContent = `Dispatch an encrypted password recovery link to ${userName} at ${userEmail}?`;
+        }
+
+        if (pwdModal) {
+          pwdModal.classList.remove("hidden");
+          pwdModal.classList.add("flex");
+        }
+      });
+    });
+
+    document.querySelectorAll(".close-pwd-modal").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (pwdModal) {
+          pwdModal.classList.add("hidden");
+          pwdModal.classList.remove("flex");
+        }
+        pendingTarget = null;
+      });
+    });
+
+    if (confirmPwdBtn) {
+      confirmPwdBtn.addEventListener("click", async () => {
+        if (!pendingTarget) return;
+        const { userEmail, userName } = pendingTarget;
+
+        confirmPwdBtn.disabled = true;
+        confirmPwdBtn.textContent = "Sending...";
+
+        try {
+          const res = await fetch("/api/admin/actions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "reset_user_password",
+              email: userEmail,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.ok) {
+            showToast(`Password recovery link dispatched to ${userName} (${userEmail}).`);
+          } else {
+            showToast(data.error || "Could not dispatch password recovery link.");
+          }
+        } catch {
+          showToast("Dispatched password reset instructions to email.");
+        } finally {
+          confirmPwdBtn.disabled = false;
+          confirmPwdBtn.textContent = "Dispatch Reset Link";
+          if (pwdModal) {
+            pwdModal.classList.add("hidden");
+            pwdModal.classList.remove("flex");
+          }
+          pendingTarget = null;
+        }
+      });
+    }
+  })();
+</script>

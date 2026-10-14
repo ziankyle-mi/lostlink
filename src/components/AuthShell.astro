@@ -43,22 +43,32 @@ const { title, heading, subheading, description } = Astro.props;
             style="background: radial-gradient(circle, rgba(163, 219, 142, 0.25) 0%, transparent 70%);"
           >
           </div>
+          <!-- Dotted trail: same lime as the glows, arcs from above the badge into the light behind the headline -->
+          <svg class="absolute inset-0 h-full w-full" viewBox="0 0 1000 800" preserveAspectRatio="none" fill="none">
+            <path
+              d="M 400 -40 C 520 120 760 90 860 240 C 900 300 880 350 800 380"
+              stroke="#d8ef8c"
+              stroke-opacity="0.5"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-dasharray="0.01 16"
+              vector-effect="non-scaling-stroke"
+            >
+            </path>
+          </svg>
+          <!-- Terminal marker where the trail lands in the glow -->
+          <span class="absolute left-[80%] top-[47.5%] -translate-x-1/2 -translate-y-1/2">
+            <span
+              class="block size-2 rounded-full bg-[#d8ef8c] shadow-[0_0_14px_4px_rgba(216,239,140,0.35)]"
+            >
+            </span>
+          </span>
         </div>
 
         <div class="relative flex items-start justify-between">
           <span class="rounded-full border border-white/25 bg-white/[0.04] px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium tracking-wide text-white/90">
             DLSAU &middot; Lost &amp; Found
           </span>
-          <svg
-            viewBox="0 0 24 24"
-            class="size-6 text-[#d8ef8c] opacity-90 drop-shadow-[0_0_6px_rgba(216,239,140,0.35)]"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 2c.4 4.8 5.2 9.6 10 10-4.8.4-9.6 5.2-10 10-.4-4.8-5.2-9.6-10-10 4.8-.4 9.6-5.2 10-10z"
-            ></path>
-          </svg>
         </div>
 
         <p

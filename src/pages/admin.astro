@@ -6,6 +6,8 @@ import AdminMetrics from "~/components/admin/AdminMetrics.astro";
 import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.astro";
 import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
+import UsersManagement from "~/components/admin/UsersManagement.astro";
+import { INITIAL_CAMPUS_USERS, type CampusUser } from "~/data/mockUsers";
 
 import { roleForEmail } from "~/lib/session";
 import { readEnv } from "~/lib/env";
@@ -19,6 +21,8 @@ const isRealAdmin = user?.role === "admin" || roleForEmail(userEmail) === "admin
 if (!isRealAdmin) {
   return Astro.redirect("/");
 }
+
+const currentTab = Astro.url.searchParams.get("tab") || "overview";
 
 // Date formatting matching "SATURDAY, OCTOBER 10" from Figma
 const today = new Date();
@@ -39,6 +43,7 @@ let liveMetrics = {
 let liveClaims: any[] = [];
 let liveIntake: any[] = [];
 let liveLogs: any[] = [];
+let allUsers: CampusUser[] = [...INITIAL_CAMPUS_USERS];
 
 if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
   try {
@@ -48,7 +53,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       { auth: { persistSession: false } },
     );
 
-    // Admin View: Live stats from entire campus
+    // Admin View: Live stats and records from entire campus
     const [
       custodyRes,
       lostRes,
@@ -57,6 +62,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       claimsListRes,
       intakeListRes,
       logsListRes,
+      profilesRes,
     ] = await Promise.all([
       supabase
         .from("items")
@@ -114,6 +120,10 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
         `)
         .order("created_at", { ascending: false })
         .limit(8),
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, role, active, created_at")
+        .order("created_at", { ascending: false }),
     ]);
 
     liveMetrics = {
@@ -126,6 +136,21 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     if (claimsListRes.data) liveClaims = claimsListRes.data;
     if (intakeListRes.data) liveIntake = intakeListRes.data;
     if (logsListRes.data) liveLogs = logsListRes.data;
+
+    if (profilesRes.data && profilesRes.data.length > 0) {
+      const liveUsers: CampusUser[] = profilesRes.data.map((p: any) => ({
+        id: p.id,
+        full_name: p.full_name || p.email.split("@")[0].replace(/[._-]/g, " "),
+        email: p.email,
+        role: p.role,
+        active: p.active ?? true,
+        created_at: p.created_at,
+        department: p.role === "admin" ? "Disciplinary / Security Office" : "DLSAU Student",
+      }));
+      const liveEmails = new Set(liveUsers.map((u) => u.email.toLowerCase()));
+      const remainingMock = INITIAL_CAMPUS_USERS.filter((u) => !liveEmails.has(u.email.toLowerCase()));
+      allUsers = [...liveUsers, ...remainingMock];
+    }
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
   }
@@ -133,7 +158,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
 ---
 
 <Base
-  title="Admin Console | LostLink"
+  title={`${currentTab === "users" ? "User Management" : "Admin Console"} | LostLink`}
   description="LostLink campus lost and found console for De La Salle Araneta University."
 >
   <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
@@ -153,61 +178,78 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
                   {dateEyebrow}
                 </p>
                 <h1 class="mt-1 font-serif text-4xl sm:text-5xl lg:text-[3.25rem] font-black text-forest-900 tracking-tight leading-none">
-                  Overview
+                  {currentTab === "users" ? "User Management" : "Overview"}
                 </h1>
               </div>
 
-              <!-- Top Right Controls: Search bar + CTA button -->
+              <!-- Top Right Controls -->
               <div class="flex items-center gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
-                <div class="relative flex-1 sm:w-72 lg:w-80">
-                  <input
-                    type="search"
-                    id="overview-search-input"
-                    placeholder="Search items, students, claims.."
-                    class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
-                  />
-                  <svg
-                    class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    aria-hidden="true"
+                {currentTab === "users" ? (
+                  <a
+                    href="/admin"
+                    class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+                    <span>&larr; Back to Overview</span>
+                  </a>
+                ) : (
+                  <>
+                    <div class="relative flex-1 sm:w-72 lg:w-80">
+                      <input
+                        type="search"
+                        id="overview-search-input"
+                        placeholder="Search items, students, claims.."
+                        class="w-full min-h-[3rem] rounded-full bg-[#eae3d2] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
+                      />
+                      <svg
+                        class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
 
-                <button
-                  type="button"
-                  id="log-found-cta-btn"
-                  class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
-                >
-                  <span>Log a found item</span>
-                  <span class="text-base font-black leading-none">+</span>
-                </button>
+                    <button
+                      type="button"
+                      id="log-found-cta-btn"
+                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-[#164f38] hover:bg-[#123e2c] active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                    >
+                      <span>Log a found item</span>
+                      <span class="text-base font-black leading-none">+</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            <!-- Row 1: 4 KPI Stat Cards -->
-            <AdminMetrics role="admin" metrics={liveMetrics} />
+            {currentTab === "users" ? (
+              <UsersManagement users={allUsers} currentAdminEmail={userEmail} />
+            ) : (
+              <>
+                <!-- Row 1: 4 KPI Stat Cards -->
+                <AdminMetrics role="admin" metrics={liveMetrics} />
 
-            <!-- Row 2: Claims to verify Table Card -->
-            <ClaimsVerificationTable role="admin" liveClaims={liveClaims} />
+                <!-- Row 2: Claims to verify Table Card -->
+                <ClaimsVerificationTable role="admin" liveClaims={liveClaims} />
 
-            <!-- Row 3: Two Columns Split (Waiting for intake + Recent activity) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
-              <IntakeQueue role="admin" liveIntake={liveIntake} />
-              <RecentActivity role="admin" liveLogs={liveLogs} />
-            </div>
+                <!-- Row 3: Two Columns Split (Waiting for intake + Recent activity) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
+                  <IntakeQueue role="admin" liveIntake={liveIntake} />
+                  <RecentActivity role="admin" liveLogs={liveLogs} />
+                </div>
+              </>
+            )}
           </main>
 
           <!-- Floating Admin Sidebar (Right Column) -->
           <div class="w-full lg:w-auto shrink-0 lg:sticky lg:top-8 self-start">
             <AdminSidebar
               role="admin"
-              activeTab="overview"
+              activeTab={currentTab}
               userEmail={userEmail}
             />
           </div>
