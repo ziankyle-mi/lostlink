@@ -18,6 +18,40 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Unclaimed Items Review is now a real feature, not a mockup.
+- **Removed the fake parts:** the three hardcoded item rows in `admin.astro`
+  (AquaFlask 48 days / Calculator 39 / Glasses 33), the two `button` click
+  handlers that only swapped their own label and fired a toast, and
+  `DEMO_STATS.unclaimed30Days = 3` (deleted; the sidebar and the activity feed
+  no longer echo a made-up number).
+- **New shared rules** `src/lib/custody.ts`: `CUSTODY_OVERDUE_DAYS = 30`,
+  `CUSTODY_EXTENSION_DAYS = 15`, `daysInCustody`, `daysUntilOverdue`,
+  `isCustodyOverdue`, `extensionDeadline`, `custodyAgeLabel`. Single source for
+  the list, the action, and the copy so the numbers cannot drift.
+- **Real query** in `admin.astro`: found + approved + not marked for donation,
+  reported more than 30 days ago, oldest first, with the reporter's name joined
+  from `profiles`. An item inside a grace extension is not listed; once the
+  extension lapses it is listed again with the lapse date shown.
+- **Real mutation:** new Astro Action `actions.custodyDecision`
+  (`accept: "form"`, Zod `custodyDecisionSchema`). Server-side admin check,
+  then writes the item, an `admin_log` entry (`custody_extended` /
+  `marked_donation`), and a notification to the reporter. Every row is a real
+  `<form>` posting to it, so it works without JavaScript; the page re-renders
+  with a success or error toast and the modal stays open.
+- **States:** empty ("Nothing is overdue"), loading-free server render, and a
+  "Database update needed" notice if the two custody columns are missing
+  instead of a broken console.
+- **Schema:** `docs/schema.sql` items table now carries `custody_extended_until`
+  and `donation_turnover` plus a partial index. `docs/migrations.sql` holds the
+  idempotent `alter table` statements the owner must run once in the Supabase
+  SQL editor (PostgREST cannot run DDL, so this is a manual step; verified the
+  columns do not exist yet in the live project).
+- Verified: `astro check` 0 errors / 0 warnings (7 pre-existing hints);
+  `npm test` 89/89 (7 new in `tests/custody.test.ts`); `npm run build` success.
+- Live data note: all 4 approved found items are 0-3 days old, so the review is
+  correctly empty until items age out. `docs/migrations.sql` has an optional
+  commented backdate for demos.
+
 Done: Registration fixes — new accounts get a `profiles` row; role pills no longer lie.
 - **Missing profile row (the real bug):** `actions.register` only created the
   Supabase auth user. `profiles` rows were only ever inserted by
