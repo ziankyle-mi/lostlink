@@ -77,8 +77,9 @@ const { item, isAdmin = false } = Astro.props;
             {/* Prev Slide Button */}
             <button
               type="button"
-              class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition-all hover:bg-black/85 hover:scale-105 active:scale-95 cursor-pointer"
+              class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full border border-line/60 bg-white/95 text-forest-900 shadow-2xs backdrop-blur-xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:border-forest-700 hover:bg-forest-700 hover:text-white active:scale-95 cursor-pointer"
               aria-label="Previous photo"
+              title="Previous photo"
             >
               <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -88,8 +89,9 @@ const { item, isAdmin = false } = Astro.props;
             {/* Next Slide Button */}
             <button
               type="button"
-              class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs transition-all hover:bg-black/85 hover:scale-105 active:scale-95 cursor-pointer"
+              class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full border border-line/60 bg-white/95 text-forest-900 shadow-2xs backdrop-blur-xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:border-forest-700 hover:bg-forest-700 hover:text-white active:scale-95 cursor-pointer"
               aria-label="Next photo"
+              title="Next photo"
             >
               <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -97,8 +99,8 @@ const { item, isAdmin = false } = Astro.props;
             </button>
 
             {/* Slide Counter Badge */}
-            <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full bg-black/65 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-xs shadow-xs">
-              <span class="current-slide-idx">1</span>/{item.images.length}
+            <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full border border-line/60 bg-white/95 px-2.5 py-1 text-xs font-bold text-forest-900 shadow-2xs backdrop-blur-xs">
+              <span class="current-slide-idx text-forest-700">1</span><span class="font-medium text-stone-500">/{item.images.length}</span>
             </div>
           </>
         )}

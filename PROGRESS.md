@@ -18,6 +18,24 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: UI polish — item-card photo sliders restyled onto the design tokens.
+- Card carousel prev/next arrows and the `1/3` counter badge were the last
+  controls off-theme (`bg-black/60` / `bg-black/65` translucent black).
+- `ItemCard.astro` + the JS-built quick-report card in `index.astro` now use the
+  on-photo control language already used by the admin remove button: white
+  surface `bg-white/95`, `border-line/60`, `shadow-2xs`, forest-900 icon, flat
+  hover to `bg-forest-700 text-white`, `active:scale-95`. Badge is a white chip
+  with a forest-700 index and stone-500 total (was black/65 white text).
+- Touch target fix (a11y skill rule): arrows grew `size-8` -> `size-10` and got
+  an `after:-inset-0.5` transparent hit expansion to a full 44px target;
+  added the missing `title` attributes alongside the existing `aria-label`s.
+- Zero behavior change: `.slider-prev` / `.slider-next` / `.slider-track` /
+  `.current-slide-idx` selectors, swipe handling, and slide JS untouched.
+- Verified: generated CSS confirmed to contain `after\:content-\[\'\'\]`,
+  `after\:-inset-0\.5`, `size-10`, `bg-white\/95`, `border-line\/60` rules;
+  `astro check` 0 errors / 0 warnings (7 pre-existing hints);
+  `npm test` 78/78; `npm run build` success.
+
 Done: Feed grid fix — filtering no longer leaves empty gaps in "Latest on campus".
 - Root cause: cards 9+ are wrapped in an `.extra-item` div that is itself the CSS-grid
   child. The filter script only toggled `hidden` on the inner `<article>`, so every
