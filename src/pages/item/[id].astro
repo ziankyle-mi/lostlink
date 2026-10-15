@@ -14,6 +14,7 @@ const userEmail = user?.email || "";
 const env = Astro.locals.env || readEnv();
 let item: any = null;
 let isReporter = false;
+let isUserSuspended = false;
 
 // 1. Check Supabase
 if (id && env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
@@ -61,6 +62,17 @@ if (id && env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLI
 
       if (user && dbItem.profiles?.email) {
         isReporter = dbItem.profiles.email.toLowerCase() === userEmail.toLowerCase();
+      }
+    }
+
+    if (userEmail) {
+      const { data: currentUserProf } = await supabase
+        .from("profiles")
+        .select("active")
+        .eq("email", userEmail.toLowerCase().trim())
+        .maybeSingle();
+      if (currentUserProf && currentUserProf.active === false) {
+        isUserSuspended = true;
       }
     }
   } catch (err) {
@@ -248,6 +260,23 @@ if (!item && id && !isDbConfigured) {
                       <div class="rounded-2xl bg-forest-50 p-4 border border-forest-200 text-forest-900 text-xs">
                         <p class="font-bold">You reported this found item.</p>
                         <p class="mt-0.5 text-stone-600">Thank you for turning it over to the Security Office. It is registered on the campus network.</p>
+                      </div>
+                    ) : isUserSuspended ? (
+                      <div class="rounded-2xl border border-[#9b2c1f]/20 bg-[#9b2c1f]/10 p-5 space-y-2 text-forest-900 shadow-2xs">
+                        <div class="flex items-center gap-2.5">
+                          <div class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-[#9b2c1f] text-white">
+                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                          </div>
+                          <h3 class="font-bold text-sm text-[#9b2c1f]">Account suspended &bull; Claiming restricted</h3>
+                        </div>
+                        <p class="text-xs text-forest-900/85 leading-relaxed">
+                          Your campus account has been temporarily suspended by the Disciplinary Office. Claim verification and report submission privileges are locked pending administrative review.
+                        </p>
+                        <p class="text-xs text-stone-500">
+                          To appeal or inquire, please visit the Disciplinary &amp; Security Office at LSB Building #3 or contact <a href="mailto:studentaffairs@dlsau.edu.ph" class="font-bold text-forest-700 underline underline-offset-2 hover:text-forest-900">studentaffairs@dlsau.edu.ph</a>.
+                        </p>
                       </div>
                     ) : (
                       <div class="rounded-2xl border border-forest-700/20 bg-forest-900/5 p-5 space-y-4">

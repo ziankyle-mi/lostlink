@@ -1113,17 +1113,46 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               photoUrls: finalPhotoUrls,
             }),
           });
-          if (itemRes.ok) {
-            const itemJson = await itemRes.json();
-            if (itemJson.item) {
-              itemId = itemJson.item.id;
-              if (itemJson.item.reference_code) {
-                refCode = itemJson.item.reference_code;
-              }
+          const itemJson = await itemRes.json().catch(() => ({}));
+
+          if (itemRes.ok && itemJson.item) {
+            itemId = itemJson.item.id;
+            if (itemJson.item.reference_code) {
+              refCode = itemJson.item.reference_code;
             }
+          } else {
+            const errorMsg = itemJson.error || "Could not save report. Please check your inputs.";
+            const valError = document.getElementById("photo-validation-error");
+            if (valError) {
+              const textSpan = valError.querySelector("span");
+              if (textSpan) textSpan.textContent = errorMsg;
+              else valError.textContent = errorMsg;
+              valError.classList.remove("hidden");
+            }
+            if (typeof (window as any).llToast === "function") {
+              (window as any).llToast(errorMsg, "error");
+            } else {
+              alert(errorMsg);
+            }
+            if (submitBtn) submitBtn.disabled = false;
+            if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
+            if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            return;
           }
         } catch (itemErr) {
           console.warn("[items] Database save notice:", itemErr);
+          const errorMsg = "Network error saving report. Please try again.";
+          const valError = document.getElementById("photo-validation-error");
+          if (valError) {
+            const textSpan = valError.querySelector("span");
+            if (textSpan) textSpan.textContent = errorMsg;
+            else valError.textContent = errorMsg;
+            valError.classList.remove("hidden");
+          }
+          if (submitBtn) submitBtn.disabled = false;
+          if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
+          if (submitBtnText) submitBtnText.textContent = "Submit Report";
+          return;
         }
 
         // Build newly created card DOM with confirmed photo URLs

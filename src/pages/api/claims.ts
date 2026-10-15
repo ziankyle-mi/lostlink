@@ -202,10 +202,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Resolve claimant profile
     let claimantId: string | null = null;
-    const { data: profile } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
-    if (profile?.id) claimantId = profile.id;
-    else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
-      claimantId = user.id;
+    const { data: profile } = await supabase.from("profiles").select("id, active").eq("email", userEmail).maybeSingle();
+
+    if (profile && profile.active === false) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "Your account has been suspended by the Disciplinary Office. You cannot submit ownership claims.",
+          suspended: true,
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (profile?.id) {
+      claimantId = profile.id;
+    } else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+      const { data: idProf } = await supabase.from("profiles").select("id, active").eq("id", user.id).maybeSingle();
+      if (idProf && idProf.active === false) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "Your account has been suspended by the Disciplinary Office. You cannot submit ownership claims.",
+            suspended: true,
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      claimantId = idProf?.id || user.id;
     }
 
     if (!claimantId) {

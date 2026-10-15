@@ -29,9 +29,43 @@ const devOpen = devBypassEnabled(Astro.locals.env);
 >
   {
     registerError && (
-      <p role="alert" class="notice">
-        {registerError}
-      </p>
+      registerError.includes("suspended") ? (
+        <div
+          role="alert"
+          class="mt-6 rounded-2xl border border-[#9b2c1f]/25 bg-[#9b2c1f]/10 p-4 sm:p-5 text-forest-900 shadow-2xs flex items-start gap-3.5"
+        >
+          <div class="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-[#9b2c1f] text-white shadow-2xs">
+            <svg class="size-4.5 sm:size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="space-y-1 min-w-0 flex-1">
+            <p class="text-sm font-bold text-[#9b2c1f] leading-snug">
+              Account suspended by Disciplinary Office
+            </p>
+            <p class="text-xs sm:text-[0.8125rem] text-forest-900/85 leading-relaxed">
+              {registerError}
+            </p>
+            <p class="text-xs text-stone-500 pt-0.5">
+              To appeal or inquire, please visit the Disciplinary &amp; Security Office at LSB Building #3 or contact <a href="mailto:studentaffairs@dlsau.edu.ph" class="font-bold text-forest-700 underline underline-offset-2 hover:text-forest-900">studentaffairs@dlsau.edu.ph</a>.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div
+          role="alert"
+          class="mt-6 rounded-2xl border border-[#9b2c1f]/20 bg-[#9b2c1f]/10 p-4 text-xs sm:text-[0.8125rem] leading-relaxed text-[#9b2c1f] shadow-2xs flex items-center gap-3 font-medium"
+        >
+          <div class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#9b2c1f] text-white">
+            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p class="min-w-0 flex-1 leading-normal">
+            {registerError}
+          </p>
+        </div>
+      )
     )
   }
 

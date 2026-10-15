@@ -421,6 +421,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { "Content-Type": "application/json" },
           });
         }
+      } else if (targetEmail) {
+        const { error: statusErr } = await supabase.from("profiles").update({ active }).eq("email", targetEmail);
+        if (statusErr) {
+          return new Response(JSON.stringify({ ok: false, error: statusErr.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
       }
 
       if (adminProfileId) {
