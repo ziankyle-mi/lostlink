@@ -111,7 +111,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} />
 
       <!-- Filter Controls Toolbar -->
-      <div class="mt-4">
+      <div class="mt-4 relative z-30">
         <FilterBar totalCount={allFeedItems.length} />
       </div>
 
@@ -348,7 +348,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         menu.querySelectorAll("." + optionClass).forEach((opt) => {
           const optVal = opt.dataset[dataAttr];
           const isSelected = optVal === selectedVal || (!optVal && selectedVal === "all");
-          opt.classList.toggle("bg-[#ece5d6]/70", isSelected);
+          opt.classList.toggle("bg-[#ece5d6]", isSelected);
           opt.classList.toggle("font-semibold", isSelected);
           opt.classList.toggle("text-forest-950", isSelected);
           const check = opt.querySelector(".location-check, .category-check, .date-check");
@@ -369,10 +369,6 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             menu.classList.remove("hidden");
             btn.setAttribute("aria-expanded", "true");
             btn.querySelector("svg")?.classList.add("rotate-180");
-            const searchInput = menu.querySelector("input");
-            if (searchInput) {
-              setTimeout(() => searchInput.focus(), 60);
-            }
           }
         });
 
@@ -384,25 +380,6 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             btn.setAttribute("aria-expanded", "false");
             btn.querySelector("svg")?.classList.remove("rotate-180");
           });
-        });
-      }
-
-      // Location inline search
-      const locSearchInput = document.getElementById("location-search-input");
-      if (locSearchInput) {
-        locSearchInput.addEventListener("click", (e) => e.stopPropagation());
-        locSearchInput.addEventListener("input", (e) => {
-          const query = e.target.value.toLowerCase().trim();
-          const locOptions = document.querySelectorAll(".location-option");
-          let matchCount = 0;
-          locOptions.forEach((opt) => {
-            const locName = (opt.dataset.location || opt.textContent || "").toLowerCase();
-            const matches = !query || locName.includes(query);
-            opt.classList.toggle("hidden", !matches);
-            if (matches) matchCount++;
-          });
-          const noResults = document.getElementById("location-no-results");
-          if (noResults) noResults.classList.toggle("hidden", matchCount > 0);
         });
       }
 
@@ -474,10 +451,6 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         updateDropdownState("location-dropdown-menu", "location-option", "location", "All Locations");
         updateDropdownState("date-dropdown-menu", "date-option", "date", "all");
 
-        if (locSearchInput) {
-          locSearchInput.value = "";
-          locSearchInput.dispatchEvent(new Event("input"));
-        }
 
         closeAllDropdowns();
         applyGridWithTransition(updateGrid);
@@ -1129,8 +1102,8 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               else valError.textContent = errorMsg;
               valError.classList.remove("hidden");
             }
-            if (typeof (window as any).llToast === "function") {
-              (window as any).llToast(errorMsg, "error");
+            if (typeof window.llToast === "function") {
+              window.llToast(errorMsg, "error");
             } else {
               alert(errorMsg);
             }

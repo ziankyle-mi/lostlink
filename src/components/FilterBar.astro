@@ -9,12 +9,12 @@ interface Props {
 const { totalCount = TOTAL } = Astro.props;
 ---
 
-<section class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-8 lg:px-10 xl:px-14" aria-label="Campus feed filters">
-  <div class="relative flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 rounded-2xl bg-[#eee9dc]/85 backdrop-blur-md p-1.5 sm:p-2 shadow-xs border border-stone-300/40">
+<section class="relative z-30 mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-8 lg:px-10 xl:px-14" aria-label="Campus feed filters">
+  <div class="relative flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 rounded-2xl bg-[#ece5d6] p-1.5 sm:p-2 shadow-2xs border border-stone-300/50">
     <!-- Left Filter Controls (Subtle, streamlined layout) -->
     <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
       <!-- Segmented Type Buttons -->
-      <div class="flex items-center gap-1 rounded-full bg-stone-200/40 p-0.5">
+      <div class="flex items-center gap-1 rounded-full bg-stone-200/50 p-0.5">
         <!-- All Items Filter Pill (Active by default) -->
         <button
           type="button"
@@ -28,7 +28,7 @@ const { totalCount = TOTAL } = Astro.props;
         <button
           type="button"
           data-filter-type="found"
-          class="filter-type-btn min-h-9 sm:min-h-10 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900/75 transition-all hover:text-forest-900 hover:bg-white/50 cursor-pointer"
+          class="filter-type-btn min-h-9 sm:min-h-10 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900/80 transition-all hover:text-forest-900 hover:bg-white/50 cursor-pointer"
         >
           Found
         </button>
@@ -37,7 +37,7 @@ const { totalCount = TOTAL } = Astro.props;
         <button
           type="button"
           data-filter-type="lost"
-          class="filter-type-btn min-h-9 sm:min-h-10 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900/75 transition-all hover:text-forest-900 hover:bg-white/50 cursor-pointer"
+          class="filter-type-btn min-h-9 sm:min-h-10 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900/80 transition-all hover:text-forest-900 hover:bg-white/50 cursor-pointer"
         >
           Lost
         </button>
@@ -53,7 +53,7 @@ const { totalCount = TOTAL } = Astro.props;
           id="category-dropdown-btn"
           aria-haspopup="listbox"
           aria-expanded="false"
-          class="flex min-h-9 sm:min-h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-stone-200/90 bg-white/90 px-3.5 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900 shadow-2xs transition-all hover:bg-white hover:border-stone-300 cursor-pointer"
+          class="flex min-h-9 sm:min-h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-stone-200 bg-white px-3.5 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900 shadow-2xs transition-all hover:bg-stone-50 hover:border-stone-300 cursor-pointer"
         >
           <span id="selected-category-label">Category</span>
           <svg class="size-3 text-forest-900/60 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -64,15 +64,15 @@ const { totalCount = TOTAL } = Astro.props;
         <div
           id="category-dropdown-menu"
           role="listbox"
-          class="absolute left-0 top-full mt-2 z-40 hidden min-w-[240px] sm:min-w-[260px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-950/10 ring-1 ring-black/5"
+          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[240px] sm:min-w-[260px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
         >
-          <div class="max-h-60 sm:max-h-72 overflow-y-auto overscroll-contain custom-scrollbar space-y-0.5">
+          <div class="max-h-64 sm:max-h-72 overflow-y-auto overscroll-contain custom-scrollbar space-y-0.5">
             {CATEGORIES.map((cat) => (
               <button
                 type="button"
                 role="option"
                 data-category={cat}
-                class="category-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer"
+                class="category-option group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900 hover:bg-[#f5f1e6] hover:text-forest-950 transition-colors cursor-pointer"
               >
                 <span class="truncate">{cat}</span>
                 <span class="category-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
@@ -89,7 +89,7 @@ const { totalCount = TOTAL } = Astro.props;
           id="location-dropdown-btn"
           aria-haspopup="listbox"
           aria-expanded="false"
-          class="flex min-h-9 sm:min-h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-stone-200/90 bg-white/90 px-3.5 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900 shadow-2xs transition-all hover:bg-white hover:border-stone-300 cursor-pointer"
+          class="flex min-h-9 sm:min-h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-stone-200 bg-white px-3.5 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900 shadow-2xs transition-all hover:bg-stone-50 hover:border-stone-300 cursor-pointer"
         >
           <span id="selected-location-label">Location</span>
           <svg class="size-3 text-forest-900/60 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -100,40 +100,21 @@ const { totalCount = TOTAL } = Astro.props;
         <div
           id="location-dropdown-menu"
           role="listbox"
-          class="absolute left-0 top-full mt-2 z-40 hidden min-w-[260px] sm:min-w-[280px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-950/10 ring-1 ring-black/5"
+          class="absolute left-0 sm:left-0 max-sm:left-auto max-sm:right-0 top-full mt-2 z-50 hidden min-w-[240px] sm:min-w-[270px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
         >
-          <!-- Sticky subtle search input for rapid building discovery -->
-          <div class="p-1 pb-1.5 border-b border-stone-100">
-            <div class="relative flex items-center">
-              <svg class="size-3.5 text-stone-400 absolute left-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input
-                type="text"
-                id="location-search-input"
-                placeholder="Search campus buildings..."
-                class="w-full pl-8 pr-2.5 py-1.5 text-xs bg-stone-100/80 hover:bg-stone-100 focus:bg-white rounded-xl border border-transparent focus:border-stone-300 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium"
-              />
-            </div>
-          </div>
-
-          <!-- Constrained scrollable list of campus locations -->
-          <div class="max-h-56 sm:max-h-64 overflow-y-auto overscroll-contain custom-scrollbar pt-1 space-y-0.5">
+          <!-- Scrollable list of campus locations -->
+          <div class="max-h-64 sm:max-h-80 overflow-y-auto overscroll-contain custom-scrollbar space-y-0.5">
             {LOCATION_FILTER_OPTIONS.map((loc) => (
               <button
                 type="button"
                 role="option"
                 data-location={loc}
-                class="location-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer"
+                class="location-option group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900 hover:bg-[#f5f1e6] hover:text-forest-950 transition-colors cursor-pointer"
               >
                 <span class="truncate">{loc}</span>
                 <span class="location-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
               </button>
             ))}
-            <div id="location-no-results" class="hidden py-4 text-center text-xs text-stone-400 font-medium">
-              No matching buildings
-            </div>
           </div>
         </div>
       </div>
@@ -145,7 +126,7 @@ const { totalCount = TOTAL } = Astro.props;
           id="date-dropdown-btn"
           aria-haspopup="listbox"
           aria-expanded="false"
-          class="flex min-h-9 sm:min-h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-stone-200/90 bg-white/90 px-3.5 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900 shadow-2xs transition-all hover:bg-white hover:border-stone-300 cursor-pointer"
+          class="flex min-h-9 sm:min-h-10 items-center gap-1.5 sm:gap-2 rounded-full border border-stone-200 bg-white px-3.5 sm:px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium text-forest-900 shadow-2xs transition-all hover:bg-stone-50 hover:border-stone-300 cursor-pointer"
         >
           <span id="selected-date-label">Date</span>
           <svg class="size-3 text-forest-900/60 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -156,22 +137,22 @@ const { totalCount = TOTAL } = Astro.props;
         <div
           id="date-dropdown-menu"
           role="listbox"
-          class="absolute left-0 top-full mt-2 z-40 hidden min-w-[170px] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-950/10 ring-1 ring-black/5"
+          class="absolute left-0 sm:left-0 max-sm:left-auto max-sm:right-0 top-full mt-2 z-50 hidden min-w-[170px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200 bg-white p-2 shadow-xl ring-1 ring-black/5"
         >
           <div class="space-y-0.5">
-            <button type="button" data-date="all" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="all" class="date-option group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900 hover:bg-[#f5f1e6] hover:text-forest-950 transition-colors cursor-pointer">
               <span>All dates</span>
               <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
             </button>
-            <button type="button" data-date="today" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="today" class="date-option group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900 hover:bg-[#f5f1e6] hover:text-forest-950 transition-colors cursor-pointer">
               <span>Today</span>
               <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
             </button>
-            <button type="button" data-date="week" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="week" class="date-option group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900 hover:bg-[#f5f1e6] hover:text-forest-950 transition-colors cursor-pointer">
               <span>Past 7 days</span>
               <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
             </button>
-            <button type="button" data-date="month" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="month" class="date-option group flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900 hover:bg-[#f5f1e6] hover:text-forest-950 transition-colors cursor-pointer">
               <span>Past 30 days</span>
               <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
             </button>
@@ -185,7 +166,7 @@ const { totalCount = TOTAL } = Astro.props;
       <!-- Item Counter Pill -->
       <span
         id="item-counter-badge"
-        class="flex min-h-9 sm:min-h-10 items-center justify-center rounded-full bg-[#d8ef8c]/80 px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-bold text-forest-950 border border-lime-600/25 shadow-2xs"
+        class="flex min-h-9 sm:min-h-10 items-center justify-center rounded-full bg-[#d8ef8c] px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-bold text-forest-950 border border-lime-600/30 shadow-2xs"
         title="Items currently matching filters"
       >
         {totalCount}
@@ -194,7 +175,7 @@ const { totalCount = TOTAL } = Astro.props;
       <!-- Campus Map Button -->
       <a
         href="/help#campus-map"
-        class="flex min-h-9 sm:min-h-10 items-center gap-1.5 rounded-full border border-stone-200/90 bg-white/80 hover:bg-white px-3 sm:px-4 py-1 text-xs sm:text-[0.875rem] font-medium text-forest-900/80 hover:text-forest-900 shadow-2xs transition-all cursor-pointer"
+        class="flex min-h-9 sm:min-h-10 items-center gap-1.5 rounded-full border border-stone-200 bg-white hover:bg-stone-50 px-3 sm:px-4 py-1 text-xs sm:text-[0.875rem] font-medium text-forest-900/80 hover:text-forest-900 shadow-2xs transition-all cursor-pointer"
         title="View DLSAU Campus Map and Custody Office (LSB)"
       >
         <svg class="size-3.5 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -209,7 +190,7 @@ const { totalCount = TOTAL } = Astro.props;
       <button
         type="button"
         id="reset-filters-btn"
-        class="flex min-h-9 sm:min-h-10 items-center gap-1.5 rounded-full border border-transparent hover:border-stone-200/90 hover:bg-white/70 px-3 sm:px-3.5 py-1 text-xs sm:text-[0.875rem] font-medium text-forest-900/70 hover:text-forest-900 transition-all cursor-pointer"
+        class="flex min-h-9 sm:min-h-10 items-center gap-1.5 rounded-full border border-transparent hover:border-stone-200 hover:bg-white px-3 sm:px-3.5 py-1 text-xs sm:text-[0.875rem] font-medium text-forest-900/70 hover:text-forest-900 transition-all cursor-pointer"
         title="Clear all active filters"
       >
         <svg class="size-3 text-forest-900/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
