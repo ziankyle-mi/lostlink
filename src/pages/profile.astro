@@ -34,7 +34,6 @@ const env = Astro.locals.env || readEnv();
 let myReports: any[] = [];
 let myClaims: any[] = [];
 let profileName = userEmail.split("@")[0].replace(/[._]/g, " ");
-let isSuspended = false;
 
 if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
   try {
@@ -47,13 +46,9 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     // 1. Resolve Profile ID
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, full_name, email, role, active")
+      .select("id, full_name, email, role")
       .eq("email", userEmail.toLowerCase().trim())
       .maybeSingle();
-
-    if (profile && profile.active === false) {
-      isSuspended = true;
-    }
 
     const profileId = profile?.id || user.id;
     if (profile?.full_name) profileName = profile.full_name;
@@ -152,12 +147,6 @@ function parsePhotos(photoPath?: string | null): string[] {
                 <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-900">
                   {isUserAdmin ? "Security Office Staff" : "DLSAU Student / Faculty"}
                 </span>
-                {isSuspended && (
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 border border-rose-200 px-3 py-1 text-xs font-bold text-[#9b2c1f]">
-                    <span class="size-2 rounded-full bg-[#9b2c1f]"></span>
-                    Account Suspended
-                  </span>
-                )}
               </div>
               <p class="mt-1 text-xs sm:text-sm text-stone-500 font-medium">
                 {userEmail}
@@ -167,15 +156,13 @@ function parsePhotos(photoPath?: string | null): string[] {
 
           <!-- Quick Action Buttons -->
           <div class="flex items-center gap-3 w-full md:w-auto flex-wrap sm:flex-nowrap">
-            {!isSuspended && (
-              <a
-                href="/?report=found"
-                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-full sm:w-auto text-sm cursor-pointer"
-              >
-                <span>Post an item</span>
-                <span aria-hidden="true">+</span>
-              </a>
-            )}
+            <a
+              href="/?report=found"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-full sm:w-auto text-sm cursor-pointer"
+            >
+              <span>Post an item</span>
+              <span aria-hidden="true">+</span>
+            </a>
             <a
               href="/"
               class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-stone-200/90 bg-white px-5 py-2.5 text-sm font-bold text-forest-900 shadow-2xs hover:bg-stone-50 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
@@ -196,29 +183,6 @@ function parsePhotos(photoPath?: string | null): string[] {
             )}
           </div>
         </section>
-
-        <!-- Disciplinary Hold Notice Banner (Recipe from ui-design-system) -->
-        {isSuspended && (
-          <div class="rounded-3xl border border-[#9b2c1f]/20 bg-[#9b2c1f]/10 p-6 sm:p-7 text-forest-900 shadow-xs flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
-            <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#9b2c1f] text-white shadow-2xs">
-              <svg class="size-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div class="space-y-1.5 min-w-0 flex-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="font-bold text-base text-[#9b2c1f]">Disciplinary hold &bull; Privileges restricted</h3>
-                <span class="rounded-full bg-[#9b2c1f] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs">Action required</span>
-              </div>
-              <p class="text-xs sm:text-sm text-forest-900/85 leading-relaxed">
-                Your campus account is currently suspended by the Disciplinary &amp; Security Office. You are restricted from posting new lost/found reports and claiming items on the campus network.
-              </p>
-              <p class="text-xs text-stone-500">
-                To inquire about this status or file an appeal, please visit the Disciplinary Office at the Life Science Building (LSB, Building #3) or email <a href="mailto:studentaffairs@dlsau.edu.ph" class="font-bold text-forest-700 underline underline-offset-2 hover:text-forest-900">studentaffairs@dlsau.edu.ph</a>.
-              </p>
-            </div>
-          </div>
-        )}
 
         <!-- KPI Metric Row (Recipe from ui-design-system with Card 3 in Lime) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5" aria-label="Student Activity Metrics">

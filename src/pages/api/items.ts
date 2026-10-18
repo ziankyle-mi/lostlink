@@ -132,23 +132,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, active")
+      .select("id")
       .eq("email", userEmail)
       .maybeSingle();
-
-    if (profile && profile.active === false) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: "Your account has been suspended by the Disciplinary Office. You cannot submit new reports.",
-          suspended: true,
-        }),
-        {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
 
     if (profile?.id) {
       reporterId = profile.id;
@@ -156,21 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fallback: search by user.id if it is a valid UUID
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
       if (isUuid) {
-        const { data: idProf } = await supabase.from("profiles").select("id, active").eq("id", user.id).maybeSingle();
-        if (idProf && idProf.active === false) {
-          return new Response(
-            JSON.stringify({
-              ok: false,
-              error: "Your account has been suspended by the Disciplinary Office. You cannot submit new reports.",
-              suspended: true,
-            }),
-            {
-              status: 403,
-              headers: { "Content-Type": "application/json" },
-            },
-          );
-        }
-        reporterId = idProf?.id || user.id;
+        reporterId = user.id;
       } else {
         // Pick first existing admin or user profile as fallback
         const { data: anyProfile } = await supabase.from("profiles").select("id").limit(1).maybeSingle();

@@ -111,8 +111,12 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} />
 
       <!-- Filter Controls Toolbar -->
-      <div class="mt-4 relative z-30">
-        <FilterBar totalCount={allFeedItems.length} />
+      <div class="mt-4">
+        <FilterBar
+          totalCount={allFeedItems.length}
+          availableCategories={allFeedItems.map((item) => item.category)}
+          availableLocations={allFeedItems.map((item) => item.location)}
+        />
       </div>
 
       <!-- Campus Feed Headline & Two CTA Action Cards -->
@@ -348,7 +352,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         menu.querySelectorAll("." + optionClass).forEach((opt) => {
           const optVal = opt.dataset[dataAttr];
           const isSelected = optVal === selectedVal || (!optVal && selectedVal === "all");
-          opt.classList.toggle("bg-[#ece5d6]", isSelected);
+          opt.classList.toggle("bg-[#ece5d6]/70", isSelected);
           opt.classList.toggle("font-semibold", isSelected);
           opt.classList.toggle("text-forest-950", isSelected);
           const check = opt.querySelector(".location-check, .category-check, .date-check");
@@ -369,6 +373,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             menu.classList.remove("hidden");
             btn.setAttribute("aria-expanded", "true");
             btn.querySelector("svg")?.classList.add("rotate-180");
+            const searchInput = menu.querySelector("input");
+            if (searchInput) {
+              setTimeout(() => searchInput.focus(), 60);
+            }
           }
         });
 
@@ -380,6 +388,25 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             btn.setAttribute("aria-expanded", "false");
             btn.querySelector("svg")?.classList.remove("rotate-180");
           });
+        });
+      }
+
+      // Location inline search
+      const locSearchInput = document.getElementById("location-search-input");
+      if (locSearchInput) {
+        locSearchInput.addEventListener("click", (e) => e.stopPropagation());
+        locSearchInput.addEventListener("input", (e) => {
+          const query = e.target.value.toLowerCase().trim();
+          const locOptions = document.querySelectorAll(".location-option");
+          let matchCount = 0;
+          locOptions.forEach((opt) => {
+            const locName = (opt.dataset.location || opt.textContent || "").toLowerCase();
+            const matches = !query || locName.includes(query);
+            opt.classList.toggle("hidden", !matches);
+            if (matches) matchCount++;
+          });
+          const noResults = document.getElementById("location-no-results");
+          if (noResults) noResults.classList.toggle("hidden", matchCount > 0);
         });
       }
 
@@ -451,6 +478,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         updateDropdownState("location-dropdown-menu", "location-option", "location", "All Locations");
         updateDropdownState("date-dropdown-menu", "date-option", "date", "all");
 
+        if (locSearchInput) {
+          locSearchInput.value = "";
+          locSearchInput.dispatchEvent(new Event("input"));
+        }
 
         closeAllDropdowns();
         applyGridWithTransition(updateGrid);
@@ -1047,6 +1078,12 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         let refCode = reportType === "found" ? `LL-${Math.floor(4000 + Math.random() * 900)}` : "";
         let itemId = `item-${Date.now()}`;
         const currentDate = "Just now";
+        const now = new Date();
+        let reportEventDate = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, "0"),
+          String(now.getDate()).padStart(2, "0"),
+        ].join("-");
 
         // Step 1: Upload Photos to Supabase Storage Bucket
         let finalPhotoUrls = photos;
@@ -1083,49 +1120,24 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               category: itemCategory,
               location: itemLocation,
               description: itemDesc,
+              eventDate: reportEventDate,
               photoUrls: finalPhotoUrls,
             }),
           });
-          const itemJson = await itemRes.json().catch(() => ({}));
-
-          if (itemRes.ok && itemJson.item) {
-            itemId = itemJson.item.id;
-            if (itemJson.item.reference_code) {
-              refCode = itemJson.item.reference_code;
+          if (itemRes.ok) {
+            const itemJson = await itemRes.json();
+            if (itemJson.item) {
+              itemId = itemJson.item.id;
+              if (typeof itemJson.item.event_date === "string") {
+                reportEventDate = itemJson.item.event_date;
+              }
+              if (itemJson.item.reference_code) {
+                refCode = itemJson.item.reference_code;
+              }
             }
-          } else {
-            const errorMsg = itemJson.error || "Could not save report. Please check your inputs.";
-            const valError = document.getElementById("photo-validation-error");
-            if (valError) {
-              const textSpan = valError.querySelector("span");
-              if (textSpan) textSpan.textContent = errorMsg;
-              else valError.textContent = errorMsg;
-              valError.classList.remove("hidden");
-            }
-            if (typeof window.llToast === "function") {
-              window.llToast(errorMsg, "error");
-            } else {
-              alert(errorMsg);
-            }
-            if (submitBtn) submitBtn.disabled = false;
-            if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-            if (submitBtnText) submitBtnText.textContent = "Submit Report";
-            return;
           }
         } catch (itemErr) {
           console.warn("[items] Database save notice:", itemErr);
-          const errorMsg = "Network error saving report. Please try again.";
-          const valError = document.getElementById("photo-validation-error");
-          if (valError) {
-            const textSpan = valError.querySelector("span");
-            if (textSpan) textSpan.textContent = errorMsg;
-            else valError.textContent = errorMsg;
-            valError.classList.remove("hidden");
-          }
-          if (submitBtn) submitBtn.disabled = false;
-          if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-          if (submitBtnText) submitBtnText.textContent = "Submit Report";
-          return;
         }
 
         // Build newly created card DOM with confirmed photo URLs
@@ -1138,6 +1150,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         newCard.dataset.itemName = itemName;
         newCard.dataset.itemDesc = itemDesc;
         newCard.dataset.itemDate = currentDate;
+        newCard.dataset.itemEventDate = reportEventDate;
         newCard.dataset.itemAction = actionLabel;
         newCard.dataset.itemRef = refCode;
         newCard.dataset.itemImages = JSON.stringify(finalPhotoUrls);

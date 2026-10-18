@@ -131,21 +131,6 @@ export const server = {
       clearRateLimit(ipKey);
       clearRateLimit(emailKey);
 
-      // Check if user account is suspended before creating session
-      const supabase = serviceClient(context.locals.env);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("active")
-        .eq("email", email.toLowerCase().trim())
-        .maybeSingle();
-
-      if (profile && profile.active === false) {
-        throw new ActionError({
-          code: "FORBIDDEN",
-          message: "This account has been suspended by the Disciplinary Office. Access to campus services is restricted. Please contact Student Affairs.",
-        });
-      }
-
       setSessionCookies(context.cookies, result.session, remember);
       const defaultPath = roleForEmail(email) === "admin" ? "/admin" : "/";
       const targetPath = next && next !== "/" ? safeNextPath(next) : defaultPath;
@@ -166,21 +151,6 @@ export const server = {
         throw new ActionError({
           code: "BAD_REQUEST",
           message: "Agree to the terms and conditions to register.",
-        });
-      }
-
-      // Block registration if account was suspended by Disciplinary Office
-      const supabase = serviceClient(context.locals.env);
-      const { data: existingProf } = await supabase
-        .from("profiles")
-        .select("active")
-        .eq("email", email.toLowerCase().trim())
-        .maybeSingle();
-
-      if (existingProf && existingProf.active === false) {
-        throw new ActionError({
-          code: "FORBIDDEN",
-          message: "This account has been suspended by the Disciplinary Office. Access to campus services is restricted.",
         });
       }
 
@@ -285,21 +255,6 @@ export const server = {
           code: "FORBIDDEN",
           message: `Only @${policy.allowedDomain.trim()} accounts can sign in.`,
         });
-      }
-
-      if (hasSupabase(env)) {
-        const supabase = serviceClient(env);
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("active")
-          .eq("email", email.toLowerCase().trim())
-          .maybeSingle();
-        if (prof && prof.active === false) {
-          throw new ActionError({
-            code: "FORBIDDEN",
-            message: "This account has been suspended by the Disciplinary Office. Access to campus services is restricted.",
-          });
-        }
       }
 
       const token = await signDevSession(

@@ -1,6 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { createClient } from "@supabase/supabase-js";
-import { hasSupabase, readEnv } from "~/lib/env";
+import { readEnv } from "~/lib/env";
 import {
   clearSessionCookies,
   resolveUser,
@@ -69,58 +68,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAction = pathname.startsWith(ACTION_PREFIX);
   const isPublicAction = isAction && PUBLIC_ACTIONS.has(actionName(pathname));
 
-  let user = await resolveUser(context.cookies, env);
-
-  // If user session is present, verify account is not suspended in profiles
-  if (user && hasSupabase(env)) {
-    try {
-      const supabase = createClient(
-        env.PUBLIC_SUPABASE_URL,
-        env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
-        { auth: { persistSession: false } },
-      );
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("active")
-        .eq("email", user.email.toLowerCase().trim())
-        .maybeSingle();
-
-      if (prof && prof.active === false) {
-        clearSessionCookies(context.cookies);
-        user = null;
-        context.locals.user = null;
-
-        if (isAction || pathname.startsWith("/api/")) {
-          return withSecurityHeaders(
-            new Response(
-              JSON.stringify({
-                ok: false,
-                error: "This account has been suspended by the Disciplinary Office. Access is restricted.",
-                suspended: true,
-              }),
-              {
-                status: 403,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-            "no-store",
-          );
-        }
-
-        if (pathname !== "/login") {
-          return context.redirect("/login?suspended=1", 302);
-        }
-      }
-    } catch (err) {
-      console.warn("[middleware] Suspension check notice:", err);
-    }
-  }
-
-  context.locals.user = user;
-
   if (isPublic(pathname) || isPublicAction) {
+    // Logged-in visitors on /login are redirected by the page itself.
+    context.locals.user = await resolveUser(context.cookies, env);
     return withSecurityHeaders(await next());
   }
+
+  const user = await resolveUser(context.cookies, env);
+  context.locals.user = user;
 
   if (!user) {
     // Action handlers and API routes do their own role checks or return JSON 401
