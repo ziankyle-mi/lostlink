@@ -48,7 +48,10 @@ const returnedCount = metrics?.returnedThisMonth !== undefined
   </div>
 
   <!-- Card 2 -->
-  <div class="rounded-3xl bg-white p-6 sm:p-7 border border-stone-200/60 shadow-xs flex flex-col justify-between">
+  <div
+    id="lost-reports"
+    class="scroll-mt-8 rounded-3xl bg-white p-6 sm:p-7 border border-stone-200/60 shadow-xs flex flex-col justify-between"
+  >
     <p class="text-sm font-medium text-stone-600">
       {isAdmin ? "Active lost reports" : "My pending claims"}
     </p>
