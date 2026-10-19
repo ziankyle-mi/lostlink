@@ -7,6 +7,13 @@ import { roleForEmail } from "~/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
 
+import { actions } from "astro:actions";
+
+const logoutResult = Astro.getActionResult(actions.logout);
+if (logoutResult && !logoutResult.error) {
+  return Astro.redirect("/login", 302);
+}
+
 // Middleware protects this route, but fallback guard ensures user exists
 const user = Astro.locals.user;
 if (!user) {

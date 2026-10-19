@@ -1,5 +1,4 @@
 ---
-import { actions } from "astro:actions";
 import { roleForEmail } from "~/lib/session";
 
 import { createClient } from "@supabase/supabase-js";
@@ -384,7 +383,7 @@ const initials = getInitials(userEmail);
             </div>
 
             <div class="mt-3 border-t border-line pt-3">
-              <form method="POST" action={actions.logout}>
+              <form method="POST" action="/api/auth/logout">
                 <button
                   type="submit"
                   class="w-full rounded-xl bg-[#9b2c1f]/10 px-3 py-2.5 text-left text-sm font-bold text-[#9b2c1f] transition-colors hover:bg-[#9b2c1f]/20 cursor-pointer"

@@ -67,6 +67,11 @@ interface OverdueCustodyItem {
 let unclaimedOverdue: OverdueCustodyItem[] = [];
 let custodyColumnsMissing = false;
 
+const logoutResult = Astro.getActionResult(actions.logout);
+if (logoutResult && !logoutResult.error) {
+  return Astro.redirect("/login", 302);
+}
+
 // Office decision posted from the Unclaimed Items Review (real DB write).
 const custodyResult = Astro.getActionResult(actions.custodyDecision);
 const custodyNotice = custodyResult
@@ -812,37 +817,56 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
   <!-- Modal 2: Full Audit Log Modal -->
   <div
     id="audit-log-modal"
-    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-stone-950/60 p-4 backdrop-blur-md"
     role="dialog"
     aria-modal="true"
     aria-labelledby="audit-log-modal-title"
   >
-    <div class="relative w-full max-w-3xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+    <div class="relative w-full max-w-3xl rounded-[2rem] border border-stone-200/80 bg-white p-6 sm:p-8 shadow-2xl max-h-[90dvh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div>
-          <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
-            Campus Audit Trail
-          </span>
-          <h3 id="audit-log-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-forest-900/10 px-3 py-1 text-[11px] font-bold text-forest-900 border border-forest-900/15">
+              <svg class="size-3 text-forest-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Campus Audit Trail
+            </span>
+          </div>
+          <h3 id="audit-log-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2.5 tracking-tight">
             Full Administrative Audit Log
           </h3>
-          <p class="text-xs text-stone-500 mt-0.5">Chronological record of verified claims, custodial intakes, role alterations, and account moderation.</p>
+          <p class="text-xs text-stone-500 mt-1 leading-relaxed">Chronological verification record of claimed items, custodial intakes, role alterations, and campus account moderation.</p>
         </div>
         <button
           type="button"
-          class="close-audit-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          class="close-audit-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 hover:text-stone-900 transition-all cursor-pointer"
           aria-label="Close dialog"
         >
-          &times;
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         </button>
       </div>
 
-      <!-- Friendly guidance for staff members -->
-      <div class="mt-3.5 rounded-2xl bg-[#f5f1e6]/80 border border-stone-200/90 p-3.5 text-xs text-stone-700 flex items-start gap-3">
-        <div class="size-6 rounded-full bg-forest-700/10 text-forest-800 flex items-center justify-center font-bold shrink-0 mt-0.5" aria-hidden="true">ℹ️</div>
-        <div class="leading-relaxed">
-          <strong class="font-bold text-forest-900">How to read this record:</strong>
-          Every action taken in LostLink is automatically recorded here in plain language. You can see who performed the action, which student account or item was affected, and the exact time it happened.
+      <!-- Friendly guidance for staff members without emojis -->
+      <div class="mt-4 rounded-2xl bg-gradient-to-r from-[#fbf8f0] via-[#f7f3e8] to-[#f5f1e6] border border-[#e5dcce] p-4 text-xs text-stone-700 flex items-start gap-3.5 shadow-2xs">
+        <div class="size-7 rounded-xl bg-forest-900/10 text-forest-900 flex items-center justify-center shrink-0 mt-0.5 border border-forest-900/15 shadow-2xs" aria-hidden="true">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
+        <div class="leading-relaxed flex-1">
+          <div class="font-bold text-forest-950 flex items-center gap-1.5">
+            <span>How to read this record</span>
+            <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-forest-900/5 text-forest-800">Campus Guide</span>
+          </div>
+          <p class="mt-0.5 text-stone-600">
+            Every action taken in LostLink is automatically recorded here in plain language. You can inspect who performed the action, which student account or item was affected, and the exact timestamp.
+          </p>
         </div>
       </div>
 
@@ -856,8 +880,11 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           type="text"
           id="audit-log-search"
           placeholder="Search by student email, item name, or action (e.g. maria, delete, hydro flask)..."
-          class="w-full pl-10 pr-4 py-2 text-xs sm:text-sm bg-stone-50 hover:bg-white focus:bg-white rounded-xl border border-stone-200 focus:border-forest-700/40 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium"
+          class="w-full pl-10 pr-12 py-2.5 text-xs sm:text-sm bg-stone-50 hover:bg-white focus:bg-white rounded-xl border border-stone-200 focus:border-forest-700/60 focus:ring-2 focus:ring-forest-700/10 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium shadow-2xs"
         />
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+          <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-medium text-stone-400 bg-white border border-stone-200 rounded shadow-2xs">ESC</kbd>
+        </div>
       </div>
 
       <!-- Filter chips for audit log -->
@@ -981,18 +1008,31 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           </div>
         ))}
 
-        <div id="audit-empty-state" class="hidden py-10 text-center text-xs sm:text-sm text-stone-500 font-medium">
-          No audit events match your search or filter.
+        <div id="audit-empty-state" class="hidden py-12 text-center text-stone-500">
+          <div class="mx-auto size-12 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-400 mb-3 border border-stone-200/60 shadow-2xs">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <p class="text-sm font-bold text-stone-700">No matching audit events</p>
+          <p class="mt-1 text-xs text-stone-400 max-w-xs mx-auto">No actions match your search query or selected filter criteria.</p>
         </div>
       </div>
 
-      <div class="mt-6 flex items-center justify-between pt-4 border-t border-stone-100">
-        <span class="text-xs text-stone-500 font-medium">Logged securely with cryptographic integrity &bull; DLSAU Security Office</span>
+      <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-stone-100">
+        <span class="inline-flex items-center gap-1.5 text-xs text-stone-500 font-medium">
+          <svg class="size-3.5 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+          Logged securely with cryptographic integrity &bull; DLSAU Security Office
+        </span>
         <button
           type="button"
-          class="close-audit-modal rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+          class="close-audit-modal w-full sm:w-auto rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
         >
-          Close
+          Close Log
         </button>
       </div>
     </div>

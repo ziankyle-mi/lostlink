@@ -40,6 +40,41 @@ function formatLogAction(action: string, itemName?: string): string {
   return `${name} status updated: ${action}`;
 }
 
+function getLogCategory(text: string): {
+  iconType: "check" | "box" | "alert" | "info" | "shield";
+  badgeStyle: string;
+} {
+  const lower = text.toLowerCase();
+  if (lower.includes("released") || lower.includes("verified") || lower.includes("approved")) {
+    return {
+      iconType: "check",
+      badgeStyle: "bg-emerald-50 text-emerald-700 border-emerald-200/70",
+    };
+  }
+  if (lower.includes("intake") || lower.includes("custody") || lower.includes("logged into")) {
+    return {
+      iconType: "box",
+      badgeStyle: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    };
+  }
+  if (lower.includes("flagged") || lower.includes("claimants") || lower.includes("denied") || lower.includes("rejected")) {
+    return {
+      iconType: "alert",
+      badgeStyle: "bg-amber-50 text-amber-800 border-amber-200/70",
+    };
+  }
+  if (lower.includes("alert") || lower.includes("match") || lower.includes("linked") || lower.includes("account")) {
+    return {
+      iconType: "info",
+      badgeStyle: "bg-sky-50 text-sky-800 border-sky-200/70",
+    };
+  }
+  return {
+    iconType: "shield",
+    badgeStyle: "bg-stone-50 text-stone-700 border-stone-200/70",
+  };
+}
+
 const mappedLiveLogs = liveLogs && liveLogs.length > 0
   ? liveLogs.map((l: any) => ({
       text: formatLogAction(l.action, l.items?.name),
@@ -52,58 +87,124 @@ const logs = liveLogs !== undefined
   : (isAdmin ? adminLogs : studentLogs);
 ---
 
-<section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between" id="activity">
+<section
+  class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between"
+  id="activity"
+>
   <div>
-    <!-- Header -->
+    <!-- Header with Live Activity Indicator -->
     <div class="flex items-center justify-between pb-4 border-b border-stone-100">
-      <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
-        {isAdmin ? "Recent activity" : "My recent activity"}
-      </h2>
-      <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">
-        Today
-      </span>
+      <div class="flex items-center gap-2.5">
+        <div class="size-8 rounded-xl bg-forest-900/5 text-forest-900 flex items-center justify-center border border-forest-900/10 shadow-2xs">
+          <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight leading-none">
+            {isAdmin ? "Recent activity" : "My recent activity"}
+          </h2>
+          <p class="text-xs text-stone-400 font-medium mt-1">
+            {isAdmin ? "Campus operations stream" : "Personal submission history"}
+          </p>
+        </div>
+      </div>
     </div>
 
-    <!-- Feed List -->
-    <div class="mt-4 divide-y divide-stone-100">
+    <!-- Feed List with Categorized Icons & Timeline Badges -->
+    <div class="mt-4 divide-y divide-stone-100/90">
       {logs.length === 0 ? (
-        <div class="py-8 text-center text-stone-500">
-          <p class="text-sm font-semibold text-stone-600">No activity recorded today</p>
-          <p class="mt-1 text-xs text-stone-400">Actions taken by staff and students will appear here in real time.</p>
+        <div class="py-10 text-center text-stone-500">
+          <div class="mx-auto size-11 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-400 mb-2.5 border border-stone-200/60 shadow-2xs">
+            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <p class="text-sm font-semibold text-stone-700">No activity recorded today</p>
+          <p class="mt-1 text-xs text-stone-400 max-w-xs mx-auto">Actions taken by staff and students will appear here in real time.</p>
         </div>
       ) : (
-        logs.map((log) => (
-        <div class="flex items-center justify-between gap-4 py-4 first:pt-2 last:pb-0 hover:bg-stone-50/50 rounded-lg px-1 transition-colors">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="size-2 rounded-full bg-[#164f38] shrink-0"></span>
-            <p class="truncate text-sm font-medium text-stone-800">
-              {log.text}
-            </p>
-          </div>
-          <span class="shrink-0 text-xs font-mono font-medium text-stone-500">
-            {log.time}
-          </span>
-        </div>
-      )))}
+        logs.map((log) => {
+          const cat = getLogCategory(log.text);
+          return (
+            <div class="group flex items-center justify-between gap-3.5 py-3.5 first:pt-1 last:pb-1 hover:bg-stone-50/70 rounded-xl px-2.5 -mx-2.5 transition-all">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class={`size-7 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${cat.badgeStyle}`}>
+                  {cat.iconType === "check" && (
+                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                  {cat.iconType === "box" && (
+                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                      <rect x="1" y="3" width="22" height="5"></rect>
+                      <line x1="10" y1="12" x2="14" y2="12"></line>
+                    </svg>
+                  )}
+                  {cat.iconType === "alert" && (
+                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                  )}
+                  {cat.iconType === "info" && (
+                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                  )}
+                  {cat.iconType === "shield" && (
+                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                  )}
+                </div>
+                <p class="truncate text-xs sm:text-sm font-medium text-stone-800 group-hover:text-forest-950 transition-colors">
+                  {log.text}
+                </p>
+              </div>
+              <span class="shrink-0 text-[11px] font-mono font-medium text-stone-400 group-hover:text-stone-600 transition-colors bg-stone-100/70 px-2 py-0.5 rounded-md">
+                {log.time}
+              </span>
+            </div>
+          );
+        })
+      )}
     </div>
   </div>
 
-  <div class="mt-6 pt-4 border-t border-stone-100">
+  <!-- Footer Action with Hover Micro-Animation -->
+  <div class="mt-6 pt-4 border-t border-stone-100 flex items-center justify-between">
     {isAdmin ? (
       <button
         type="button"
         id="open-audit-log-btn"
-        class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 transition-colors cursor-pointer"
+        class="group inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 hover:text-forest-700 transition-colors cursor-pointer"
       >
-        <span>View full audit log &rarr;</span>
+        <span class="underline underline-offset-4">View full audit log</span>
+        <svg class="size-3.5 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
       </button>
     ) : (
       <a
         href="/profile#history"
-        class="inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 transition-colors"
+        class="group inline-flex items-center gap-1.5 text-xs font-bold text-forest-900 hover:text-forest-700 transition-colors"
       >
-        <span>View complete activity history &rarr;</span>
+        <span class="underline underline-offset-4">View complete activity history</span>
+        <svg class="size-3.5 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
       </a>
     )}
+    <span class="text-[11px] font-medium text-stone-400">
+      {logs.length} logged
+    </span>
   </div>
 </section>
+
