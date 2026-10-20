@@ -95,7 +95,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     <div>
       <span id="role-label" class="label">Role</span>
       <input type="hidden" name="role" id="role-input" value="student" />
-      <div class="grid grid-cols-3 gap-2 sm:gap-2.5" role="group" aria-labelledby="role-label">
+      <div class="grid grid-cols-2 gap-2.5" role="group" aria-labelledby="role-label">
         <button
           type="button"
           data-role="student"
@@ -111,14 +111,6 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           class="role-btn flex min-h-11 items-center justify-center rounded-full border border-line bg-white text-sm font-semibold text-forest-900/80 transition-all hover:bg-canvas active:scale-95 cursor-pointer"
         >
           Faculty
-        </button>
-        <button
-          type="button"
-          data-role="admin"
-          aria-pressed="false"
-          class="role-btn flex min-h-11 items-center justify-center rounded-full border border-line bg-white text-sm font-semibold text-forest-900/80 transition-all hover:bg-canvas active:scale-95 cursor-pointer"
-        >
-          Admin
         </button>
       </div>
       <p class="mt-2 text-xs text-sage-600 leading-relaxed">
@@ -357,10 +349,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
 
         // Update labels for program
         if (programLabel && programHint) {
-          if (role === "admin") {
-            programLabel.textContent = "Campus Office / Unit";
-            programHint.textContent = "Select your security, disciplinary, or administrative assignment.";
-          } else if (role === "faculty") {
+          if (role === "faculty") {
             programLabel.textContent = "College / Academic Department";
             programHint.textContent = "Select your teaching or administrative college department.";
           } else {
