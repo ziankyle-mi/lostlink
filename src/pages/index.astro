@@ -110,20 +110,19 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       <!-- Top Navigation and Announcement Ticker -->
       <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} />
 
-      <!-- Filter Controls Toolbar -->
-      <div class="mt-4 relative z-30">
-        <FilterBar
-          totalCount={allFeedItems.length}
-          availableCategories={allFeedItems.map((item) => item.category)}
-          availableLocations={allFeedItems.map((item) => item.location)}
-        />
-      </div>
-
       <!-- Campus Feed Headline & Two CTA Action Cards -->
       <HeroFeed foundCount={feedFoundCount} lostCount={feedLostCount} />
 
-      <!-- 8-Card Campus Feed Grid -->
-      <DashboardGrid items={allFeedItems} isAdmin={isRealAdmin} />
+      <!-- 8-Card Campus Feed Grid with FilterBar directly inside Latest on campus -->
+      <DashboardGrid items={allFeedItems} isAdmin={isRealAdmin}>
+        <div slot="filters">
+          <FilterBar
+            totalCount={allFeedItems.length}
+            availableCategories={allFeedItems.map((item) => item.category)}
+            availableLocations={allFeedItems.map((item) => item.location)}
+          />
+        </div>
+      </DashboardGrid>
     </div>
 
     <!-- Campus Footer -->

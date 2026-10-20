@@ -37,6 +37,11 @@ const showingCount = Math.min(8, totalCount);
     </button>
   </div>
 
+  <!-- Filter Controls Toolbar embedded inside Latest Items -->
+  <div class="mb-5 sm:mb-8 relative z-30">
+    <slot name="filters" />
+  </div>
+
   <!-- Skeleton Loading Cards Grid (Displays during filtering/search transitions) -->
   <div
     id="skeleton-grid"
