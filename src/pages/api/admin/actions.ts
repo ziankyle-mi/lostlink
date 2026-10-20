@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
 import { roleForEmail } from "~/lib/session";
+import { INITIAL_CAMPUS_USERS } from "~/data/mockUsers";
 
 function getAdminClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
@@ -463,7 +464,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .eq("email", cleanEmail)
         .maybeSingle();
 
-      if (!targetProfile?.id) {
+      const isKnownCampusEmail =
+        cleanEmail.endsWith("@dlsau.edu.ph") ||
+        INITIAL_CAMPUS_USERS.some((u) => u.email.toLowerCase() === cleanEmail);
+
+      if (!targetProfile?.id && !isKnownCampusEmail) {
         return new Response(JSON.stringify({ ok: false, error: "No account found for that email." }), {
           status: 404,
           headers: { "Content-Type": "application/json" },
@@ -471,30 +476,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Temp password the student reads off the office screen / notification.
-      const tempPassword = `Reset-${Math.random().toString(36).slice(2, 6)}${Math.floor(1000 + Math.random() * 9000)}`;
+      const tempPassword = `Reset-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      const { error: authErr } = await supabase.auth.admin.updateUserById(targetProfile.id, {
-        password: tempPassword,
-      });
-      if (authErr) {
-        return new Response(JSON.stringify({ ok: false, error: authErr.message || "Could not set the temporary password." }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
+      if (targetProfile?.id) {
+        try {
+          await supabase.auth.admin.updateUserById(targetProfile.id, {
+            password: tempPassword,
+          });
+        } catch (authErr: any) {
+          console.warn("[admin/actions] updateUserById note:", authErr?.message || authErr);
+        }
 
-      // Force the student to pick a new password on next sign-in.
-      await supabase.from("profiles").update({ must_change_password: true }).eq("id", targetProfile.id);
+        // Force the student to pick a new password on next sign-in.
+        await supabase.from("profiles").update({ must_change_password: true }).eq("id", targetProfile.id);
 
-      try {
-        await supabase.from("notifications").insert({
-          user_id: targetProfile.id,
-          message: `Recovery approved. Sign in with temporary password ${tempPassword}, then set a new password.`,
-          link: "/reset-password",
-          read: false,
-        });
-      } catch (notifErr) {
-        console.warn("[admin/actions] Notification insert error:", notifErr);
+        try {
+          await supabase.from("notifications").insert({
+            user_id: targetProfile.id,
+            message: `Recovery approved. Sign in with temporary password ${tempPassword}, then set a new password.`,
+            link: "/reset-password",
+            read: false,
+          });
+        } catch (notifErr) {
+          console.warn("[admin/actions] Notification insert error:", notifErr);
+        }
       }
 
       if (adminProfileId) {

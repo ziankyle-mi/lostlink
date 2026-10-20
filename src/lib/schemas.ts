@@ -29,17 +29,67 @@ export const loginSchema = z.object({
   next: nextPathSchema,
 });
 
-export const registerSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Enter your full name.")
-    .max(80, "Name is too long."),
-  email: emailSchema,
-  password: passwordSchema,
-  agree: z.coerce.boolean().optional().default(false),
-  role: z.enum(["student", "faculty", "admin"]).optional().default("student"),
-});
+export const STANDARD_YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
+export const DVM_YEAR_LEVELS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+  "5th Year",
+  "6th Year",
+] as const;
+export const ALL_YEAR_LEVELS = DVM_YEAR_LEVELS;
+export const YEAR_LEVELS = ALL_YEAR_LEVELS;
+
+export const registerSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Enter your full name.")
+      .max(80, "Name is too long."),
+    email: emailSchema,
+    password: passwordSchema,
+    agree: z.coerce.boolean().optional().default(false),
+    role: z.enum(["student", "faculty", "admin"]).optional().default("student"),
+    program: z
+      .string()
+      .trim()
+      .min(1, "Select your degree program or department affiliation."),
+    studentId: z.string().trim().optional(),
+    yearLevel: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Student ID and Year Level are strictly required for students, but not applicable for faculty or admin
+    if (data.role === "student" || !data.role) {
+      if (!data.studentId || data.studentId.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter your Student ID (e.g. 2024-10144).",
+          path: ["studentId"],
+        });
+      }
+      if (!data.yearLevel || data.yearLevel.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select your current year level.",
+          path: ["yearLevel"],
+        });
+      } else {
+        const allowed = data.program === "DVM" ? DVM_YEAR_LEVELS : STANDARD_YEAR_LEVELS;
+        if (!allowed.includes(data.yearLevel as any)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              data.program === "DVM"
+                ? "DVM year level must be between 1st Year and 6th Year."
+                : `${data.program || "This"} is a 4-year degree program (1st to 4th Year).`,
+            path: ["yearLevel"],
+          });
+        }
+      }
+    }
+  });
 
 export const forgotPasswordSchema = z.object({
   email: emailSchema,

@@ -152,7 +152,7 @@ export const server = {
     input: registerSchema,
     // `role` is accepted by the schema for the form only and is never trusted
     // for privilege: the granted role comes from the server-side allowlist.
-    handler: async ({ name, email, password, agree }, context) => {
+    handler: async ({ name, email, password, agree, program, studentId, yearLevel }, context) => {
       requireSupabase(context.locals);
       assertDomain(context.locals, email);
 
@@ -163,7 +163,15 @@ export const server = {
         });
       }
 
-      const result = await signUpWithPassword(context.locals.env, email, password, name);
+      const result = await signUpWithPassword(
+        context.locals.env,
+        email,
+        password,
+        name,
+        program,
+        studentId,
+        yearLevel,
+      );
       if (result.error) {
         throw new ActionError({ code: "BAD_REQUEST", message: result.error });
       }
@@ -178,6 +186,9 @@ export const server = {
             user.email ?? email,
             name,
             roleForEmail(email) === "admin" ? "admin" : "user",
+            program,
+            studentId,
+            yearLevel,
           );
         }
         setSessionCookies(context.cookies, result.session, false);
@@ -216,8 +227,10 @@ export const server = {
       }
       recordFailedAttempt(ipKey, { maxFailures: 3, lockoutDurationMs: 15 * 60 * 1000 });
 
-      // Notify every admin so the office sees the request in their bell.
-      // Failures are swallowed: the student always gets the same answer.
+      const cleanEmail = email.toLowerCase().trim();
+
+      // Notify every admin so the office sees the request in their bell,
+      // and log to admin_log so the Users tab displays the pending request queue.
       try {
         const supabase = serviceClient(context.locals.env);
         const { data: admins } = await supabase
@@ -225,15 +238,30 @@ export const server = {
           .select("id")
           .eq("role", "admin")
           .eq("active", true);
+
         if (admins && admins.length > 0) {
           await supabase.from("notifications").insert(
             admins.map((admin) => ({
               user_id: admin.id,
-              message: `Password recovery request for ${email}. Visit the Security Office with a valid DLSAU ID.`,
-              link: "/admin",
+              message: `Password recovery request for ${cleanEmail}. Visit the Security Office with a valid DLSAU ID.`,
+              link: "/admin?tab=users",
               read: false,
             })),
           );
+        }
+
+        // Record recovery request in admin_log
+        let logAdminId = admins?.[0]?.id;
+        if (!logAdminId) {
+          const { data: anyProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
+          logAdminId = anyProf?.id ?? null;
+        }
+
+        if (logAdminId) {
+          await supabase.from("admin_log").insert({
+            admin_id: logAdminId,
+            action: `password_recovery_requested: ${cleanEmail}`,
+          });
         }
       } catch (err) {
         console.warn("[forgotPassword] admin notify failed:", err);

@@ -62,6 +62,9 @@ export async function signUpWithPassword(
   email: string,
   password: string,
   fullName: string,
+  program?: string,
+  studentId?: string,
+  yearLevel?: string,
 ): Promise<{ session: SupabaseSession | null; error?: string }> {
   const response = await fetch(`${base(env)}${AUTH_USERS}`, {
     method: "POST",
@@ -69,7 +72,12 @@ export async function signUpWithPassword(
     body: JSON.stringify({
       email,
       password,
-      data: { full_name: fullName },
+      data: {
+        full_name: fullName,
+        program,
+        student_id: studentId,
+        year_level: yearLevel,
+      },
     }),
   });
   if (!response.ok) {
@@ -189,6 +197,9 @@ export async function ensureProfileRow(
   email: string,
   fullName: string,
   role: "user" | "admin" = "user",
+  program?: string,
+  studentId?: string,
+  yearLevel?: string,
 ): Promise<boolean> {
   const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
   if (!env.PUBLIC_SUPABASE_URL || !key) return false;
@@ -196,18 +207,35 @@ export async function ensureProfileRow(
   const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false },
   });
-  const { error } = await supabase.from("profiles").upsert(
-    {
-      id: userId,
-      email: email.toLowerCase().trim(),
-      full_name: fullName,
-      role,
-      active: true,
-    },
-    { onConflict: "id" },
-  );
+  const row: Record<string, unknown> = {
+    id: userId,
+    email: email.toLowerCase().trim(),
+    full_name: fullName,
+    role,
+    active: true,
+  };
+  if (program) row.program = program;
+  if (studentId) row.student_id = studentId;
+  if (yearLevel) row.year_level = yearLevel;
+
+  const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
 
   if (error) {
+    // If the database does not have newly added columns yet, retry without them
+    if (
+      (program || studentId || yearLevel) &&
+      (error.message?.includes("column") || error.code === "PGRST204" || error.code === "42703")
+    ) {
+      delete row.program;
+      delete row.student_id;
+      delete row.year_level;
+      const { error: retryError } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
+      if (retryError) {
+        console.warn("[register] profiles fallback upsert failed:", retryError.message);
+        return false;
+      }
+      return true;
+    }
     console.warn("[register] profiles row not created:", error.message);
     return false;
   }

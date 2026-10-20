@@ -4,6 +4,14 @@ import AuthShell from "~/components/AuthShell.astro";
 import PasswordField from "~/components/PasswordField.astro";
 import SubmitButton from "~/components/SubmitButton.astro";
 import { devBypassEnabled } from "~/lib/session";
+import { COLLEGES, DEGREE_PROGRAMS } from "~/data/campusPrograms";
+import { STANDARD_YEAR_LEVELS, DVM_YEAR_LEVELS } from "~/lib/schemas";
+
+// Group programs by college for the select element
+const programsByCollege = Object.entries(COLLEGES).map(([cCode, cInfo]) => ({
+  college: cInfo,
+  programs: Object.values(DEGREE_PROGRAMS).filter((p) => p.collegeCode === cCode),
+}));
 
 // If user submits registration successfully, redirect accordingly
 const registerResult = Astro.getActionResult(actions.register);
@@ -16,8 +24,9 @@ const registerError =
     ? registerResult.error.message
     : undefined;
 const fields = isInputError(registerResult?.error) ? registerResult.error.fields : undefined;
-const fieldError = (name: "name" | "email" | "password" | "agree") =>
-  fields?.[name]?.[0] ?? undefined;
+const fieldError = (
+  name: "name" | "email" | "password" | "agree" | "program" | "studentId" | "yearLevel",
+) => fields?.[name]?.[0] ?? undefined;
 
 const devOpen = devBypassEnabled(Astro.locals.env);
 ---
@@ -86,7 +95,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     <div>
       <label class="label">Role</label>
       <input type="hidden" name="role" id="role-input" value="student" />
-      <div class="grid grid-cols-3 gap-2.5">
+      <div class="grid grid-cols-2 gap-2.5">
         <button
           type="button"
           data-role="student"
@@ -101,17 +110,140 @@ const devOpen = devBypassEnabled(Astro.locals.env);
         >
           Faculty
         </button>
-        <button
-          type="button"
-          data-role="admin"
-          class="role-btn flex min-h-11 items-center justify-center rounded-control border border-line bg-canvas/40 text-xs sm:text-sm font-medium text-forest-900/70 transition-all hover:bg-canvas cursor-pointer"
-        >
-          Admin
-        </button>
       </div>
       <p class="caption mt-1.5">
         New accounts start as Student. Admin access is assigned by the Security Office.
       </p>
+    </div>
+
+    <!-- Degree Program / Academic Affiliation Selection -->
+    <div>
+      <div class="flex items-center justify-between mb-1.5">
+        <label for="program" class="label mb-0" id="program-label">
+          Degree Program
+        </label>
+        <span class="text-[0.6875rem] font-bold text-forest-800 bg-[#d8ef8c]/50 border border-forest-700/20 px-2 py-0.5 rounded-full">
+          Required for DLSAU Verification
+        </span>
+      </div>
+      <div class="relative">
+        <select
+          id="program"
+          name="program"
+          required
+          class="field appearance-none pr-10 cursor-pointer font-medium text-forest-900 bg-white"
+          aria-invalid={fieldError("program") ? true : undefined}
+          aria-describedby={fieldError("program") ? "program-error" : "program-hint"}
+        >
+          <option value="" disabled selected>Select your degree program...</option>
+          {programsByCollege.map(({ college, programs }) => (
+            <optgroup label={`${college.code} — ${college.name}`} class="font-bold text-forest-900 bg-stone-50">
+              {programs.map((p) => (
+                <option value={p.code} class="font-normal text-forest-900 py-1">
+                  {p.code} — {p.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-forest-700">
+          <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+          </svg>
+        </div>
+      </div>
+      <p id="program-hint" class="caption mt-1.5">
+        Your college and program are verified by the Security Office when claiming or verifying campus items.
+      </p>
+      {
+        fieldError("program") && (
+          <p id="program-error" role="alert" class="field-error mt-1">
+            {fieldError("program")}
+          </p>
+        )
+      }
+    </div>
+
+    <!-- Student-Only Fields: Student ID & Year Level (hidden/inapplicable for Faculty and Admin) -->
+    <div id="student-fields" class="space-y-4 transition-all">
+      <!-- Student ID Field -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="studentId" class="label mb-0">Student ID</label>
+          <span class="text-[0.6875rem] font-bold text-forest-800 bg-[#d8ef8c]/50 border border-forest-700/20 px-2 py-0.5 rounded-full">
+            Required for Students
+          </span>
+        </div>
+        <input
+          id="studentId"
+          type="text"
+          name="studentId"
+          class="field"
+          placeholder="e.g. 2024-10144"
+          autocomplete="off"
+          required
+          aria-invalid={fieldError("studentId") ? true : undefined}
+          aria-describedby={fieldError("studentId") ? "studentId-error" : "studentId-hint"}
+        />
+        <p id="studentId-hint" class="caption mt-1.5">
+          Official DLSAU student ID number found on your campus ID card.
+        </p>
+        {
+          fieldError("studentId") && (
+            <p id="studentId-error" role="alert" class="field-error mt-1">
+              {fieldError("studentId")}
+            </p>
+          )
+        }
+      </div>
+
+      <!-- Year Level Dropdown -->
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="yearLevel" class="label mb-0">Year Level</label>
+          <span class="text-[0.6875rem] font-bold text-forest-800 bg-[#d8ef8c]/50 border border-forest-700/20 px-2 py-0.5 rounded-full">
+            Required for Students
+          </span>
+        </div>
+        <div class="relative">
+          <select
+            id="yearLevel"
+            name="yearLevel"
+            required
+            class="field appearance-none pr-10 cursor-pointer font-medium text-forest-900 bg-white"
+            aria-invalid={fieldError("yearLevel") ? true : undefined}
+            aria-describedby={fieldError("yearLevel") ? "yearLevel-error" : "yearLevel-hint"}
+          >
+            <option value="" disabled selected>Select your current year level...</option>
+            {STANDARD_YEAR_LEVELS.map((level) => (
+              <option value={level} class="py-1 text-forest-900">
+                {level}
+              </option>
+            ))}
+            <option value="5th Year" class="py-1 text-forest-900 hidden dvm-only-option" id="opt-5th-year">
+              5th Year (DVM Clinician)
+            </option>
+            <option value="6th Year" class="py-1 text-forest-900 hidden dvm-only-option" id="opt-6th-year">
+              6th Year (DVM Clinician)
+            </option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-forest-700">
+            <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <p id="yearLevel-hint" class="caption mt-1.5">
+          Your current academic standing at De La Salle Araneta University.
+        </p>
+        {
+          fieldError("yearLevel") && (
+            <p id="yearLevel-error" role="alert" class="field-error mt-1">
+              {fieldError("yearLevel")}
+            </p>
+          )
+        }
+      </div>
     </div>
 
     <!-- Password Field -->
@@ -172,11 +304,101 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     )
   }
 
-  <!-- Interactive script for Role pill selection -->
+  <!-- Interactive script for Role pill selection, dynamic program labels, and student fields toggle -->
   <script is:inline>
     (function () {
       const roleBtns = document.querySelectorAll(".role-btn");
       const roleInput = document.getElementById("role-input");
+      const programLabel = document.getElementById("program-label");
+      const programHint = document.getElementById("program-hint");
+      const studentFields = document.getElementById("student-fields");
+      const studentIdInput = document.getElementById("studentId");
+      const yearLevelSelect = document.getElementById("yearLevel");
+
+      function syncRoleUI(role) {
+        const isStudent = role === "student" || !role;
+
+        // Toggle student-only fields (hidden & disabled for Faculty / Admin)
+        if (studentFields) {
+          if (isStudent) {
+            studentFields.classList.remove("hidden");
+            if (studentIdInput) {
+              studentIdInput.removeAttribute("disabled");
+              studentIdInput.setAttribute("required", "");
+            }
+            if (yearLevelSelect) {
+              yearLevelSelect.removeAttribute("disabled");
+              yearLevelSelect.setAttribute("required", "");
+            }
+          } else {
+            studentFields.classList.add("hidden");
+            if (studentIdInput) {
+              studentIdInput.removeAttribute("required");
+              studentIdInput.setAttribute("disabled", "true");
+              studentIdInput.value = "";
+            }
+            if (yearLevelSelect) {
+              yearLevelSelect.removeAttribute("required");
+              yearLevelSelect.setAttribute("disabled", "true");
+              yearLevelSelect.value = "";
+            }
+          }
+        }
+
+        // Update labels for program
+        if (programLabel && programHint) {
+          if (role === "faculty") {
+            programLabel.textContent = "College / Academic Department";
+            programHint.textContent = "Select your teaching or administrative college department.";
+          } else if (role === "admin") {
+            programLabel.textContent = "Office / Department Affiliation";
+            programHint.textContent = "Select your affiliated campus department.";
+          } else {
+            programLabel.textContent = "Degree Program";
+            programHint.textContent = "Your college and program are verified by the Security Office when claiming or verifying campus items.";
+          }
+        }
+      }
+
+      const programSelect = document.getElementById("program");
+      const yearLevelHint = document.getElementById("yearLevel-hint");
+      const opt5 = document.getElementById("opt-5th-year");
+      const opt6 = document.getElementById("opt-6th-year");
+
+      function syncYearLevelsForProgram(programCode) {
+        const isDvm = programCode === "DVM";
+        if (opt5 && opt6) {
+          if (isDvm) {
+            opt5.classList.remove("hidden");
+            opt5.removeAttribute("disabled");
+            opt6.classList.remove("hidden");
+            opt6.removeAttribute("disabled");
+            if (yearLevelHint) {
+              yearLevelHint.textContent = "Doctor of Veterinary Medicine is a 6-year professional program (1st to 6th Year).";
+            }
+          } else {
+            opt5.classList.add("hidden");
+            opt5.setAttribute("disabled", "true");
+            opt6.classList.add("hidden");
+            opt6.setAttribute("disabled", "true");
+            if (yearLevelSelect && (yearLevelSelect.value === "5th Year" || yearLevelSelect.value === "6th Year")) {
+              yearLevelSelect.value = "";
+            }
+            if (yearLevelHint) {
+              yearLevelHint.textContent = "Your current academic standing at De La Salle Araneta University.";
+            }
+          }
+        }
+      }
+
+      if (programSelect) {
+        programSelect.addEventListener("change", (e) => {
+          syncYearLevelsForProgram(e.target.value);
+        });
+        if (programSelect.value) {
+          syncYearLevelsForProgram(programSelect.value);
+        }
+      }
 
       roleBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -187,9 +409,12 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           btn.classList.add("bg-forest-700", "text-white", "font-bold", "active");
           btn.classList.remove("border", "border-line", "bg-canvas/40", "text-forest-900/70", "font-medium");
 
+          const role = btn.dataset.role || "student";
           if (roleInput) {
-            roleInput.value = btn.dataset.role || "student";
+            roleInput.value = role;
           }
+
+          syncRoleUI(role);
         });
       });
     })();

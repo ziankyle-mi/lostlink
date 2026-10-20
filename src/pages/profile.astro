@@ -7,6 +7,7 @@ import Icon from "~/components/Icon.astro";
 import { roleForEmail } from "~/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
+import { DEGREE_PROGRAMS } from "~/data/campusPrograms";
 
 const logoutResult = Astro.getActionResult(actions.logout);
 if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
@@ -40,6 +41,9 @@ const env = Astro.locals.env || readEnv();
 let myReports: any[] = [];
 let myClaims: any[] = [];
 let profileName = userEmail.split("@")[0].replace(/[._]/g, " ");
+let userProgramCode: string | undefined = undefined;
+let userStudentId: string | undefined = undefined;
+let userYearLevel: string | undefined = undefined;
 
 if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
   try {
@@ -52,12 +56,15 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     // 1. Resolve Profile ID
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, full_name, email, role")
+      .select("*")
       .eq("email", userEmail.toLowerCase().trim())
       .maybeSingle();
 
     const profileId = profile?.id || user.id;
     if (profile?.full_name) profileName = profile.full_name;
+    if (profile?.program) userProgramCode = profile.program;
+    if (profile?.student_id) userStudentId = profile.student_id;
+    if (profile?.year_level) userYearLevel = profile.year_level;
 
     // 2. Fetch My Reported Items
     if (profileId) {
@@ -102,6 +109,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
 const totalReports = myReports.length;
 const activeReports = myReports.filter((r) => r.status === "pending" || r.status === "approved").length;
 const totalClaims = myClaims.length;
+const userProgramInfo = userProgramCode ? DEGREE_PROGRAMS[userProgramCode] : undefined;
 
 function parsePhotos(photoPath?: string | null): string[] {
   if (!photoPath) return [];
@@ -153,9 +161,27 @@ function parsePhotos(photoPath?: string | null): string[] {
                 <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-900">
                   {isUserAdmin ? "Security Office Staff" : "DLSAU Student / Faculty"}
                 </span>
+                {userProgramInfo && (
+                  <span class="rounded-full bg-[#d8ef8c]/60 border border-lime-700/30 px-3 py-1 text-xs font-bold text-forest-900 shadow-2xs">
+                    {userProgramInfo.code} &middot; {userProgramInfo.collegeCode}
+                  </span>
+                )}
               </div>
-              <p class="mt-1 text-xs sm:text-sm text-stone-500 font-medium">
-                {userEmail}
+              <p class="mt-1 text-xs sm:text-sm text-stone-500 font-medium flex items-center gap-2 flex-wrap">
+                <span>{userEmail}</span>
+                {userStudentId && (
+                  <span class="rounded bg-stone-100 border border-stone-200/80 px-2 py-0.5 text-xs font-semibold text-stone-700">
+                    ID: {userStudentId}
+                  </span>
+                )}
+                {userYearLevel && (
+                  <span class="rounded bg-stone-100 border border-stone-200/80 px-2 py-0.5 text-xs font-semibold text-stone-700">
+                    {userYearLevel}
+                  </span>
+                )}
+                {userProgramInfo && (
+                  <span class="text-forest-800 font-semibold">&middot; {userProgramInfo.name}</span>
+                )}
               </p>
             </div>
           </div>

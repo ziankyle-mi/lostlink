@@ -50,34 +50,177 @@ describe("loginSchema", () => {
 });
 
 describe("registerSchema", () => {
-  it("accepts a full registration", () => {
+  it("accepts a full student registration with student ID and year level", () => {
     const parsed = registerSchema.parse({
       name: "Ziankyle Piangco",
       email: "ziankyle.piangco@dlsau.edu.ph",
       password: "hunter2pass",
       agree: "on",
+      program: "BSCS",
+      studentId: "2024-10144",
+      yearLevel: "3rd Year",
+      role: "student",
     });
     expect(parsed.agree).toBe(true);
+    expect(parsed.program).toBe("BSCS");
+    expect(parsed.studentId).toBe("2024-10144");
+    expect(parsed.yearLevel).toBe("3rd Year");
   });
 
   it("requires a name", () => {
     expect(
-      registerSchema.safeParse({ name: " ", email: "a.b@dlsau.edu.ph", password: "hunter2pass" })
-        .success,
+      registerSchema.safeParse({
+        name: " ",
+        email: "a.b@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        studentId: "2024-10144",
+        yearLevel: "3rd Year",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires a degree program or department affiliation", () => {
+    expect(
+      registerSchema.safeParse({
+        name: "Zian Piangco",
+        email: "a.b@dlsau.edu.ph",
+        password: "hunter2pass",
+        studentId: "2024-10144",
+        yearLevel: "3rd Year",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires a student ID when role is student", () => {
+    expect(
+      registerSchema.safeParse({
+        name: "Zian Piangco",
+        email: "a.b@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        yearLevel: "3rd Year",
+        role: "student",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires a year level when role is student", () => {
+    expect(
+      registerSchema.safeParse({
+        name: "Zian Piangco",
+        email: "a.b@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        studentId: "2024-10144",
+        role: "student",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts faculty registration without student ID or year level", () => {
+    const parsed = registerSchema.parse({
+      name: "Prof. Maria Santos",
+      email: "maria.santos@dlsau.edu.ph",
+      password: "hunter2pass",
+      agree: "on",
+      program: "BSCS",
+      role: "faculty",
+    });
+    expect(parsed.role).toBe("faculty");
+    expect(parsed.studentId).toBeUndefined();
+    expect(parsed.yearLevel).toBeUndefined();
+  });
+
+  it("accepts admin registration without student ID or year level", () => {
+    const parsed = registerSchema.parse({
+      name: "Security Officer Cruz",
+      email: "security.cruz@dlsau.edu.ph",
+      password: "hunter2pass",
+      agree: "on",
+      program: "BSCS",
+      role: "admin",
+    });
+    expect(parsed.role).toBe("admin");
+    expect(parsed.studentId).toBeUndefined();
+    expect(parsed.yearLevel).toBeUndefined();
+  });
+
+  it("accepts DVM registration with 5th Year and 6th Year levels", () => {
+    const parsed5 = registerSchema.parse({
+      name: "Dr. Doc Vet Student",
+      email: "vet.student@dlsau.edu.ph",
+      password: "hunter2pass",
+      agree: "on",
+      program: "DVM",
+      studentId: "2024-55555",
+      yearLevel: "5th Year",
+      role: "student",
+    });
+    expect(parsed5.yearLevel).toBe("5th Year");
+
+    const parsed6 = registerSchema.parse({
+      name: "Dr. Doc Clinician",
+      email: "vet.clinician@dlsau.edu.ph",
+      password: "hunter2pass",
+      agree: "on",
+      program: "DVM",
+      studentId: "2024-66666",
+      yearLevel: "6th Year",
+      role: "student",
+    });
+    expect(parsed6.yearLevel).toBe("6th Year");
+  });
+
+  it("rejects 5th or 6th Year for standard 4-year degree programs", () => {
+    expect(
+      registerSchema.safeParse({
+        name: "CS Student",
+        email: "cs.student@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        studentId: "2024-11111",
+        yearLevel: "5th Year",
+        role: "student",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      registerSchema.safeParse({
+        name: "Psych Student",
+        email: "psych.student@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "AB Psych",
+        studentId: "2024-22222",
+        yearLevel: "6th Year",
+        role: "student",
+      }).success,
     ).toBe(false);
   });
 
   it("rejects a short password", () => {
     expect(
-      registerSchema.safeParse({ name: "Zian Piangco", email: "a@b.ph", password: "short" })
-        .success,
+      registerSchema.safeParse({
+        name: "Zian Piangco",
+        email: "a@b.ph",
+        password: "short",
+        program: "BSCS",
+        studentId: "2024-10144",
+        yearLevel: "3rd Year",
+      }).success,
     ).toBe(false);
   });
 
   it("defaults agree to false when the box is left empty", () => {
     expect(
-      registerSchema.parse({ name: "Zian Piangco", email: "a@b.ph", password: "hunter2pass" })
-        .agree,
+      registerSchema.parse({
+        name: "Zian Piangco",
+        email: "a@b.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        studentId: "2024-10144",
+        yearLevel: "3rd Year",
+      }).agree,
     ).toBe(false);
   });
 });

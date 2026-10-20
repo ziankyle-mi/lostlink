@@ -16,6 +16,8 @@ interface Props {
   };
   /** Live count of found items past the custody window, passed by the admin page. */
   unclaimedCount?: number;
+  /** Live count of pending password recovery requests awaiting counter verification. */
+  pendingRecoveryCount?: number;
 }
 
 const {
@@ -24,6 +26,7 @@ const {
   userEmail = "dlsau.lostlink@dlsau.edu.ph",
   metrics,
   unclaimedCount = 0,
+  pendingRecoveryCount = 0,
 } = Astro.props;
 
 const isAdmin = role === "admin";
@@ -174,6 +177,15 @@ const userName = isAdmin
               </svg>
               Users
             </span>
+            {pendingRecoveryCount > 0 && (
+              <span
+                class="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-black text-amber-950 shadow-xs"
+                title={`${pendingRecoveryCount} student(s) waiting for password reset`}
+              >
+                <span class="size-1.5 rounded-full bg-amber-900 animate-ping"></span>
+                <span>{pendingRecoveryCount} reset</span>
+              </span>
+            )}
           </a>
 
           <!-- Activity log (Admin) -->

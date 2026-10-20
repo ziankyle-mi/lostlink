@@ -12,14 +12,23 @@ create table profiles (
   email text not null unique,
   role user_role not null default 'user',
   active boolean not null default true,
+  -- Degree program code chosen at registration (e.g. 'BSCS', 'DVM').
+  -- Nullable: admins, staff, and accounts created before this column have NULL.
+  program text,
+  -- Student-specific fields: Student ID and Year Level (null for faculty and admin)
+  student_id text,
+  year_level text,
   -- Set when the Security Office issues a temporary password. The student is
   -- forced to /reset-password until they choose a new one.
   must_change_password boolean not null default false,
   created_at timestamptz default now()
 );
 
--- Migration for databases created before this column existed:
+-- Migrations for databases created before these columns existed:
 alter table profiles add column if not exists must_change_password boolean not null default false;
+alter table profiles add column if not exists program text;
+alter table profiles add column if not exists student_id text;
+alter table profiles add column if not exists year_level text;
 
 create table items (
   id uuid primary key default gen_random_uuid(),

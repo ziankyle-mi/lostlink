@@ -59,6 +59,16 @@ let liveIntake: any[] = [];
 let liveLogs: any[] = [];
 let allUsers: EnhancedCampusUser[] = [];
 
+export interface PendingRecoveryRequest {
+  email: string;
+  requestedAt: string;
+  name?: string;
+  program?: string;
+  studentId?: string;
+  collegeCode?: string;
+}
+let pendingRecoveryRequests: PendingRecoveryRequest[] = [];
+
 interface OverdueCustodyItem {
   id: string;
   name: string;
@@ -101,6 +111,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       intakeListRes,
       logsListRes,
       profilesRes,
+      recoveryLogsRes,
     ] = await Promise.all([
       supabase
         .from("items")
@@ -160,9 +171,15 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
         .limit(8),
       supabase
         .from("profiles")
-        .select("id, full_name, email, role, active, created_at")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(500),
+      supabase
+        .from("admin_log")
+        .select("id, action, created_at")
+        .or("action.like.password_recovery_requested:%,action.like.temp_password_issued:%")
+        .order("created_at", { ascending: false })
+        .limit(100),
     ]);
 
     liveMetrics = {
@@ -242,11 +259,81 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
         const meta = authUserMetaMap.get(p.id) || authUserMetaMap.get((p.email || "").toLowerCase());
         return enrichCampusUser({
           ...p,
+          program: p.program || meta?.program,
           user_metadata: meta,
         });
       });
     } else {
       allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
+    }
+
+    // Process Password Recovery Requests from admin_log
+    if (recoveryLogsRes?.data && recoveryLogsRes.data.length > 0) {
+      const emailStatusMap = new Map<string, { status: "requested" | "issued"; requestedAt: string }>();
+      for (const log of recoveryLogsRes.data) {
+        const rawAction = log.action || "";
+        if (rawAction.startsWith("password_recovery_requested:")) {
+          const email = rawAction.replace("password_recovery_requested:", "").trim().toLowerCase();
+          if (!emailStatusMap.has(email)) {
+            emailStatusMap.set(email, { status: "requested", requestedAt: log.created_at });
+          }
+        } else if (rawAction.startsWith("temp_password_issued:")) {
+          const email = rawAction.replace("temp_password_issued:", "").trim().toLowerCase();
+          if (!emailStatusMap.has(email)) {
+            emailStatusMap.set(email, { status: "issued", requestedAt: log.created_at });
+          }
+        }
+      }
+
+      for (const [email, info] of emailStatusMap.entries()) {
+        if (info.status === "requested") {
+          const matchedUser = allUsers.find((u: any) => (u.email || "").toLowerCase() === email);
+          pendingRecoveryRequests.push({
+            email,
+            requestedAt: info.requestedAt,
+            name: matchedUser?.full_name,
+            program: matchedUser?.programName,
+            studentId: matchedUser?.studentId,
+            collegeCode: matchedUser?.collegeCode,
+          });
+        }
+      }
+    }
+
+    // Fallback: also scan notifications for recent password recovery requests not yet issued
+    if (pendingRecoveryRequests.length === 0) {
+      try {
+        const { data: recNotifs } = await supabase
+          .from("notifications")
+          .select("message, created_at")
+          .ilike("message", "%Password recovery request for%")
+          .order("created_at", { ascending: false })
+          .limit(20);
+        if (recNotifs && recNotifs.length > 0) {
+          for (const notif of recNotifs) {
+            const match = notif.message.match(/Password recovery request for ([^\s.]+@[^\s]+)/i);
+            if (match && match[1]) {
+              const email = match[1].toLowerCase().trim();
+              const alreadyIssued = liveLogs.some(
+                (l: any) => (l.action || "").includes("temp_password_issued:") && (l.action || "").toLowerCase().includes(email)
+              );
+              if (!alreadyIssued && !pendingRecoveryRequests.some((p) => p.email === email)) {
+                const matchedUser = allUsers.find((u: any) => (u.email || "").toLowerCase() === email);
+                pendingRecoveryRequests.push({
+                  email,
+                  requestedAt: notif.created_at,
+                  name: matchedUser?.full_name,
+                  program: matchedUser?.programName,
+                  studentId: matchedUser?.studentId,
+                  collegeCode: matchedUser?.collegeCode,
+                });
+              }
+            }
+          }
+        }
+      } catch (notifQueryErr) {
+        console.warn("[admin] Recovery notifications check note:", notifQueryErr);
+      }
     }
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
@@ -291,6 +378,23 @@ function parseAuditEvent(
       description: `Permanently removed account record for ${target}.`,
       target,
       operator,
+      category: "user",
+      time: formattedTime,
+    };
+  }
+
+  // 1b. Password Recovery Requested by Student
+  if (action.startsWith("password_recovery_requested:")) {
+    const target = action.replace("password_recovery_requested:", "").trim();
+    return {
+      title: "Password Recovery Requested",
+      badgeText: "Reset Pending",
+      badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+      iconType: "key",
+      iconBg: "bg-amber-50 text-amber-800 border-amber-200",
+      description: `${target} requested a password reset. Awaiting DLSAU ID verification at Security Office.`,
+      target,
+      operator: "Student Portal",
       category: "user",
       time: formattedTime,
     };
@@ -618,7 +722,11 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             </div>
 
             {currentTab === "users" ? (
-              <UsersManagement users={allUsers} currentAdminEmail={userEmail} />
+              <UsersManagement
+                users={allUsers}
+                currentAdminEmail={userEmail}
+                pendingRecoveryRequests={pendingRecoveryRequests}
+              />
             ) : (
               <>
                 <!-- Row 1: 4 KPI Stat Cards -->
@@ -644,6 +752,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
               userEmail={userEmail}
               metrics={liveMetrics}
               unclaimedCount={unclaimedOverdue.length}
+              pendingRecoveryCount={pendingRecoveryRequests.length}
             />
           </div>
         </div>

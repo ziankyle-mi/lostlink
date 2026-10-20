@@ -287,28 +287,49 @@ export function enrichCampusUser(raw: {
   role?: "admin" | "user";
   active?: boolean;
   created_at?: string;
+  program?: string;
+  student_id?: string;
+  studentId?: string;
+  year_level?: string;
+  yearLevel?: string;
   user_metadata?: Record<string, any>;
 }): EnhancedCampusUser {
   const emailLower = (raw.email || "").toLowerCase().trim();
   const meta = raw.user_metadata || {};
   const special = SPECIAL_USER_ASSIGNMENTS[emailLower] || {};
 
-  // Check metadata, special override, or deterministic fallback
+  // Check direct DB column, auth metadata, special override, or deterministic fallback
   const h = hashString(emailLower || raw.id);
-  const progKey = meta.program || special.programCode || PROGRAM_KEYS[h % PROGRAM_KEYS.length];
+  const progKey = raw.program || meta.program || special.programCode || PROGRAM_KEYS[h % PROGRAM_KEYS.length];
   const program = DEGREE_PROGRAMS[progKey] || DEGREE_PROGRAMS.BSCS;
 
   const isFaculty = meta.is_faculty !== undefined
     ? Boolean(meta.is_faculty)
     : (special.isFaculty ?? (h % 11 === 0)); // ~1 in 11 accounts is faculty
 
-  const yearLevels = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-  const yearLevel = isFaculty ? "Faculty Member" : (special.yearLevel || meta.year_level || yearLevels[h % yearLevels.length]);
+  const yearLevels =
+    progKey === "DVM"
+      ? ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "6th Year"]
+      : ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+  const yearLevel = isFaculty
+    ? "Faculty Member"
+    : raw.year_level ||
+      raw.yearLevel ||
+      meta.year_level ||
+      meta.yearLevel ||
+      special.yearLevel ||
+      yearLevels[h % yearLevels.length];
 
   const units = isFaculty ? 0 : (special.units || meta.units || (18 + (h % 7))); // 18-24 units
   const idYear = 2022 + (h % 3);
   const idSeq = String(10000 + (h % 90000)).slice(0, 5);
-  const studentId = special.studentId || meta.student_id || (isFaculty ? `${idYear}-F${idSeq.slice(0, 3)}` : `${idYear}-${idSeq}`);
+  const studentId =
+    raw.student_id ||
+    raw.studentId ||
+    meta.student_id ||
+    meta.studentId ||
+    special.studentId ||
+    (isFaculty ? `${idYear}-F${idSeq.slice(0, 3)}` : `${idYear}-${idSeq}`);
 
   const fullName = raw.full_name || special.full_name || meta.full_name || emailLower.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
