@@ -16,12 +16,12 @@ The agent updates this file after every step. Keep it short.
 - [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
-## Current step
-
-Done: Added delete button for individual notifications and fixed filter dropdown overlap.
-- Added a subtle trash icon button on each notification card in `StudentNavbar.astro` with slide-fade removal animation, live unread badge recalculation, and `DELETE /api/notifications` handler.
-- Fixed Location/Category/Date dropdown overlap in `FilterBar.astro` & `index.astro`: assigned `relative z-30` to the FilterBar section and wrapper, elevated dropdown menus to `z-50`, and adjusted max-height to prevent clipping underneath the `HeroFeed` cards. Added gentle debounce on building search.
-- Verified: `astro check` 0 errors, 0 warnings; `npm test` 89/89 passed; production build succeeded.
+Done: Applied UI design system tokens to ReportModal and removed live feed label.
+- Removed redundant `DLSAU Campus Feed` top pill badge and `Live on DLSAU campus feed` footer text from `src/components/ReportModal.astro`.
+- Refined header typography with Fraunces serif display heading, BrandMark lockup, and clean circular close control.
+- Elevated Found vs. Lost classification toggle cards with crisp token borders, badges, and smooth state transitions in `src/pages/index.astro`.
+- Polished form inputs, dropdowns, description textarea, and photo dropzone with design system tokens (`rounded-control`, `text-forest-900`, `border-line`, `shadow-2xs`).
+- Verified: `astro check` passed with 0 errors and 0 warnings. Committed and pushed to `main`.
 
 Done: Admin sidebar's Student View button now opens the campus feed (`/`)
 instead of the separate profile page. No visual changes.
