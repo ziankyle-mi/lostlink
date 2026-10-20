@@ -5,7 +5,7 @@ import PasswordField from "~/components/PasswordField.astro";
 import SubmitButton from "~/components/SubmitButton.astro";
 import { devBypassEnabled } from "~/lib/session";
 import { COLLEGES, DEGREE_PROGRAMS } from "~/data/campusPrograms";
-import { STANDARD_YEAR_LEVELS, DVM_YEAR_LEVELS } from "~/lib/schemas";
+import { STANDARD_YEAR_LEVELS } from "~/lib/schemas";
 
 // Group programs by college for the select element
 const programsByCollege = Object.entries(COLLEGES).map(([cCode, cInfo]) => ({
@@ -95,12 +95,12 @@ const devOpen = devBypassEnabled(Astro.locals.env);
     <div>
       <span id="role-label" class="label">Role</span>
       <input type="hidden" name="role" id="role-input" value="student" />
-      <div class="grid grid-cols-2 gap-2.5" role="group" aria-labelledby="role-label">
+      <div class="grid grid-cols-3 gap-2 sm:gap-2.5" role="group" aria-labelledby="role-label">
         <button
           type="button"
           data-role="student"
           aria-pressed="true"
-          class="role-btn active flex min-h-11 items-center justify-center rounded-control bg-forest-700 text-sm font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer"
+          class="role-btn active flex min-h-11 items-center justify-center rounded-full bg-forest-700 text-sm font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer"
         >
           Student
         </button>
@@ -108,12 +108,20 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           type="button"
           data-role="faculty"
           aria-pressed="false"
-          class="role-btn flex min-h-11 items-center justify-center rounded-control border border-line bg-white text-sm font-semibold text-forest-900/80 transition-all hover:bg-canvas active:scale-95 cursor-pointer"
+          class="role-btn flex min-h-11 items-center justify-center rounded-full border border-line bg-white text-sm font-semibold text-forest-900/80 transition-all hover:bg-canvas active:scale-95 cursor-pointer"
         >
           Faculty
         </button>
+        <button
+          type="button"
+          data-role="admin"
+          aria-pressed="false"
+          class="role-btn flex min-h-11 items-center justify-center rounded-full border border-line bg-white text-sm font-semibold text-forest-900/80 transition-all hover:bg-canvas active:scale-95 cursor-pointer"
+        >
+          Admin
+        </button>
       </div>
-      <p class="caption mt-1.5">
+      <p class="mt-2 text-xs text-sage-600 leading-relaxed">
         New accounts start as Student. Admin access is assigned by the Security Office.
       </p>
     </div>
@@ -124,7 +132,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
         <label for="program" class="label mb-0" id="program-label">
           Degree Program
         </label>
-        <span class="rounded-full bg-lime border border-forest-700/20 px-2.5 py-1 text-xs font-bold text-forest-900">
+        <span class="rounded-full bg-lime border border-forest-700/15 px-2.5 py-0.5 text-xs font-bold text-forest-900 shadow-2xs">
           Required for DLSAU Verification
         </span>
       </div>
@@ -154,7 +162,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           </svg>
         </div>
       </div>
-      <p id="program-hint" class="caption mt-1.5">
+      <p id="program-hint" class="mt-1.5 text-xs text-sage-600 leading-relaxed">
         Your college and program are verified by the Security Office when claiming or verifying campus items.
       </p>
       {
@@ -172,7 +180,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       <div>
         <div class="flex items-center justify-between mb-1.5">
           <label for="studentId" class="label mb-0">Student ID</label>
-          <span class="rounded-full bg-lime border border-forest-700/20 px-2.5 py-1 text-xs font-bold text-forest-900">
+          <span class="rounded-full bg-lime border border-forest-700/15 px-2.5 py-0.5 text-xs font-bold text-forest-900 shadow-2xs">
             Required for Students
           </span>
         </div>
@@ -187,7 +195,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           aria-invalid={fieldError("studentId") ? true : undefined}
           aria-describedby={fieldError("studentId") ? "studentId-error" : "studentId-hint"}
         />
-        <p id="studentId-hint" class="caption mt-1.5">
+        <p id="studentId-hint" class="mt-1.5 text-xs text-sage-600 leading-relaxed">
           Official DLSAU student ID number found on your campus ID card.
         </p>
         {
@@ -203,7 +211,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       <div>
         <div class="flex items-center justify-between mb-1.5">
           <label for="yearLevel" class="label mb-0">Year Level</label>
-          <span class="rounded-full bg-lime border border-forest-700/20 px-2.5 py-1 text-xs font-bold text-forest-900">
+          <span class="rounded-full bg-lime border border-forest-700/15 px-2.5 py-0.5 text-xs font-bold text-forest-900 shadow-2xs">
             Required for Students
           </span>
         </div>
@@ -235,7 +243,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
             </svg>
           </div>
         </div>
-        <p id="yearLevel-hint" class="caption mt-1.5">
+        <p id="yearLevel-hint" class="mt-1.5 text-xs text-sage-600 leading-relaxed">
           Your current academic standing at De La Salle Araneta University.
         </p>
         {
@@ -349,7 +357,10 @@ const devOpen = devBypassEnabled(Astro.locals.env);
 
         // Update labels for program
         if (programLabel && programHint) {
-          if (role === "faculty") {
+          if (role === "admin") {
+            programLabel.textContent = "Campus Office / Unit";
+            programHint.textContent = "Select your security, disciplinary, or administrative assignment.";
+          } else if (role === "faculty") {
             programLabel.textContent = "College / Academic Department";
             programHint.textContent = "Select your teaching or administrative college department.";
           } else {

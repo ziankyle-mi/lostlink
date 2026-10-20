@@ -16,6 +16,12 @@ The agent updates this file after every step. Keep it short.
 - [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
+Done: Register area refined onto UI design system and aligned with `context/createnewacc.png`.
+- Replaced role buttons with full 3-column pill group (`Student`, `Faculty`, `Admin`) with standard `rounded-full`, active `bg-forest-700 text-white shadow-2xs` vs. inactive `border border-line bg-white text-forest-900/80 hover:bg-canvas`, and dynamic ARIA state sync.
+- Aligned helper captions: switched form hints under fields from centered `.caption` to left-aligned `text-xs text-sage-600 leading-relaxed` so helper text sits naturally under inputs.
+- Refined attention chips (`Required for DLSAU Verification`, `Required for Students`) with compact `py-0.5` padding and shadow token.
+- Verified: `astro check` 0 errors / 0 warnings, `npm test` 98/98 passed, and `npm run build` completed successfully.
+
 Done: Resolved admin Users tab password reset issue and added in-person recovery alerts.
 - Fixed `reset_user_password` action in `/api/admin/actions.ts` to reliably handle campus demo users and format credentials cleanly as `Reset-XXXX-YYYY`.
 - Upgraded the "Issue temporary password" modal in `UsersManagement.astro` into a two-step flow: Step 1 confirms identity check, and Step 2 reveals the temporary password with a 1-click clipboard copy button and counter instructions (no longer abruptly closes).
