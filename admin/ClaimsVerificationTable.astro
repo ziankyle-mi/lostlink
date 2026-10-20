@@ -1,0 +1,303 @@
+---
+interface Props {
+  role?: "admin" | "student";
+  liveClaims?: any[];
+}
+
+const { role = "admin", liveClaims } = Astro.props;
+const isAdmin = role === "admin";
+
+export const adminClaims = [
+  {
+    id: "claim-1",
+    name: "Black bifold wallet",
+    location: "Found at Library, 2F",
+    iconBg: "bg-[#e5ecdc]",
+    iconType: "wallet",
+    claimant: "Juan D. Reyes",
+    studentId: "2023-01234",
+    statusText: "At the office now",
+    statusStyle: "bg-[#d8ef8c] text-[#164f38]",
+    time: "Today, 2:10 PM",
+    privateDetails: "Contains DLSAU library card, 2 guitar picks, and receipt from cafeteria.",
+  },
+  {
+    id: "claim-2",
+    name: "Student ID card",
+    location: "Found at Main Gate",
+    iconBg: "bg-[#dbe6e2]",
+    iconType: "id-card",
+    claimant: "Maria Santos",
+    studentId: "2022-04871",
+    statusText: "Awaiting visit",
+    statusStyle: "bg-stone-200 text-stone-700",
+    time: "Today, 11:42 AM",
+    privateDetails: "ID in a dark green leather lanyard with a yellow smiley button.",
+  },
+  {
+    id: "claim-3",
+    name: "Keys, green lanyard",
+    location: "Found at Engg. Bldg",
+    iconBg: "bg-[#edecc9]",
+    iconType: "keys",
+    claimant: "Paolo Cruz",
+    studentId: "2024-00318",
+    statusText: "Awaiting visit",
+    statusStyle: "bg-stone-200 text-stone-700",
+    time: "Yesterday, 4:05 PM",
+    privateDetails: "3 silver keys, 1 motorcycle key, DLSAU Agrivet keychain.",
+  },
+  {
+    id: "claim-4",
+    name: "Earbuds case",
+    location: "Found at Admin Lobby",
+    iconBg: "bg-[#ece4d5]",
+    iconType: "earbuds",
+    claimant: "Ana Villanueva +1",
+    studentId: "2 claims on this",
+    statusText: "Two claimants",
+    statusStyle: "bg-[#164f38] text-white",
+    time: "Yesterday, 1:30 PM",
+    privateDetails: "White charging case with subtle scratch on the bottom right corner.",
+  },
+  {
+    id: "claim-5",
+    name: "Folding umbrella",
+    location: "Found at Covered court",
+    iconBg: "bg-[#dce8e4]",
+    iconType: "umbrella",
+    claimant: "Rico Mendoza",
+    studentId: "2023-02290",
+    statusText: "Awaiting visit",
+    statusStyle: "bg-stone-200 text-stone-700",
+    time: "Oct 8, 9:15 AM",
+    privateDetails: "Automatic black umbrella with green handle strap.",
+  },
+];
+
+export const studentClaims = [
+  {
+    id: "claim-s1",
+    name: "Scientific calculator",
+    location: "Turned in at Engg. Bldg",
+    iconBg: "bg-[#dde6de]",
+    iconType: "calculator",
+    claimant: "You (Claim Submitted)",
+    studentId: "2022-04871",
+    statusText: "At the office now",
+    statusStyle: "bg-[#d8ef8c] text-[#164f38]",
+    time: "Today, 2:10 PM",
+    privateDetails: "Casio fx-991EX with name sticker 'M. Santos' on back lid.",
+  },
+  {
+    id: "claim-s2",
+    name: "Keys, green lanyard",
+    location: "Reported lost near Library",
+    iconBg: "bg-[#edecc9]",
+    iconType: "keys",
+    claimant: "You (Lost Report)",
+    studentId: "Report #LR-104",
+    statusText: "Awaiting visit",
+    statusStyle: "bg-stone-200 text-stone-700",
+    time: "Yesterday, 4:05 PM",
+    privateDetails: "Security matches found keys turned in at Admin Lobby.",
+  },
+  {
+    id: "claim-s3",
+    name: "Student ID card",
+    location: "Found at Canteen",
+    iconBg: "bg-[#dbe6e2]",
+    iconType: "id-card",
+    claimant: "You (Turned in to DO)",
+    studentId: "Custody #IN-082",
+    statusText: "In DO custody",
+    statusStyle: "bg-[#164f38] text-white",
+    time: "Oct 8, 9:15 AM",
+    privateDetails: "Safely logged at Disciplinary Office. Ready for owner release.",
+  },
+];
+
+function formatClaimDate(dateStr?: string): string {
+  if (!dateStr) return "Recently";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return isToday ? `Today, ${timeStr}` : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+interface RawLiveClaim {
+  id: string;
+  proof_description?: string;
+  status?: string;
+  created_at?: string;
+  items?: { name?: string; location?: string; category?: string };
+  profiles?: { full_name?: string; email?: string };
+}
+
+const mappedLiveClaims = liveClaims && liveClaims.length > 0
+  ? liveClaims.map((c: RawLiveClaim) => ({
+      id: c.id,
+      name: c.items?.name ?? "Reported Item",
+      location: c.items?.location ? `Found at ${c.items.location}` : "Campus grounds",
+      iconBg: "bg-[#e5ecdc]",
+      iconType: c.items?.category === "IDs, Cards & Wallets" ? "wallet" : "id-card",
+      claimant: c.profiles?.full_name ?? "Student Claimant",
+      studentId: c.profiles?.email ? c.profiles.email.split("@")[0] : "Verified Student",
+      statusText: c.status === "verified" ? "Verified" : (c.status === "denied" ? "Denied" : "Awaiting visit"),
+      statusStyle: c.status === "verified" ? "bg-[#d8ef8c] text-[#164f38]" : (c.status === "denied" ? "bg-red-100 text-red-800" : "bg-stone-200 text-stone-700"),
+      time: formatClaimDate(c.created_at),
+      privateDetails: c.proof_description ?? "Proof details provided during claim verification.",
+    }))
+  : [];
+
+const items = liveClaims !== undefined
+  ? mappedLiveClaims
+  : (isAdmin ? adminClaims : studentClaims);
+---
+
+<section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs" id="claims">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-5 border-b border-stone-100">
+    <div>
+      <h2 class="font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight">
+        {isAdmin ? "Claims to verify" : "My active claims & reports"}
+      </h2>
+      <p class="mt-1 text-sm text-stone-500">
+        {isAdmin
+          ? "Check each claim against the private details before release."
+          : "Track verification status and office pickup tickets."}
+      </p>
+    </div>
+
+    <a
+      href={isAdmin ? "/admin#all-claims" : "/profile#all-claims"}
+      class="text-sm font-bold text-forest-900 hover:text-forest-700 underline underline-offset-4 transition-colors shrink-0"
+    >
+      {isAdmin ? "View all claims \u2192" : "View all reports \u2192"}
+    </a>
+  </div>
+
+  <!-- Table Header (Desktop) -->
+  <div class="hidden sm:grid sm:grid-cols-12 gap-4 py-3 border-b border-stone-100 text-[11px] font-black tracking-wider text-stone-400 uppercase">
+    <div class="col-span-4 lg:col-span-5">ITEM</div>
+    <div class="col-span-3 lg:col-span-3">CLAIMANT</div>
+    <div class="col-span-3 lg:col-span-2">STATUS</div>
+    <div class="col-span-2 lg:col-span-2 text-right">ACTION</div>
+  </div>
+
+  <!-- Rows List -->
+  <div class="divide-y divide-stone-100">
+    {items.length === 0 ? (
+      <div class="py-12 text-center text-stone-500">
+        <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+          <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="mt-3 text-sm font-bold text-forest-900">No claims to verify</p>
+        <p class="mt-1 text-xs text-stone-400">When students submit claims for found items, they will appear here for verification.</p>
+      </div>
+    ) : (
+      items.map((item) => (
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 py-4.5 sm:items-center hover:bg-stone-50/60 rounded-xl px-2 transition-colors">
+        <!-- ITEM Column -->
+        <div class="sm:col-span-4 lg:col-span-5 flex items-center gap-3.5 min-w-0">
+          <div class={`size-11 sm:size-12 shrink-0 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
+            {item.iconType === "wallet" && (
+              <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path>
+                <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>
+              </svg>
+            )}
+            {item.iconType === "id-card" && (
+              <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="14" x="3" y="5" rx="2"></rect>
+                <circle cx="8" cy="11" r="2"></circle>
+                <path d="M14 9h3"></path>
+                <path d="M14 13h3"></path>
+              </svg>
+            )}
+            {item.iconType === "keys" && (
+              <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="7.5" cy="15.5" r="4.5"></circle>
+                <path d="m21 3-9.5 9.5"></path>
+                <path d="m15.5 7.5 3 3"></path>
+              </svg>
+            )}
+            {item.iconType === "earbuds" && (
+              <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="16" height="12" x="4" y="6" rx="4"></rect>
+                <path d="M4 12h16"></path>
+                <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
+              </svg>
+            )}
+            {item.iconType === "umbrella" && (
+              <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12A10 10 0 0 0 2 12Z"></path>
+                <path d="M12 12v7a2 2 0 0 0 4 0"></path>
+                <path d="M12 2v2"></path>
+              </svg>
+            )}
+            {item.iconType === "calculator" && (
+              <svg class="size-6 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="16" height="20" x="4" y="2" rx="2"></rect>
+                <line x1="8" x2="16" y1="6" y2="6"></line>
+                <line x1="16" x2="16" y1="14" y2="18"></line>
+                <path d="M16 10h.01"></path>
+                <path d="M12 10h.01"></path>
+                <path d="M8 10h.01"></path>
+                <path d="M12 14h.01"></path>
+                <path d="M8 14h.01"></path>
+                <path d="M12 18h.01"></path>
+                <path d="M8 18h.01"></path>
+              </svg>
+            )}
+          </div>
+          <div class="min-w-0">
+            <p class="truncate text-sm font-bold text-stone-900 leading-tight">
+              {item.name}
+            </p>
+            <p class="truncate text-xs text-stone-500 mt-0.5">
+              {item.location}
+            </p>
+          </div>
+        </div>
+
+        <!-- CLAIMANT Column -->
+        <div class="sm:col-span-3 lg:col-span-3 min-w-0 pl-14 sm:pl-0">
+          <p class="truncate text-sm font-bold text-stone-900 leading-tight">
+            {item.claimant}
+          </p>
+          <p class="truncate text-xs text-stone-500 mt-0.5 font-mono">
+            {item.studentId}
+          </p>
+        </div>
+
+        <!-- STATUS Column -->
+        <div class="sm:col-span-3 lg:col-span-2 pl-14 sm:pl-0">
+          <span class={`inline-block rounded-full px-3 py-1 text-xs font-bold leading-none ${item.statusStyle}`}>
+            {item.statusText}
+          </span>
+          <span class="block text-xs text-stone-500 mt-1">
+            {item.time}
+          </span>
+        </div>
+
+        <!-- ACTION Column -->
+        <div class="sm:col-span-2 lg:col-span-2 sm:text-right pl-14 sm:pl-0">
+          <button
+            type="button"
+            data-claim-id={item.id}
+            data-claim-item={item.name}
+            data-claim-claimant={item.claimant}
+            data-claim-details={item.privateDetails}
+            class="claim-review-btn inline-flex items-center gap-1 text-sm font-bold text-forest-900 hover:text-forest-700 transition-colors cursor-pointer"
+          >
+            {isAdmin ? "Review \u2192" : "View ticket \u2192"}
+          </button>
+        </div>
+      </div>
+    )))}
+  </div>
+</section>
