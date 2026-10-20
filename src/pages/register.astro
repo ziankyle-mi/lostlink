@@ -93,20 +93,22 @@ const devOpen = devBypassEnabled(Astro.locals.env);
 
     <!-- Role Selection Pills from createnewacc.png -->
     <div>
-      <label class="label">Role</label>
+      <span id="role-label" class="label">Role</span>
       <input type="hidden" name="role" id="role-input" value="student" />
-      <div class="grid grid-cols-2 gap-2.5">
+      <div class="grid grid-cols-2 gap-2.5" role="group" aria-labelledby="role-label">
         <button
           type="button"
           data-role="student"
-          class="role-btn active flex min-h-11 items-center justify-center rounded-control bg-forest-700 text-xs sm:text-sm font-bold text-white shadow-2xs transition-all cursor-pointer"
+          aria-pressed="true"
+          class="role-btn active flex min-h-11 items-center justify-center rounded-control bg-forest-700 text-sm font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer"
         >
           Student
         </button>
         <button
           type="button"
           data-role="faculty"
-          class="role-btn flex min-h-11 items-center justify-center rounded-control border border-line bg-canvas/40 text-xs sm:text-sm font-medium text-forest-900/70 transition-all hover:bg-canvas cursor-pointer"
+          aria-pressed="false"
+          class="role-btn flex min-h-11 items-center justify-center rounded-control border border-line bg-white text-sm font-semibold text-forest-900/80 transition-all hover:bg-canvas active:scale-95 cursor-pointer"
         >
           Faculty
         </button>
@@ -122,7 +124,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
         <label for="program" class="label mb-0" id="program-label">
           Degree Program
         </label>
-        <span class="text-[0.6875rem] font-bold text-forest-800 bg-[#d8ef8c]/50 border border-forest-700/20 px-2 py-0.5 rounded-full">
+        <span class="rounded-full bg-lime border border-forest-700/20 px-2.5 py-1 text-xs font-bold text-forest-900">
           Required for DLSAU Verification
         </span>
       </div>
@@ -170,7 +172,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       <div>
         <div class="flex items-center justify-between mb-1.5">
           <label for="studentId" class="label mb-0">Student ID</label>
-          <span class="text-[0.6875rem] font-bold text-forest-800 bg-[#d8ef8c]/50 border border-forest-700/20 px-2 py-0.5 rounded-full">
+          <span class="rounded-full bg-lime border border-forest-700/20 px-2.5 py-1 text-xs font-bold text-forest-900">
             Required for Students
           </span>
         </div>
@@ -201,7 +203,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       <div>
         <div class="flex items-center justify-between mb-1.5">
           <label for="yearLevel" class="label mb-0">Year Level</label>
-          <span class="text-[0.6875rem] font-bold text-forest-800 bg-[#d8ef8c]/50 border border-forest-700/20 px-2 py-0.5 rounded-full">
+          <span class="rounded-full bg-lime border border-forest-700/20 px-2.5 py-1 text-xs font-bold text-forest-900">
             Required for Students
           </span>
         </div>
@@ -318,7 +320,7 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       function syncRoleUI(role) {
         const isStudent = role === "student" || !role;
 
-        // Toggle student-only fields (hidden & disabled for Faculty / Admin)
+        // Toggle student-only fields (hidden & disabled for Faculty)
         if (studentFields) {
           if (isStudent) {
             studentFields.classList.remove("hidden");
@@ -350,9 +352,6 @@ const devOpen = devBypassEnabled(Astro.locals.env);
           if (role === "faculty") {
             programLabel.textContent = "College / Academic Department";
             programHint.textContent = "Select your teaching or administrative college department.";
-          } else if (role === "admin") {
-            programLabel.textContent = "Office / Department Affiliation";
-            programHint.textContent = "Select your affiliated campus department.";
           } else {
             programLabel.textContent = "Degree Program";
             programHint.textContent = "Your college and program are verified by the Security Office when claiming or verifying campus items.";
@@ -403,11 +402,13 @@ const devOpen = devBypassEnabled(Astro.locals.env);
       roleBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
           roleBtns.forEach((b) => {
-            b.classList.remove("bg-forest-700", "text-white", "font-bold", "active");
-            b.classList.add("border", "border-line", "bg-canvas/40", "text-forest-900/70", "font-medium");
+            b.classList.remove("bg-forest-700", "text-white", "font-bold", "shadow-2xs", "active");
+            b.classList.add("border", "border-line", "bg-white", "text-forest-900/80", "font-semibold");
+            b.setAttribute("aria-pressed", "false");
           });
-          btn.classList.add("bg-forest-700", "text-white", "font-bold", "active");
-          btn.classList.remove("border", "border-line", "bg-canvas/40", "text-forest-900/70", "font-medium");
+          btn.classList.add("bg-forest-700", "text-white", "font-bold", "shadow-2xs", "active");
+          btn.classList.remove("border", "border-line", "bg-white", "text-forest-900/80", "font-semibold");
+          btn.setAttribute("aria-pressed", "true");
 
           const role = btn.dataset.role || "student";
           if (roleInput) {

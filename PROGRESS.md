@@ -23,6 +23,19 @@ Done: Resolved admin Users tab password reset issue and added in-person recovery
 - Added a dedicated "Password Recovery Requests" banner to the admin Users tab with quick-action "Issue Password" buttons, student card badges (`⚡ Reset Requested`), and an alert badge on the Admin Sidebar "Users" link.
 - Verified: All 98 tests pass (`npm test`), `npm run build` succeeds cleanly.
 
+Done: Register form restyled onto the UI design system (matched `context/createnewacc.png`).
+- Role pills use the sanctioned active/inactive recipe (forest-700 + white vs.
+  white + `border-line`, `font-semibold`, `shadow-2xs`, `active:scale-95`);
+  now a real `role="group"` with `aria-pressed` toggled in the client script.
+- "Required for ..." chips moved off `text-[0.6875rem]` (sub-12px) and the
+  non-existent `forest-800` token to the 12px lime attention chip
+  (`bg-lime`, `text-forest-900`, `rounded-full`).
+- Removed the dead admin branch from the role script (Admin pill is gone; role
+  changes come only from the server allowlist). Faculty/student hints unchanged.
+- Verified: `astro check` 0 errors / 0 warnings; `npm test` 98/98;
+  `npm run build` success; `/register` renders 200 with the role group and
+  aria-pressed, no `0.6875rem` utilities left in the page markup.
+
 Done: Redesigned the Full Administrative Audit Log modal with UI design system tokens.
 - Replaced off-palette colors with brand tokens (`danger`, `forest-700`, `lime`, `stone`).
 - Upgraded modal header with Fraunces serif display typography, shield badge lockup, and 40px circular close button.
