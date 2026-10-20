@@ -79,6 +79,16 @@ const stories = [
           </span>
         </div>
 
+        <!-- Subtle animated organic wave layers -->
+        <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-44 overflow-hidden select-none opacity-20">
+          <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-36 text-[#d8ef8c]" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
+            <path d="M0,40 C150,95 350,10 500,60 C650,110 900,20 1200,50 L1200,120 L0,120 Z"></path>
+          </svg>
+          <svg class="animate-wave-reverse absolute -bottom-1 left-0 w-[200%] h-32 text-white opacity-40" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
+            <path d="M0,20 C200,80 400,-10 600,45 C800,100 1000,15 1200,35 L1200,120 L0,120 Z"></path>
+          </svg>
+        </div>
+
         <div class="relative flex items-start justify-between">
           <span class="rounded-full border border-white/25 bg-white/[0.04] px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium tracking-wide text-white/90">
             DLSAU &middot; Lost &amp; Found
@@ -95,9 +105,15 @@ const stories = [
         </p>
 
         <div
-          class="relative rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs"
+          class="relative overflow-hidden rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs"
           data-story-carousel
         >
+          <!-- Subtle animated wave inside callout card -->
+          <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-16 overflow-hidden select-none opacity-15">
+            <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-14 text-forest-900" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
+              <path d="M0,40 C150,95 350,10 500,60 C650,110 900,20 1200,50 L1200,120 L0,120 Z"></path>
+            </svg>
+          </div>
           <div class="grid">
             {
               stories.map((story, i) => (

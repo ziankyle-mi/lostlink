@@ -431,6 +431,58 @@
   border-top-color: var(--color-forest-900);
 }
 
+/* Subtle Organic Wave Animations for Cards */
+@keyframes waveSlow {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-25%, -4px, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes waveReverse {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  50% {
+    transform: translate3d(-25%, 3px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes waveCard {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-25%, -2px, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-wave-slow {
+  animation: waveSlow 14s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.animate-wave-reverse {
+  animation: waveReverse 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.animate-wave-card {
+  animation: waveCard 12s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
