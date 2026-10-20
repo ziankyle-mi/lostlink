@@ -4,7 +4,7 @@ A lost and found system for De La Salle Araneta University designed to streamlin
 
 ## Tech Stack
 
-- **Frontend:** Astro 5, React 19, Tailwind CSS v4
+- **Frontend:** Astro 5, Tailwind CSS v4
 - **Backend & Database:** Supabase (Auth & PostgreSQL)
 
 
