@@ -79,83 +79,14 @@ const stories = [
           </span>
         </div>
 
-        <!-- Flowing Organic SVG Waves (Multi-layered, floating translucent background animation) -->
-        <div class="card-wave-container pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden="true">
-          <!-- Back Wave Layer: Deep Forest Ambient Drift -->
-          <div class="card-wave card-wave-back">
-            <svg viewBox="0 0 1600 450" fill="none" preserveAspectRatio="none" class="h-full w-full">
-              <defs>
-                <linearGradient id="wave-grad-back" x1="0%" y1="0%" x2="100%" y2="80%">
-                  <stop offset="0%" stop-color="#2a7a53" stop-opacity="0.32" />
-                  <stop offset="40%" stop-color="#164f38" stop-opacity="0.22" />
-                  <stop offset="85%" stop-color="#0d3222" stop-opacity="0.12" />
-                  <stop offset="100%" stop-color="#082216" stop-opacity="0.04" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 0,170 C 240,90 480,240 720,160 C 960,80 1200,230 1440,150 C 1540,110 1600,130 1600,130 L 1600,450 L 0,450 Z"
-                fill="url(#wave-grad-back)"
-              />
-            </svg>
-          </div>
-
-          <!-- Mid Wave Layer: Luminous Emerald & Lime Float -->
-          <div class="card-wave card-wave-mid">
-            <svg viewBox="0 0 1600 450" fill="none" preserveAspectRatio="none" class="h-full w-full">
-              <defs>
-                <linearGradient id="wave-grad-mid" x1="0%" y1="0%" x2="100%" y2="60%">
-                  <stop offset="0%" stop-color="#d8ef8c" stop-opacity="0.18" />
-                  <stop offset="35%" stop-color="#3fa76e" stop-opacity="0.16" />
-                  <stop offset="75%" stop-color="#164f38" stop-opacity="0.08" />
-                  <stop offset="100%" stop-color="#d8ef8c" stop-opacity="0.04" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 0,220 C 220,300 460,150 700,230 C 940,310 1180,170 1420,240 C 1520,270 1600,225 1600,225 L 1600,450 L 0,450 Z"
-                fill="url(#wave-grad-mid)"
-              />
-            </svg>
-          </div>
-
-          <!-- Front Wave Layer: Radiant Lime Crest Ribbon with Subtle Edge Glow -->
-          <div class="card-wave card-wave-front">
-            <svg viewBox="0 0 1600 450" fill="none" preserveAspectRatio="none" class="h-full w-full">
-              <defs>
-                <linearGradient id="wave-crest-stroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#d8ef8c" stop-opacity="0.06" />
-                  <stop offset="25%" stop-color="#d8ef8c" stop-opacity="0.45" />
-                  <stop offset="55%" stop-color="#bfe880" stop-opacity="0.6" />
-                  <stop offset="85%" stop-color="#d8ef8c" stop-opacity="0.3" />
-                  <stop offset="100%" stop-color="#d8ef8c" stop-opacity="0.05" />
-                </linearGradient>
-                <linearGradient id="wave-grad-front" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#d8ef8c" stop-opacity="0.12" />
-                  <stop offset="30%" stop-color="#246a48" stop-opacity="0.06" />
-                  <stop offset="100%" stop-color="#0d3222" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M 0,270 C 260,200 520,330 780,250 C 1040,170 1300,310 1560,230 C 1600,220 1600,220 1600,220 L 1600,450 L 0,450 Z"
-                fill="url(#wave-grad-front)"
-              />
-              <path
-                d="M 0,270 C 260,200 520,330 780,250 C 1040,170 1300,310 1560,230 C 1600,220 1600,220 1600,220"
-                stroke="url(#wave-crest-stroke)"
-                stroke-width="2.5"
-                stroke-linecap="round"
-              />
-            </svg>
-          </div>
-        </div>
-
-        <div class="relative z-10 flex items-start justify-between">
+        <div class="relative flex items-start justify-between">
           <span class="rounded-full border border-white/25 bg-white/[0.04] px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium tracking-wide text-white/90">
             DLSAU &middot; Lost &amp; Found
           </span>
         </div>
 
         <p
-          class="relative z-10 font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal tracking-tight text-white"
+          class="relative font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal tracking-tight text-white"
         >
           Find what<br />
           <span class="font-bold text-[#d8ef8c]">you Lost.</span><br />
@@ -164,7 +95,7 @@ const stories = [
         </p>
 
         <div
-          class="relative z-10 rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs"
+          class="relative rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs"
           data-story-carousel
         >
           <div class="grid">
@@ -283,83 +214,4 @@ const stories = [
     })();
   </script>
 
-  <style>
-    .card-wave-container {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      pointer-events: none;
-      border-radius: inherit;
-    }
-
-    .card-wave {
-      position: absolute;
-      bottom: -10%;
-      left: -20%;
-      width: 140%;
-      height: 72%;
-      will-change: transform;
-      mix-blend-mode: screen;
-      pointer-events: none;
-    }
-
-    .card-wave-back {
-      animation: waveDriftBack 20s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
-    }
-
-    .card-wave-mid {
-      animation: waveDriftMid 15s cubic-bezier(0.42, 0, 0.58, 1) infinite alternate;
-      opacity: 0.9;
-    }
-
-    .card-wave-front {
-      animation: waveDriftFront 11s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
-      opacity: 0.95;
-      filter: drop-shadow(0 0 10px rgba(216, 239, 140, 0.25));
-    }
-
-    @keyframes waveDriftBack {
-      0% {
-        transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg);
-      }
-      50% {
-        transform: translate3d(-6%, -16px, 0) scale(1.04, 1.08) rotate(1deg);
-      }
-      100% {
-        transform: translate3d(4%, -6px, 0) scale(0.97, 0.96) rotate(-0.8deg);
-      }
-    }
-
-    @keyframes waveDriftMid {
-      0% {
-        transform: translate3d(4%, 0, 0) scale(1.02, 0.96) rotate(-1deg);
-      }
-      50% {
-        transform: translate3d(-5%, -12px, 0) scale(0.97, 1.05) rotate(0.8deg);
-      }
-      100% {
-        transform: translate3d(-7%, 8px, 0) scale(1.03, 1.01) rotate(-0.4deg);
-      }
-    }
-
-    @keyframes waveDriftFront {
-      0% {
-        transform: translate3d(-3%, 4px, 0) scale(1, 1);
-      }
-      50% {
-        transform: translate3d(5%, -14px, 0) scale(1.03, 1.06);
-      }
-      100% {
-        transform: translate3d(-5%, -4px, 0) scale(0.98, 0.97);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .card-wave-back,
-      .card-wave-mid,
-      .card-wave-front {
-        animation: none !important;
-      }
-    }
-  </style>
 </Base>

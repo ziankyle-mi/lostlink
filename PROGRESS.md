@@ -18,6 +18,41 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Admin sidebar's Student View button now opens the campus feed (`/`)
+instead of the separate profile page. No visual changes.
+
+Done: Logout from student and admin pages now redirects to login on the first
+submit. Added logout-result handling to shared-navbar routes and the admin
+console; no UI changes.
+
+Updated: Admin navigation analysis confirmed these are hash-jump links, not
+dedicated screens. Moved the `lost-reports` anchor to the Active lost reports
+KPI (it was mistakenly on Items in custody). `inventory` currently jumps to
+the Waiting for intake queue; there is no separate all-items inventory or lost
+reports table in the admin dashboard.
+- Verified: `astro check` has 0 errors; Cloudflare build succeeds.
+
+Done: Admin sidebar anchors resolve to existing sections.
+- Added the missing `lost-reports` target to the Active lost reports metric and
+  the missing `inventory` target to the found-item intake queue. Both direct
+  hash URLs and the sidebar links now have matching destinations.
+
+Done: Newly posted "Just now" items match the Today date filter.
+- The quick-report client card now carries the same local calendar date sent
+  with the report to the API; previously it had only a display label ("Just
+  now") and no `data-item-event-date`, so date filters excluded it.
+- Verified in the browser by posting a mocked report, then selecting Today:
+  the card remained visible with its Just now label. `astro check` passed with
+  0 errors and the Cloudflare build passed.
+
+Done: Dashboard filters include values used by live approved reports.
+- `FilterBar` keeps the canonical category and campus-location options and
+  appends distinct values present in the current feed, so older or new report
+  values remain selectable.
+- Verified in the running app: selecting the live-only `Accessories` category
+  shows its matching card; selecting `Cafeteria` shows its four matching
+  cards. `astro check`, build, and the focused schema suite pass.
+
 Done: Responsive device adaptation and notification bell placement fix.
 - Reordered right-hand navbar utility controls to `[Post an item]` -> `[Notification Bell]` -> `[User Avatar]` so the bell naturally sits with user tools on the right rather than awkward left placement.
 - Fixed notification popover positioning: on mobile (`<640px`), it renders centered with `fixed inset-x-3 top-16` within screen bounds; on tablets/PC (`>=640px`), it anchors cleanly with `sm:absolute sm:right-0 sm:top-14 sm:w-80`.

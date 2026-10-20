@@ -68,19 +68,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAction = pathname.startsWith(ACTION_PREFIX);
   const isPublicAction = isAction && PUBLIC_ACTIONS.has(actionName(pathname));
 
-  // Instant 1-click logout defense-in-depth:
-  // If the request targets logout (via action query or action endpoint), clear cookies and redirect immediately.
-  if (
-    context.url.searchParams.get("_action") === "logout" ||
-    (isAction && actionName(pathname) === "logout")
-  ) {
-    clearSessionCookies(context.cookies);
-    const accept = context.request.headers.get("accept") || "";
-    if (!accept.includes("application/json")) {
-      return context.redirect("/login", 303);
-    }
-  }
-
   if (isPublic(pathname) || isPublicAction) {
     // Logged-in visitors on /login are redirected by the page itself.
     context.locals.user = await resolveUser(context.cookies, env);

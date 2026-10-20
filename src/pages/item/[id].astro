@@ -1,4 +1,5 @@
 ---
+import { actions } from "astro:actions";
 import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
 import { ALL_ITEMS } from "~/data/mockItems";
@@ -6,6 +7,11 @@ import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
 
 const { id } = Astro.params;
+
+const logoutResult = Astro.getActionResult(actions.logout);
+if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
+  return Astro.redirect(logoutResult.data.redirect, 302);
+}
 
 // Resolve user session (if logged in)
 const user = Astro.locals.user;

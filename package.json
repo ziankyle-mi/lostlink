@@ -12,10 +12,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/cloudflare": "12.6.13",
     "@astrojs/react": "^4.4.2",
     "@supabase/supabase-js": "^2.117.2",
-    "astro": "^5.18.2",
+    "astro": "5.18.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^3.25.76"
@@ -28,13 +28,11 @@
     "@types/react-dom": "^19.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.0",
-    "vitest": "^3.2.0"
+    "vitest": "^5.0.5"
   },
   "allowScripts": {
-    "esbuild@0.27.7": true,
-    "esbuild@0.25.12": true,
-    "esbuild@0.27.0": true,
     "sharp@0.34.5": true,
-    "workerd@1.20260114.0": true
+    "esbuild@0.28.2": true,
+    "workerd@1.20261012.1": true
   }
 }
