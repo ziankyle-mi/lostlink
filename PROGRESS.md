@@ -16,10 +16,11 @@ The agent updates this file after every step. Keep it short.
 - [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
-Done: Completed fast-track system improvements (Tasks 1, 2, and 3).
-- Task 1: Harmonized `ItemClaimModal.astro` with the design system (Fraunces serif heading, circular close button, `z-[100]` backdrop-blur-sm, token metadata card, and `rounded-full bg-forest-700` action button).
-- Task 2: Closed admin privilege escalation in `src/lib/session.ts` by removing insecure `admin.*` and `lostlink@` prefix heuristics; roles are now authoritatively verified from `profiles.role` in Supabase.
-- Task 3: Standardized status badges (`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider`) and button copy to clean sentence case ("Submit report", "Submit claim", "Forgot password?", "Sign in") across `ReportModal.astro`, `ItemClaimModal.astro`, `item/[id].astro`, `login.astro`, and `profile.astro`.
+Done: Redesigned the Full Administrative Audit Log modal with UI design system tokens.
+- Replaced off-palette colors with brand tokens (`danger`, `forest-700`, `lime`, `stone`).
+- Upgraded modal header with Fraunces serif display typography, shield badge lockup, and 40px circular close button.
+- Replaced emoji with tokenized Lucide SVG info icon and refined callout box.
+- Standardized search input to pill format and upgraded audit event rows into tactile cards with tokenized badges, operator tags, and monospace timestamps.
 - Verified: `astro check` passed with 0 errors and 0 warnings. Committed and pushed to `main`.
 
 Done: Admin sidebar's Student View button now opens the campus feed (`/`)

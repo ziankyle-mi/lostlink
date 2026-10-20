@@ -285,9 +285,9 @@ function parseAuditEvent(
     return {
       title: "Student Account Deleted",
       badgeText: "Account Deleted",
-      badgeClass: "bg-rose-100 text-rose-800 border-rose-200",
+      badgeClass: "bg-danger/10 text-danger border-danger/20",
       iconType: "delete",
-      iconBg: "bg-rose-50 text-rose-700 border-rose-200",
+      iconBg: "bg-danger/10 text-danger border-danger/20",
       description: `Permanently removed account record for ${target}.`,
       target,
       operator,
@@ -296,16 +296,16 @@ function parseAuditEvent(
     };
   }
 
-  // 2. Password Reset Sent (e.g. "password_reset_sent: juan.reyes@dlsau.edu.ph")
-  if (action.startsWith("password_reset_sent:")) {
-    const target = action.replace("password_reset_sent:", "").trim();
+  // 2. Password Reset Sent / Temp Password Issued
+  if (action.startsWith("password_reset_sent:") || action.startsWith("temp_password_issued:")) {
+    const target = action.replace("password_reset_sent:", "").replace("temp_password_issued:", "").trim();
     return {
-      title: "Password Reset Link Dispatched",
-      badgeText: "Password Reset",
-      badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+      title: "Temporary Password Issued",
+      badgeText: "Recovery",
+      badgeClass: "bg-[#ece5d6] text-forest-900 border-stone-300",
       iconType: "key",
-      iconBg: "bg-amber-50 text-amber-700 border-amber-200",
-      description: `Dispatched official security password reset instructions to ${target}.`,
+      iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+      description: `Dispatched official security verification and temporary credentials to ${target}.`,
       target,
       operator,
       category: "user",
@@ -319,10 +319,10 @@ function parseAuditEvent(
     const target = action.replace("status_updated:", "").replace(/set to (suspended|active)/, "").trim();
     return {
       title: isSuspended ? "User Account Suspended" : "User Account Reactivated",
-      badgeText: isSuspended ? "Suspended" : "Reactivated",
-      badgeClass: isSuspended ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200",
+      badgeText: isSuspended ? "Suspended" : "Active",
+      badgeClass: isSuspended ? "bg-[#ece5d6] text-forest-900 border-stone-300" : "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
       iconType: isSuspended ? "suspend" : "activate",
-      iconBg: isSuspended ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200",
+      iconBg: isSuspended ? "bg-[#faf8f4] text-forest-900 border-line" : "bg-forest-700/10 text-forest-700 border-forest-700/20",
       description: isSuspended ? `Temporarily suspended access for ${target}.` : `Restored full active access for ${target}.`,
       target,
       operator,
@@ -338,9 +338,9 @@ function parseAuditEvent(
     return {
       title: isAdminRole ? "Granted Administrator Privileges" : "Permissions Changed to Student",
       badgeText: isAdminRole ? "Admin Promoted" : "Role Changed",
-      badgeClass: isAdminRole ? "bg-blue-100 text-blue-800 border-blue-200" : "bg-stone-100 text-stone-700 border-stone-200",
+      badgeClass: isAdminRole ? "bg-forest-700 text-[#d8ef8c] border-forest-800" : "bg-stone-100 text-stone-700 border-stone-200",
       iconType: isAdminRole ? "shield" : "user",
-      iconBg: isAdminRole ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-stone-100 text-stone-600 border-stone-200",
+      iconBg: isAdminRole ? "bg-forest-700 text-[#d8ef8c] border-forest-800" : "bg-stone-100 text-stone-600 border-stone-200",
       description: isAdminRole
         ? `Promoted ${target} to Disciplinary Office Administrator.`
         : `Changed permissions for ${target} to standard campus student.`,
@@ -357,9 +357,9 @@ function parseAuditEvent(
     return {
       title: "Campus Feed Post Removed",
       badgeText: "Post Removed",
-      badgeClass: "bg-rose-100 text-rose-800 border-rose-200",
+      badgeClass: "bg-danger/10 text-danger border-danger/20",
       iconType: "trash",
-      iconBg: "bg-rose-50 text-rose-700 border-rose-200",
+      iconBg: "bg-danger/10 text-danger border-danger/20",
       description: `Removed public post for "${item}" from campus view.`,
       target: item,
       operator,
@@ -374,9 +374,9 @@ function parseAuditEvent(
     return {
       title: "Claim Approved & Released",
       badgeText: "Claim Approved",
-      badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
       iconType: "check",
-      iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      iconBg: "bg-forest-700 text-white border-forest-800",
       description: action.replace(/^System log:\s*/i, ""),
       target: item,
       operator,
@@ -391,9 +391,9 @@ function parseAuditEvent(
     return {
       title: "Item Received in Vault Custody",
       badgeText: "Custody Intake",
-      badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+      badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
       iconType: "box",
-      iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+      iconBg: "bg-[#faf8f4] text-forest-700 border-line",
       description: action.replace(/^System log:\s*/i, ""),
       target: item,
       operator,
@@ -428,9 +428,9 @@ const defaultAuditEvents = [
     id: "e1",
     title: "Claim Approved: iPhone 13 Pro Released",
     badgeText: "Claim Approved",
-    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
     iconType: "check",
-    iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    iconBg: "bg-forest-700 text-white border-forest-800",
     description: "Identity verified. Item released to student Maria Santos (ID: 2024-10144).",
     target: "iPhone 13 Pro (Ref: DLSAU-2026-F002)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -441,9 +441,9 @@ const defaultAuditEvents = [
     id: "e2",
     title: "Custody Intake: Hydro Flask 32oz",
     badgeText: "Custody Intake",
-    badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
     iconType: "box",
-    iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
     description: "Physical tag affixed. Placed in Disciplinary Office Vault Shelf C-1.",
     target: "Hydro Flask 32oz (Ref: DLSAU-2026-F005)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -454,9 +454,9 @@ const defaultAuditEvents = [
     id: "e3",
     title: "Account Promoted to Administrator",
     badgeText: "Admin Promoted",
-    badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
+    badgeClass: "bg-forest-700 text-[#d8ef8c] border-forest-800",
     iconType: "shield",
-    iconBg: "bg-blue-50 text-blue-700 border-blue-200",
+    iconBg: "bg-forest-700 text-[#d8ef8c] border-forest-800",
     description: "Granted Disciplinary Office administrative privileges to Prof. Lourdes Carandang (Faculty).",
     target: "Prof. Lourdes Carandang",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -467,9 +467,9 @@ const defaultAuditEvents = [
     id: "e4",
     title: "Custody Intake: Casio Scientific Calculator",
     badgeText: "Custody Intake",
-    badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
     iconType: "box",
-    iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
     description: "Intake verified and custody logged at Disciplinary Office Room 102.",
     target: "Casio fx-991EX (Ref: DLSAU-2026-F009)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -480,9 +480,9 @@ const defaultAuditEvents = [
     id: "e5",
     title: "Claim Submitted: Blue Backpack",
     badgeText: "Proof Submitted",
-    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+    badgeClass: "bg-[#ece5d6] text-forest-900 border-stone-300",
     iconType: "key",
-    iconBg: "bg-amber-50 text-amber-700 border-amber-200",
+    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
     description: "Claimant submitted proof photo and identifying characteristics.",
     target: "Blue backpack (Ref: DLSAU-2026-F014)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -493,9 +493,9 @@ const defaultAuditEvents = [
     id: "e6",
     title: "Student Account Suspended",
     badgeText: "Suspended",
-    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+    badgeClass: "bg-[#ece5d6] text-forest-900 border-stone-300",
     iconType: "suspend",
-    iconBg: "bg-amber-50 text-amber-700 border-amber-200",
+    iconBg: "bg-[#faf8f4] text-forest-900 border-line",
     description: "Temporarily suspended account pending Disciplinary Office student affairs review.",
     target: "Marc Daniel Hernandez",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -506,9 +506,9 @@ const defaultAuditEvents = [
     id: "e7",
     title: "Claim Approved: Leather Wallet Released",
     badgeText: "Claim Approved",
-    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
     iconType: "check",
-    iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    iconBg: "bg-forest-700 text-white border-forest-800",
     description: "Physical ID inspected. Item released to student Christian Reyes.",
     target: "Leather wallet (Ref: DLSAU-2026-F001)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -519,9 +519,9 @@ const defaultAuditEvents = [
     id: "e8",
     title: "Custody Intake: DLSAU Student ID Card",
     badgeText: "Custody Intake",
-    badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
     iconType: "box",
-    iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
     description: "Placed in secure Locker Vault A-1 (CAST Department lost card drawer).",
     target: "DLSAU ID Card (Ref: DLSAU-2026-F003)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -815,45 +815,67 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
   </div>
 
   <!-- Modal 2: Full Audit Log Modal -->
+  <!-- Modal 2: Full Audit Log Modal -->
   <div
     id="audit-log-modal"
-    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-3 sm:p-5 backdrop-blur-sm transition-all"
     role="dialog"
     aria-modal="true"
     aria-labelledby="audit-log-modal-title"
   >
-    <div class="relative w-full max-w-3xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
-        <div>
-          <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
-            Campus Audit Trail
-          </span>
-          <h3 id="audit-log-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
-            Full Administrative Audit Log
-          </h3>
-          <p class="text-xs text-stone-500 mt-0.5">Chronological record of verified claims, custodial intakes, role alterations, and account moderation.</p>
+    <div class="relative w-full max-w-3xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto custom-scrollbar transition-all">
+      <!-- Header with Shield Lockup & Close Button -->
+      <div class="flex items-start justify-between gap-4 border-b border-line/80 pb-5">
+        <div class="flex items-center gap-3.5">
+          <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-forest-700 text-[#d8ef8c] shadow-xs">
+            <svg class="size-5.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+          </div>
+          <div>
+            <span class="inline-block rounded-full bg-forest-700/10 px-3 py-0.5 text-[10px] font-black tracking-widest text-forest-700 uppercase">
+              Campus Audit Trail
+            </span>
+            <h3 id="audit-log-modal-title" class="mt-0.5 font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight leading-tight">
+              Full Administrative <span class="italic font-bold text-forest-700">Audit Log</span>
+            </h3>
+            <p class="mt-1 text-xs sm:text-sm text-stone-500 leading-normal">
+              Chronological record of verified claims, custodial intakes, role alterations, and account moderation.
+            </p>
+          </div>
         </div>
+
+        <!-- Close button -->
         <button
           type="button"
-          class="close-audit-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          class="close-audit-modal flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-stone-50 text-stone-500 hover:bg-forest-700 hover:text-white hover:border-forest-700 transition-all cursor-pointer shadow-2xs active:scale-95"
           aria-label="Close dialog"
         >
-          &times;
+          <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
-      <!-- Friendly guidance for staff members -->
-      <div class="mt-3.5 rounded-2xl bg-[#f5f1e6]/80 border border-stone-200/90 p-3.5 text-xs text-stone-700 flex items-start gap-3">
-        <div class="size-6 rounded-full bg-forest-700/10 text-forest-800 flex items-center justify-center font-bold shrink-0 mt-0.5" aria-hidden="true">ℹ️</div>
+      <!-- Friendly guidance for staff members (No emojis, tokenized) -->
+      <div class="mt-4 rounded-2xl bg-[#faf8f4] border border-line/80 p-4 text-xs text-stone-600 flex items-start gap-3 shadow-2xs">
+        <div class="flex size-6 shrink-0 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 mt-0.5" aria-hidden="true">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
         <div class="leading-relaxed">
           <strong class="font-bold text-forest-900">How to read this record:</strong>
           Every action taken in LostLink is automatically recorded here in plain language. You can see who performed the action, which student account or item was affected, and the exact time it happened.
         </div>
       </div>
 
-      <!-- Live Search Box for quick lookup -->
+      <!-- Live Search Box for quick lookup (Pill style) -->
       <div class="mt-4 relative">
-        <svg class="size-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="size-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
@@ -861,33 +883,33 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           type="text"
           id="audit-log-search"
           placeholder="Search by student email, item name, or action (e.g. maria, delete, hydro flask)..."
-          class="w-full pl-10 pr-4 py-2 text-xs sm:text-sm bg-stone-50 hover:bg-white focus:bg-white rounded-xl border border-stone-200 focus:border-forest-700/40 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium"
+          class="w-full min-h-[3rem] pl-11 pr-4 py-2 text-sm bg-white rounded-full border border-line shadow-2xs focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium"
         />
       </div>
 
       <!-- Filter chips for audit log -->
-      <div class="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 flex-wrap" id="audit-filter-pills">
-        <button type="button" class="audit-filter-pill active rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-audit-filter="all">
+      <div class="mt-3.5 flex items-center gap-2 overflow-x-auto pb-1 flex-wrap" id="audit-filter-pills">
+        <button type="button" class="audit-filter-pill active min-h-9 rounded-full bg-forest-700 px-4 py-1.5 text-xs font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-audit-filter="all">
           All activity ({allAuditEvents.length})
         </button>
-        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="claim">
+        <button type="button" class="audit-filter-pill min-h-9 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="claim">
           Claim verifications
         </button>
-        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="intake">
+        <button type="button" class="audit-filter-pill min-h-9 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="intake">
           Custodial intake
         </button>
-        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
+        <button type="button" class="audit-filter-pill min-h-9 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
           User moderation
         </button>
       </div>
 
       <!-- Audit Events List -->
-      <div class="mt-4 divide-y divide-stone-100 max-h-[420px] overflow-y-auto pr-1" id="audit-events-container">
+      <div class="mt-4 space-y-2.5 max-h-[440px] overflow-y-auto custom-scrollbar pr-1" id="audit-events-container">
         {allAuditEvents.map((evt) => (
-          <div class="audit-event-row flex items-start justify-between gap-3 p-3.5 rounded-2xl hover:bg-stone-50 transition-colors border border-transparent hover:border-stone-200/70" data-event-category={evt.category}>
-            <div class="flex items-start gap-3 min-w-0">
+          <div class="audit-event-row flex items-start justify-between gap-3.5 p-4 rounded-2xl border border-line/80 bg-white hover:border-forest-700/40 hover:bg-[#faf8f4]/60 transition-all shadow-2xs group" data-event-category={evt.category}>
+            <div class="flex items-start gap-3.5 min-w-0">
               <!-- Distinct, Color-Coded Icon -->
-              <div class={`size-10 rounded-2xl flex items-center justify-center shrink-0 border ${evt.iconBg} shadow-2xs mt-0.5`}>
+              <div class={`size-11 rounded-2xl flex items-center justify-center shrink-0 border ${evt.iconBg} shadow-2xs mt-0.5`}>
                 {evt.iconType === "delete" && (
                   <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -952,7 +974,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                   <h4 class="font-bold text-forest-900 text-sm leading-tight">
                     {evt.title}
                   </h4>
-                  <span class={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${evt.badgeClass}`}>
+                  <span class={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${evt.badgeClass}`}>
                     {evt.badgeText}
                   </span>
                 </div>
@@ -961,16 +983,16 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                   {evt.description}
                 </p>
 
-                <div class="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
+                <div class="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
                   <span class="inline-flex items-center gap-1">
                     <span class="font-medium text-stone-400">Handled by:</span>
-                    <span class="font-medium text-stone-700 bg-stone-100 rounded px-1.5 py-0.5">{evt.operator}</span>
+                    <span class="font-semibold text-forest-900 bg-stone-100 rounded px-1.5 py-0.5 border border-stone-200/60">{evt.operator}</span>
                   </span>
                   {evt.target && (
                     <span class="inline-flex items-center gap-1">
                       <span class="text-stone-300">&bull;</span>
                       <span class="font-medium text-stone-400">Target:</span>
-                      <span class="font-medium text-forest-900">{evt.target}</span>
+                      <span class="font-bold text-forest-900">{evt.target}</span>
                     </span>
                   )}
                 </div>
@@ -979,7 +1001,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
 
             <!-- Timestamp badge -->
             <div class="shrink-0 text-right">
-              <span class="inline-block rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600 whitespace-nowrap">
+              <span class="inline-block rounded-full bg-stone-100 px-3 py-1 font-mono text-xs font-semibold text-stone-600 whitespace-nowrap border border-stone-200/50">
                 {evt.time}
               </span>
             </div>
@@ -991,11 +1013,17 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         </div>
       </div>
 
-      <div class="mt-6 flex items-center justify-between pt-4 border-t border-stone-100">
-        <span class="text-xs text-stone-500 font-medium">Logged securely with cryptographic integrity &bull; DLSAU Security Office</span>
+      <!-- Modal Footer -->
+      <div class="mt-5 flex items-center justify-between gap-3 pt-4 border-t border-line/80">
+        <div class="flex items-center gap-1.5 text-xs text-stone-500 font-medium hidden sm:flex">
+          <svg class="size-4 text-forest-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Logged securely with cryptographic integrity &bull; DLSAU Security Office</span>
+        </div>
         <button
           type="button"
-          class="close-audit-modal rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+          class="close-audit-modal min-h-10 rounded-full border border-line bg-white hover:bg-stone-50 active:scale-95 px-6 py-2 text-xs font-bold text-forest-900 transition-all shadow-2xs cursor-pointer ml-auto"
         >
           Close
         </button>
