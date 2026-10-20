@@ -352,6 +352,36 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(studentUser.role).toBe("user");
     expect(studentUser.portalLevel).toBe("Student");
   });
+
+  it("issues temporary password for campus user (arona.levela@dlsau.edu.ph) with proper format", async () => {
+    const adminUser = {
+      id: "admin-uuid-1",
+      email: "dlsau.lostlink@dlsau.edu.ph",
+      role: "admin" as const,
+    };
+
+    const req = new Request("http://localhost:4321/api/admin/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "reset_user_password",
+        email: "arona.levela@dlsau.edu.ph",
+      }),
+    });
+
+    const res = await adminActionsPost({
+      request: req,
+      locals: { user: adminUser, env },
+    } as any);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(data.email).toBe("arona.levela@dlsau.edu.ph");
+    expect(data.tempPassword).toBeDefined();
+    expect(data.tempPassword).toMatch(/^Reset-[A-Z0-9]+-\d+$/);
+    expect(data.message).toContain("arona.levela@dlsau.edu.ph");
+  });
 });
 
 
