@@ -173,7 +173,30 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(data.active).toBe(false);
   });
 
-  it("dispatches password reset link for valid campus email", async () => {
+  it("rejects reset_user_password with a missing or invalid email", async () => {
+    const adminUser = {
+      id: "admin-uuid-1",
+      email: "dlsau.lostlink@dlsau.edu.ph",
+      role: "admin" as const,
+    };
+
+    const req = new Request("http://localhost:4321/api/admin/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reset_user_password", email: "" }),
+    });
+
+    const res = await adminActionsPost({
+      request: req,
+      locals: { user: adminUser, env },
+    } as any);
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.ok).toBe(false);
+  });
+
+  it("issues a temporary password (or reports no account) for a campus email", async () => {
     const adminUser = {
       id: "admin-uuid-1",
       email: "dlsau.lostlink@dlsau.edu.ph",
@@ -194,10 +217,17 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
       locals: { user: adminUser, env },
     } as any);
 
-    expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.ok).toBe(true);
-    expect(data.message).toContain("juan.reyes@dlsau.edu.ph");
+    if (res.status === 200) {
+      // Account exists in this environment: a temp password must be returned.
+      expect(data.ok).toBe(true);
+      expect(data.tempPassword).toMatch(/^Reset-/);
+      expect(data.message).toContain("juan.reyes@dlsau.edu.ph");
+    } else {
+      // Account not provisioned here: the action must say so, never fake success.
+      expect(res.status).toBe(404);
+      expect(data.ok).toBe(false);
+    }
   });
 
   it("prevents administrators from deleting their own active account", async () => {

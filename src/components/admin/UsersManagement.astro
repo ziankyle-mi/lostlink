@@ -507,7 +507,7 @@ const defaultSelectedUser = users[0] || null;
                 class="rounded-full bg-[#ece5d6] hover:bg-stone-200 px-4 py-2 text-xs font-bold text-forest-900 transition-all active:scale-95 cursor-pointer"
                 data-user-email={defaultSelectedUser?.email}
                 data-user-name={defaultSelectedUser?.full_name}
-                title="Send secure password reset link to user's campus email"
+                title="Issue a temporary password after verifying the student's DLSAU ID"
               >
                 Reset password
               </button>
@@ -715,7 +715,7 @@ const defaultSelectedUser = users[0] || null;
             Security reset
           </span>
           <h3 class="font-serif text-2xl font-black text-forest-900 mt-2">
-            Send reset instructions
+            Issue temporary password
           </h3>
         </div>
         <button
@@ -729,10 +729,10 @@ const defaultSelectedUser = users[0] || null;
 
       <div class="mt-4 text-sm text-stone-600 space-y-3">
         <p id="pwd-modal-description">
-          A secure password recovery link will be dispatched to the user's verified DLSAU email.
+          Issue a temporary password for this student. They must change it after signing in.
         </p>
         <div class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-900">
-          Passwords are encrypted using cryptographic hashes and can never be viewed directly. The student will receive a link to securely configure their new credentials.
+          Read the temporary password to the student at the counter after checking their DLSAU ID. It is also sent to their in-app notifications.
         </div>
       </div>
 
@@ -748,7 +748,7 @@ const defaultSelectedUser = users[0] || null;
           id="confirm-send-pwd-btn"
           class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
         >
-          Send reset link
+          Issue temp password
         </button>
       </div>
     </div>
@@ -1386,7 +1386,7 @@ const defaultSelectedUser = users[0] || null;
         const { userEmail, userName } = pendingTarget;
 
         confirmPwdBtn.disabled = true;
-        confirmPwdBtn.textContent = "Sending...";
+        confirmPwdBtn.textContent = "Issuing...";
 
         try {
           const res = await fetch("/api/admin/actions", {

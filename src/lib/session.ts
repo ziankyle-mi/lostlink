@@ -1,4 +1,5 @@
 import type { AstroCookies } from "astro";
+import { createClient } from "@supabase/supabase-js";
 import type { Env } from "./env";
 import {
   ACCESS_COOKIE,
@@ -67,8 +68,30 @@ export const ADMIN_EMAILS = new Set([
 
 export function roleForEmail(email: string): "admin" | "user" {
   const norm = email.toLowerCase().trim();
-  if (ADMIN_EMAILS.has(norm) || norm.startsWith("admin.") || norm.includes("lostlink@")) {
+  if (ADMIN_EMAILS.has(norm)) {
     return "admin";
+  }
+  return "user";
+}
+
+async function resolveRole(env: Env, userId: string, email: string): Promise<"admin" | "user"> {
+  const norm = email.toLowerCase().trim();
+  if (ADMIN_EMAILS.has(norm)) return "admin";
+
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) return "user";
+
+  try {
+    const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, { auth: { persistSession: false } });
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (data?.role === "admin") return "admin";
+  } catch (err) {
+    console.warn("[session] profile role resolution failed:", err);
   }
   return "user";
 }
@@ -101,7 +124,8 @@ export async function resolveUser(
   if (accessToken) {
     const user = await fetchUser(env, accessToken);
     if (user?.email && isAllowedEmail(user.email, policy)) {
-      return { id: user.id, email: user.email, role: roleForEmail(user.email) };
+      const role = await resolveRole(env, user.id, user.email);
+      return { id: user.id, email: user.email, role };
     }
     return null;
   }
@@ -112,7 +136,8 @@ export async function resolveUser(
       setAccessCookie(cookies, refreshed.access_token);
       const user = await fetchUser(env, refreshed.access_token);
       if (user?.email && isAllowedEmail(user.email, policy)) {
-        return { id: user.id, email: user.email, role: roleForEmail(user.email) };
+        const role = await resolveRole(env, user.id, user.email);
+        return { id: user.id, email: user.email, role };
       }
     }
   }
