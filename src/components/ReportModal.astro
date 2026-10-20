@@ -10,26 +10,21 @@ const presets = CAMPUS_LOCATIONS;
 
 <div
   id="report-modal-backdrop"
-  class="fixed inset-0 z-50 hidden items-center justify-center bg-[#082e1a]/65 backdrop-blur-md p-3 sm:p-5 transition-all"
+  class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-5 transition-all"
   role="dialog"
   aria-modal="true"
   aria-labelledby="report-modal-title"
 >
-  <div class="relative w-full max-w-xl max-h-[92dvh] overflow-y-auto custom-scrollbar rounded-[2rem] sm:rounded-[2.25rem] border border-[#e2ded5] bg-[#ffffff] p-5 sm:p-7 shadow-2xl transition-all">
+  <div class="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto custom-scrollbar rounded-card border border-line bg-white p-6 sm:p-8 shadow-card transition-all">
     <!-- Header with Brand Accent & Close Button -->
-    <div class="flex items-start justify-between gap-4 border-b border-[#ece5d6] pb-4.5">
-      <div class="flex items-center gap-3">
-        <BrandMark class="size-10 shadow-xs" size={40} />
+    <div class="flex items-start justify-between gap-4 border-b border-line/80 pb-5">
+      <div class="flex items-center gap-3.5">
+        <BrandMark class="size-11 rounded-2xl shadow-xs shrink-0" size={44} />
         <div>
-          <div class="flex items-center gap-2">
-            <span class="inline-block rounded-full bg-[#164f38]/10 px-2.5 py-0.5 text-[10px] font-black tracking-widest text-[#164f38] uppercase">
-              DLSAU Campus Feed
-            </span>
-          </div>
-          <h3 id="report-modal-title" class="mt-0.5 font-serif text-xl sm:text-2xl font-black text-[#082e1a] tracking-tight">
-            Post an Item to <span class="italic font-bold text-[#164f38]">Campus Feed</span>
+          <h3 id="report-modal-title" class="font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight leading-tight">
+            Post an Item to <span class="italic font-bold text-forest-700">Campus Feed</span>
           </h3>
-          <p class="mt-0.5 text-xs text-stone-500">
+          <p class="mt-1 text-xs sm:text-sm text-stone-500 leading-normal">
             Submit an item to be verified and published across De La Salle Araneta University.
           </p>
         </div>
@@ -39,7 +34,7 @@ const presets = CAMPUS_LOCATIONS;
       <button
         type="button"
         id="close-report-modal"
-        class="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-400 hover:bg-[#164f38] hover:text-white transition-all cursor-pointer shadow-2xs"
+        class="flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-stone-50 text-stone-500 hover:bg-forest-700 hover:text-white hover:border-forest-700 transition-all cursor-pointer shadow-2xs active:scale-95"
         aria-label="Close dialog"
       >
         <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -49,30 +44,30 @@ const presets = CAMPUS_LOCATIONS;
     </div>
 
     <!-- Step 1: Type Selection Choice (Found vs Lost) -->
-    <div class="mt-4.5">
-      <span class="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-2">
+    <div class="mt-5">
+      <span class="block text-xs font-bold uppercase tracking-wider text-forest-900/80 mb-2.5">
         Report Classification
       </span>
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <button
           type="button"
           id="report-choice-found"
-          class="group relative flex flex-col items-start rounded-2xl border-2 border-[#164f38] bg-[#164f38]/5 p-3.5 sm:p-4 text-left transition-all hover:bg-[#164f38]/10 cursor-pointer shadow-xs active:scale-[0.98]"
+          class="group relative flex flex-col items-start rounded-2xl border-2 border-forest-700 bg-forest-700/[0.04] p-4 text-left transition-all hover:bg-forest-700/[0.07] cursor-pointer shadow-2xs active:scale-[0.98]"
         >
           <div class="flex w-full items-center justify-between">
-            <span class="inline-flex items-center gap-1 rounded-full bg-[#164f38] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-2xs">
-              <svg class="size-2.5 text-[#d8ef8c]" fill="currentColor" viewBox="0 0 20 20">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-forest-700 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-2xs">
+              <svg class="size-3 text-[#d8ef8c]" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
               </svg>
               Found
             </span>
-            <span class="choice-check flex size-5 items-center justify-center rounded-full bg-[#164f38] text-white">
+            <span class="choice-check flex size-5.5 items-center justify-center rounded-full bg-forest-700 text-white shadow-2xs">
               <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </span>
           </div>
-          <span class="mt-2.5 text-sm sm:text-[0.9375rem] font-bold text-[#082e1a]">I Found Something</span>
+          <span class="mt-3 text-sm sm:text-[0.9375rem] font-bold text-forest-900">I Found Something</span>
           <span class="mt-0.5 text-xs text-stone-500 leading-snug">
             Turned in or held at Security Office
           </span>
@@ -81,22 +76,22 @@ const presets = CAMPUS_LOCATIONS;
         <button
           type="button"
           id="report-choice-lost"
-          class="group relative flex flex-col items-start rounded-2xl border-2 border-stone-200/90 bg-white p-3.5 sm:p-4 text-left transition-all hover:border-[#164f38]/60 hover:bg-[#f5f1e6]/40 cursor-pointer shadow-xs active:scale-[0.98]"
+          class="group relative flex flex-col items-start rounded-2xl border-2 border-line bg-white p-4 text-left transition-all hover:border-forest-700/60 hover:bg-[#f5f1e6]/40 cursor-pointer shadow-2xs active:scale-[0.98]"
         >
           <div class="flex w-full items-center justify-between">
-            <span class="inline-flex items-center gap-1 rounded-full bg-[#d8ef8c] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#082e1a] shadow-2xs">
-              <svg class="size-2.5 text-[#164f38]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-[#d8ef8c] border border-lime-600/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-forest-900 shadow-2xs">
+              <svg class="size-3 text-forest-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               Lost
             </span>
-            <span class="choice-check hidden size-5 items-center justify-center rounded-full bg-[#164f38] text-white">
+            <span class="choice-check hidden size-5.5 items-center justify-center rounded-full bg-forest-700 text-white shadow-2xs">
               <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </span>
           </div>
-          <span class="mt-2.5 text-sm sm:text-[0.9375rem] font-bold text-[#082e1a]">I Lost Something</span>
+          <span class="mt-3 text-sm sm:text-[0.9375rem] font-bold text-forest-900">I Lost Something</span>
           <span class="mt-0.5 text-xs text-stone-500 leading-snug">
             Broadcast request to campus
           </span>
@@ -115,10 +110,10 @@ const presets = CAMPUS_LOCATIONS;
       <!-- Item Name Field -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <label for="report-name" class="text-xs font-bold uppercase tracking-wider text-[#082e1a]">
-            Item Name <span class="text-[#9b2c1f]">*</span>
+          <label for="report-name" class="text-xs font-bold uppercase tracking-wider text-forest-900">
+            Item Name <span class="text-danger">*</span>
           </label>
-          <span class="text-[11px] text-stone-400 font-medium">e.g. Wallet, Hydroflask, ID</span>
+          <span class="text-xs text-stone-400 font-medium">e.g. Wallet, Hydroflask, ID</span>
         </div>
         <div class="relative flex items-center">
           <input
@@ -126,7 +121,7 @@ const presets = CAMPUS_LOCATIONS;
             id="report-name"
             required
             placeholder="e.g. Green DLSAU ID Lace, Black Hydroflask..."
-            class="w-full min-h-[3.25rem] rounded-2xl border border-stone-200/90 bg-[#fdfcf9] px-4 py-2.5 text-sm sm:text-[0.9375rem] font-semibold text-[#082e1a] placeholder:text-stone-400 placeholder:font-normal focus:bg-white focus:border-[#164f38] focus:ring-4 focus:ring-[#164f38]/10 transition-all shadow-2xs outline-none"
+            class="w-full min-h-[3.25rem] rounded-control border border-line bg-white px-4 py-2.5 text-sm sm:text-[0.9375rem] font-medium text-forest-900 placeholder:text-stone-400 focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 transition-all shadow-2xs outline-none"
           />
         </div>
       </div>
@@ -134,14 +129,14 @@ const presets = CAMPUS_LOCATIONS;
       <!-- Category & Location Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label for="report-category" class="block text-xs font-bold uppercase tracking-wider text-[#082e1a] mb-1.5">
-            Category <span class="text-[#9b2c1f]">*</span>
+          <label for="report-category" class="block text-xs font-bold uppercase tracking-wider text-forest-900 mb-1.5">
+            Category <span class="text-danger">*</span>
           </label>
           <div class="relative flex items-center">
             <select
               id="report-category"
               required
-              class="w-full min-h-[3.25rem] appearance-none rounded-2xl border border-stone-200/90 bg-[#fdfcf9] pl-4 pr-10 py-2.5 text-sm sm:text-[0.9375rem] font-semibold text-[#082e1a] focus:bg-white focus:border-[#164f38] focus:ring-4 focus:ring-[#164f38]/10 transition-all shadow-2xs outline-none cursor-pointer"
+              class="w-full min-h-[3.25rem] appearance-none rounded-control border border-line bg-white pl-4 pr-10 py-2.5 text-sm sm:text-[0.9375rem] font-medium text-forest-900 focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 transition-all shadow-2xs outline-none cursor-pointer"
             >
               <option value="" selected disabled>Select category</option>
               {CATEGORIES.filter((c) => c !== "All Categories").map((c) => (
@@ -157,14 +152,14 @@ const presets = CAMPUS_LOCATIONS;
         </div>
 
         <div>
-          <label for="report-location" class="block text-xs font-bold uppercase tracking-wider text-[#082e1a] mb-1.5">
-            Location <span class="text-[#9b2c1f]">*</span>
+          <label for="report-location" class="block text-xs font-bold uppercase tracking-wider text-forest-900 mb-1.5">
+            Location <span class="text-danger">*</span>
           </label>
           <div class="relative flex items-center">
             <select
               id="report-location"
               required
-              class="w-full min-h-[3.25rem] appearance-none rounded-2xl border border-stone-200/90 bg-[#fdfcf9] pl-4 pr-10 py-2.5 text-sm sm:text-[0.9375rem] font-semibold text-[#082e1a] focus:bg-white focus:border-[#164f38] focus:ring-4 focus:ring-[#164f38]/10 transition-all shadow-2xs outline-none cursor-pointer"
+              class="w-full min-h-[3.25rem] appearance-none rounded-control border border-line bg-white pl-4 pr-10 py-2.5 text-sm sm:text-[0.9375rem] font-medium text-forest-900 focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 transition-all shadow-2xs outline-none cursor-pointer"
             >
               <option value="" selected disabled>Select location</option>
               {presets.map((l) => (
@@ -183,34 +178,34 @@ const presets = CAMPUS_LOCATIONS;
 
       <!-- Custom Location (Optional) -->
       <div id="report-location-other-wrap" class="hidden">
-        <label for="report-location-other" class="block text-xs font-bold uppercase tracking-wider text-[#082e1a] mb-1.5">
-          Custom Campus Location <span class="text-[#9b2c1f]">*</span>
+        <label for="report-location-other" class="block text-xs font-bold uppercase tracking-wider text-forest-900 mb-1.5">
+          Custom Campus Location <span class="text-danger">*</span>
         </label>
         <input
           type="text"
           id="report-location-other"
           placeholder="e.g. Science Building Rm 302, Cafeteria Corner..."
-          class="w-full min-h-[3.25rem] rounded-2xl border border-stone-200/90 bg-[#fdfcf9] px-4 py-2.5 text-sm font-semibold text-[#082e1a] placeholder:text-stone-400 focus:bg-white focus:border-[#164f38] focus:ring-4 focus:ring-[#164f38]/10 transition-all shadow-2xs outline-none"
+          class="w-full min-h-[3.25rem] rounded-control border border-line bg-white px-4 py-2.5 text-sm font-medium text-forest-900 placeholder:text-stone-400 focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 transition-all shadow-2xs outline-none"
         />
       </div>
 
       <!-- Step 2: Photo Upload (1-3 images, required for Found, optional for Lost) -->
-      <div class="rounded-2xl border border-[#ece5d6] bg-[#fbf9f4] p-3.5 sm:p-4 space-y-3">
+      <div class="rounded-2xl border border-line/80 bg-[#faf8f4] p-4 sm:p-5 space-y-3.5">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
-            <span class="flex size-6 items-center justify-center rounded-lg bg-[#164f38]/10 text-[#164f38]">
-              <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <span class="flex size-7 items-center justify-center rounded-lg bg-forest-700/10 text-forest-700">
+              <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </span>
-            <label class="text-xs font-bold uppercase tracking-wider text-[#082e1a] mb-0" id="report-photos-label">
-              Item Photos <span id="photo-req-star" class="text-[#9b2c1f]">*</span>
+            <label class="text-xs font-bold uppercase tracking-wider text-forest-900 mb-0" id="report-photos-label">
+              Item Photos <span id="photo-req-star" class="text-danger">*</span>
             </label>
           </div>
           <span
             id="photo-req-badge"
-            class="rounded-full bg-[#164f38]/10 px-2.5 py-0.5 text-xs font-bold text-[#164f38]"
+            class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700"
           >
             1 required (max 3)
           </span>
@@ -235,18 +230,18 @@ const presets = CAMPUS_LOCATIONS;
           role="button"
           tabindex="0"
           aria-label="Upload item photos"
-          class="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#d8cfbe] bg-[#f5f1e6]/70 p-5 text-center transition-all hover:border-[#164f38] hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#164f38]/20"
+          class="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-white p-6 text-center transition-all hover:border-forest-700 hover:bg-forest-700/[0.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-forest-700/20 shadow-2xs"
         >
-          <div class="flex size-11 items-center justify-center rounded-full bg-[#164f38]/10 text-[#164f38] group-hover:scale-110 group-hover:bg-[#164f38] group-hover:text-white transition-all shadow-2xs">
+          <div class="flex size-12 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 group-hover:scale-110 group-hover:bg-forest-700 group-hover:text-white transition-all shadow-2xs">
             <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <p class="mt-2.5 text-sm font-bold text-[#082e1a] group-hover:text-[#164f38] transition-colors">
+          <p class="mt-3 text-sm font-bold text-forest-900 group-hover:text-forest-700 transition-colors">
             Click to upload or drag &amp; drop photos
           </p>
-          <p class="mt-0.5 text-xs text-stone-500">
+          <p class="mt-1 text-xs text-stone-500">
             PNG, JPG, WebP up to 5MB (1 to 3 images)
           </p>
         </div>
@@ -259,8 +254,8 @@ const presets = CAMPUS_LOCATIONS;
         <!-- Status & Compression Info -->
         <div id="photos-status-bar" class="hidden flex items-center justify-between text-xs text-stone-500 font-medium">
           <span id="photos-count-indicator">0 of 3 photos attached</span>
-          <span id="photos-compression-tag" class="text-[#164f38] font-bold flex items-center gap-1">
-            <svg class="size-3.5 inline text-[#164f38]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <span id="photos-compression-tag" class="text-forest-700 font-bold flex items-center gap-1">
+            <svg class="size-3.5 inline text-forest-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             <span>Auto-compressed &bull; Cloud Storage</span>
@@ -270,10 +265,10 @@ const presets = CAMPUS_LOCATIONS;
         <!-- Validation Error Alert -->
         <div
           id="photo-validation-error"
-          class="hidden rounded-xl border border-[#9b2c1f]/30 bg-[#9b2c1f]/10 p-3 text-xs font-bold text-[#9b2c1f] flex items-center gap-2"
+          class="hidden rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs font-bold text-danger flex items-center gap-2"
           role="alert"
         >
-          <svg class="size-4 shrink-0 text-[#9b2c1f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <svg class="size-4 shrink-0 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <span>Please add at least 1 photo for found items (up to 3 photos allowed).</span>
@@ -283,10 +278,10 @@ const presets = CAMPUS_LOCATIONS;
       <!-- Description Field -->
       <div>
         <div class="flex items-center justify-between mb-1.5">
-          <label for="report-desc" class="text-xs font-bold uppercase tracking-wider text-[#082e1a]">
-            Description <span class="text-[#9b2c1f]">*</span>
+          <label for="report-desc" class="text-xs font-bold uppercase tracking-wider text-forest-900">
+            Description <span class="text-danger">*</span>
           </label>
-          <span class="text-[11px] text-stone-400 font-medium">Min 10 characters</span>
+          <span class="text-xs text-stone-400 font-medium">Min 10 characters</span>
         </div>
         <textarea
           id="report-desc"
@@ -294,31 +289,28 @@ const presets = CAMPUS_LOCATIONS;
           rows="3"
           minlength="10"
           placeholder="Provide identifiable details, colors, or condition (e.g. keychains, brand, unique stickers)..."
-          class="w-full rounded-2xl border border-stone-200/90 bg-[#fdfcf9] p-3.5 text-sm sm:text-[0.9375rem] font-medium text-[#082e1a] placeholder:text-stone-400 focus:bg-white focus:border-[#164f38] focus:ring-4 focus:ring-[#164f38]/10 transition-all shadow-2xs outline-none resize-none"
+          class="w-full rounded-control border border-line bg-white p-3.5 text-sm sm:text-[0.9375rem] font-medium text-forest-900 placeholder:text-stone-400 focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 transition-all shadow-2xs outline-none resize-none"
         ></textarea>
       </div>
 
       <!-- Modal Footer -->
-      <div class="flex items-center justify-between gap-3 pt-3 border-t border-[#ece5d6]">
-        <div class="hidden sm:flex items-center gap-1.5 text-xs text-stone-500 font-medium">
-          <svg class="size-3.5 text-[#164f38]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-          <span>Live on DLSAU campus feed</span>
-        </div>
+      <div class="flex items-center justify-between gap-3 pt-4 border-t border-line/80">
+        <p class="text-xs text-stone-500 font-medium hidden sm:block">
+          All reports are verified by the Security Office
+        </p>
 
         <div class="flex items-center justify-end gap-2.5 w-full sm:w-auto">
           <button
             type="button"
             id="cancel-report-btn"
-            class="min-h-11 rounded-full px-5 py-2 text-sm font-bold text-stone-600 hover:text-[#082e1a] hover:bg-stone-100 cursor-pointer transition-all active:scale-95"
+            class="min-h-11 rounded-full px-5 py-2 text-sm font-bold text-stone-600 hover:text-forest-900 hover:bg-stone-100 cursor-pointer transition-all active:scale-95"
           >
             Cancel
           </button>
           <button
             type="submit"
             id="report-submit-btn"
-            class="min-h-11 rounded-full bg-[#164f38] hover:bg-[#0d3b28] active:scale-95 text-white font-bold px-7 py-2.5 text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            class="min-h-11 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 text-white font-bold px-7 py-2.5 text-sm shadow-2xs transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span id="report-submit-btn-spinner" class="hidden size-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
             <span id="report-submit-btn-text">Submit Report</span>
@@ -339,7 +331,7 @@ const presets = CAMPUS_LOCATIONS;
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
         <span id="report-success-msg-text">
-          Report and photos uploaded to secure storage! Live on campus feed.
+          Report submitted successfully! The Security Office will review your post.
         </span>
       </div>
 
