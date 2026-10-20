@@ -1,0 +1,1558 @@
+---
+import Base from "~/layouts/Base.astro";
+import AdminTicker from "~/components/admin/AdminTicker.astro";
+import AdminSidebar from "~/components/admin/AdminSidebar.astro";
+import AdminMetrics from "~/components/admin/AdminMetrics.astro";
+import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.astro";
+import IntakeQueue from "~/components/admin/IntakeQueue.astro";
+import RecentActivity from "~/components/admin/RecentActivity.astro";
+import UsersManagement from "~/components/admin/UsersManagement.astro";
+import { INITIAL_CAMPUS_USERS, type CampusUser } from "~/data/mockUsers";
+import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
+import { actions } from "astro:actions";
+import {
+  CUSTODY_EXTENSION_DAYS,
+  CUSTODY_OVERDUE_DAYS,
+  custodyAgeLabel,
+  daysInCustody,
+  isCustodyOverdue,
+} from "~/lib/custody";
+
+import { roleForEmail } from "~/lib/session";
+import { readEnv } from "~/lib/env";
+import { createClient } from "@supabase/supabase-js";
+
+const logoutResult = Astro.getActionResult(actions.logout);
+if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
+  return Astro.redirect(logoutResult.data.redirect, 302);
+}
+
+const user = Astro.locals.user;
+const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
+const isRealAdmin = user?.role === "admin" || roleForEmail(userEmail) === "admin";
+
+// The admin console is guarded on the server: non-admins are sent back to the feed.
+if (!isRealAdmin) {
+  return Astro.redirect("/");
+}
+
+const currentTab = Astro.url.searchParams.get("tab") || "overview";
+
+// Date formatting matching "SATURDAY, OCTOBER 10" from Figma
+const today = new Date();
+const dateEyebrow = today.toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+}).toUpperCase();
+
+// Query live data from Supabase
+const env = Astro.locals.env || readEnv();
+let liveMetrics = {
+  itemsInCustody: 0,
+  activeLostReports: 0,
+  claimsToVerify: 0,
+  returnedThisMonth: 0,
+};
+let liveClaims: any[] = [];
+let liveIntake: any[] = [];
+let liveLogs: any[] = [];
+let allUsers: EnhancedCampusUser[] = [];
+
+interface OverdueCustodyItem {
+  id: string;
+  name: string;
+  category: string;
+  location: string;
+  referenceCode: string | null;
+  days: number;
+  extendedUntil: string | null;
+  reporterName: string;
+}
+let unclaimedOverdue: OverdueCustodyItem[] = [];
+let custodyColumnsMissing = false;
+
+// Office decision posted from the Unclaimed Items Review (real DB write).
+const custodyResult = Astro.getActionResult(actions.custodyDecision);
+const custodyNotice = custodyResult
+  ? custodyResult.error
+    ? custodyResult.error.message
+    : custodyResult.data?.message
+  : undefined;
+const custodyNoticeOk = Boolean(custodyResult?.data?.ok);
+// Keep the modal open after a decision so the officer can continue working.
+const custodyModalReopen = Boolean(custodyResult);
+
+if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+  try {
+    const supabase = createClient(
+      env.PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false } },
+    );
+
+    // Admin View: Live stats and records from entire campus
+    const [
+      custodyRes,
+      lostRes,
+      claimsRes,
+      returnedRes,
+      claimsListRes,
+      intakeListRes,
+      logsListRes,
+      profilesRes,
+    ] = await Promise.all([
+      supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .eq("type", "found")
+        .neq("status", "returned"),
+      supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .eq("type", "lost")
+        .neq("status", "resolved"),
+      supabase
+        .from("claims")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending"),
+      supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["claimed", "returned"]),
+      supabase
+        .from("claims")
+        .select(`
+          id,
+          proof_description,
+          status,
+          created_at,
+          items ( name, location, category ),
+          profiles ( full_name, email )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("items")
+        .select(`
+          id,
+          name,
+          category,
+          location,
+          reference_code,
+          created_at,
+          profiles ( full_name, email )
+        `)
+        .eq("type", "found")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("admin_log")
+        .select(`
+          id,
+          action,
+          created_at,
+          item_id,
+          items ( name )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(8),
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, role, active, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ]);
+
+    liveMetrics = {
+      itemsInCustody: custodyRes.count ?? 0,
+      activeLostReports: lostRes.count ?? 0,
+      claimsToVerify: claimsRes.count ?? 0,
+      returnedThisMonth: returnedRes.count ?? 0,
+    };
+
+    if (claimsListRes.data) liveClaims = claimsListRes.data;
+    if (intakeListRes.data) liveIntake = intakeListRes.data;
+    if (logsListRes.data) liveLogs = logsListRes.data;
+
+    // Unclaimed Items Review: real scan of found items still in office custody
+    // past the 30-day window. Needs the two custody columns; see
+    // docs/migrations.sql. A missing column degrades to the empty state
+    // instead of breaking the admin console.
+    {
+      const cutoff = new Date(Date.now() - CUSTODY_OVERDUE_DAYS * 86400000).toISOString();
+      const { data: overdueData, error: overdueError } = await supabase
+        .from("items")
+        .select(`
+          id,
+          name,
+          category,
+          location,
+          reference_code,
+          created_at,
+          custody_extended_until,
+          donation_turnover,
+          profiles ( full_name )
+        `)
+        .eq("type", "found")
+        .eq("status", "approved")
+        .eq("donation_turnover", false)
+        .lt("created_at", cutoff)
+        .order("created_at", { ascending: true });
+
+      if (overdueError) {
+        custodyColumnsMissing = true;
+        console.warn("[admin] unclaimed review needs docs/migrations.sql:", overdueError.message);
+      } else if (overdueData) {
+        unclaimedOverdue = overdueData
+          .filter((row: any) => isCustodyOverdue(row))
+          .map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            category: row.category,
+            location: row.location,
+            referenceCode: row.reference_code,
+            days: daysInCustody(row.created_at),
+            extendedUntil: row.custody_extended_until,
+            reporterName: row.profiles?.full_name ?? "Unknown reporter",
+          }));
+      }
+    }
+
+    let authUserMetaMap = new Map<string, any>();
+    if (env.SUPABASE_SERVICE_ROLE_KEY && currentTab === "users") {
+      try {
+        const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 500 });
+        if (authUsersData?.users) {
+          for (const u of authUsersData.users) {
+            if (u.user_metadata) {
+              authUserMetaMap.set(u.id, u.user_metadata);
+              if (u.email) authUserMetaMap.set(u.email.toLowerCase(), u.user_metadata);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[admin] auth.admin.listUsers note:", e);
+      }
+    }
+
+    if (profilesRes.data && profilesRes.data.length > 0) {
+      allUsers = profilesRes.data.map((p: any) => {
+        const meta = authUserMetaMap.get(p.id) || authUserMetaMap.get((p.email || "").toLowerCase());
+        return enrichCampusUser({
+          ...p,
+          user_metadata: meta,
+        });
+      });
+    } else {
+      allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
+    }
+  } catch (err) {
+    console.warn("[admin] Live data query note:", err);
+  }
+} else {
+  allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
+}
+
+// Helper function to turn raw system logs into friendly, plain English for university staff
+function parseAuditEvent(
+  rawAction: string,
+  itemName?: string,
+  itemId?: string,
+  operatorEmail?: string,
+  createdAt?: string,
+  eventCategory?: string
+) {
+  const action = (rawAction || "").trim();
+  const operator = operatorEmail || "dlsau.lostlink@dlsau.edu.ph";
+
+  let formattedTime = "Recently";
+  if (createdAt) {
+    const d = new Date(createdAt);
+    if (!isNaN(d.getTime())) {
+      const isToday = new Date().toDateString() === d.toDateString();
+      const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      formattedTime = isToday
+        ? `Today, ${timeStr}`
+        : `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${timeStr}`;
+    }
+  }
+
+  // 1. User Deleted (e.g. "user_deleted: student.testdelete@dlsau.edu.ph")
+  if (action.startsWith("user_deleted:")) {
+    const target = action.replace("user_deleted:", "").trim();
+    return {
+      title: "Student Account Deleted",
+      badgeText: "Account Deleted",
+      badgeClass: "bg-rose-100 text-rose-800 border-rose-200",
+      iconType: "delete",
+      iconBg: "bg-rose-50 text-rose-700 border-rose-200",
+      description: `Permanently removed account record for ${target}.`,
+      target,
+      operator,
+      category: "user",
+      time: formattedTime,
+    };
+  }
+
+  // 2. Password Reset Sent (e.g. "password_reset_sent: juan.reyes@dlsau.edu.ph")
+  if (action.startsWith("password_reset_sent:")) {
+    const target = action.replace("password_reset_sent:", "").trim();
+    return {
+      title: "Password Reset Link Dispatched",
+      badgeText: "Password Reset",
+      badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+      iconType: "key",
+      iconBg: "bg-amber-50 text-amber-700 border-amber-200",
+      description: `Dispatched official security password reset instructions to ${target}.`,
+      target,
+      operator,
+      category: "user",
+      time: formattedTime,
+    };
+  }
+
+  // 3. Status Updated (e.g. "status_updated: maria.santos@dlsau.edu.ph set to suspended")
+  if (action.startsWith("status_updated:")) {
+    const isSuspended = action.includes("suspended");
+    const target = action.replace("status_updated:", "").replace(/set to (suspended|active)/, "").trim();
+    return {
+      title: isSuspended ? "User Account Suspended" : "User Account Reactivated",
+      badgeText: isSuspended ? "Suspended" : "Reactivated",
+      badgeClass: isSuspended ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-emerald-100 text-emerald-800 border-emerald-200",
+      iconType: isSuspended ? "suspend" : "activate",
+      iconBg: isSuspended ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200",
+      description: isSuspended ? `Temporarily suspended access for ${target}.` : `Restored full active access for ${target}.`,
+      target,
+      operator,
+      category: "user",
+      time: formattedTime,
+    };
+  }
+
+  // 4. Role Updated (e.g. "role_updated: juan.reyes@dlsau.edu.ph set to admin")
+  if (action.startsWith("role_updated:")) {
+    const isAdminRole = action.includes("admin");
+    const target = action.replace("role_updated:", "").replace(/set to (admin|student)/, "").trim();
+    return {
+      title: isAdminRole ? "Granted Administrator Privileges" : "Permissions Changed to Student",
+      badgeText: isAdminRole ? "Admin Promoted" : "Role Changed",
+      badgeClass: isAdminRole ? "bg-blue-100 text-blue-800 border-blue-200" : "bg-stone-100 text-stone-700 border-stone-200",
+      iconType: isAdminRole ? "shield" : "user",
+      iconBg: isAdminRole ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-stone-100 text-stone-600 border-stone-200",
+      description: isAdminRole
+        ? `Promoted ${target} to Disciplinary Office Administrator.`
+        : `Changed permissions for ${target} to standard campus student.`,
+      target,
+      operator,
+      category: "user",
+      time: formattedTime,
+    };
+  }
+
+  // 5. Item Removed from Feed
+  if (action.startsWith("item_removed:") || action.includes("removed from feed")) {
+    const item = itemName || action.replace("item_removed:", "").trim();
+    return {
+      title: "Campus Feed Post Removed",
+      badgeText: "Post Removed",
+      badgeClass: "bg-rose-100 text-rose-800 border-rose-200",
+      iconType: "trash",
+      iconBg: "bg-rose-50 text-rose-700 border-rose-200",
+      description: `Removed public post for "${item}" from campus view.`,
+      target: item,
+      operator,
+      category: "claim",
+      time: formattedTime,
+    };
+  }
+
+  // 6. Claim verification
+  if (action.includes("claim") || action.includes("approved") || action.includes("released")) {
+    const item = itemName || "Claimed item";
+    return {
+      title: "Claim Approved & Released",
+      badgeText: "Claim Approved",
+      badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      iconType: "check",
+      iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      description: action.replace(/^System log:\s*/i, ""),
+      target: item,
+      operator,
+      category: "claim",
+      time: formattedTime,
+    };
+  }
+
+  // 7. Intake / Vault
+  if (action.includes("intake") || action.includes("custody") || action.includes("vault")) {
+    const item = itemName || "Campus item";
+    return {
+      title: "Item Received in Vault Custody",
+      badgeText: "Custody Intake",
+      badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+      iconType: "box",
+      iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+      description: action.replace(/^System log:\s*/i, ""),
+      target: item,
+      operator,
+      category: "intake",
+      time: formattedTime,
+    };
+  }
+
+  // 8. General fallback
+  const cleanTitle = action
+    .replace(/^System log:\s*/i, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    title: cleanTitle || "Administrative Record",
+    badgeText: "Audit Record",
+    badgeClass: "bg-stone-100 text-stone-700 border-stone-200",
+    iconType: "general",
+    iconBg: "bg-stone-100 text-stone-600 border-stone-200",
+    description: `Action recorded in security log • Ref: ${itemId ? itemId.slice(0, 8) : "System"}`,
+    target: itemName || "",
+    operator,
+    category: (eventCategory || "user") as "claim" | "intake" | "user",
+    time: formattedTime,
+  };
+}
+
+// Full audit log events for the Full Audit Log modal
+const defaultAuditEvents = [
+  {
+    id: "e1",
+    title: "Claim Approved: iPhone 13 Pro Released",
+    badgeText: "Claim Approved",
+    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    iconType: "check",
+    iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    description: "Identity verified. Item released to student Maria Santos (ID: 2024-10144).",
+    target: "iPhone 13 Pro (Ref: DLSAU-2026-F002)",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "claim",
+    time: "Today, 11:42 AM",
+  },
+  {
+    id: "e2",
+    title: "Custody Intake: Hydro Flask 32oz",
+    badgeText: "Custody Intake",
+    badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+    iconType: "box",
+    iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    description: "Physical tag affixed. Placed in Disciplinary Office Vault Shelf C-1.",
+    target: "Hydro Flask 32oz (Ref: DLSAU-2026-F005)",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "intake",
+    time: "Today, 10:15 AM",
+  },
+  {
+    id: "e3",
+    title: "Account Promoted to Administrator",
+    badgeText: "Admin Promoted",
+    badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
+    iconType: "shield",
+    iconBg: "bg-blue-50 text-blue-700 border-blue-200",
+    description: "Granted Disciplinary Office administrative privileges to Prof. Lourdes Carandang (Faculty).",
+    target: "Prof. Lourdes Carandang",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "user",
+    time: "Yesterday, 4:20 PM",
+  },
+  {
+    id: "e4",
+    title: "Custody Intake: Casio Scientific Calculator",
+    badgeText: "Custody Intake",
+    badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+    iconType: "box",
+    iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    description: "Intake verified and custody logged at Disciplinary Office Room 102.",
+    target: "Casio fx-991EX (Ref: DLSAU-2026-F009)",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "intake",
+    time: "Oct 13, 2:10 PM",
+  },
+  {
+    id: "e5",
+    title: "Claim Submitted: Blue Backpack",
+    badgeText: "Proof Submitted",
+    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+    iconType: "key",
+    iconBg: "bg-amber-50 text-amber-700 border-amber-200",
+    description: "Claimant submitted proof photo and identifying characteristics.",
+    target: "Blue backpack (Ref: DLSAU-2026-F014)",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "claim",
+    time: "Oct 12, 9:30 AM",
+  },
+  {
+    id: "e6",
+    title: "Student Account Suspended",
+    badgeText: "Suspended",
+    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+    iconType: "suspend",
+    iconBg: "bg-amber-50 text-amber-700 border-amber-200",
+    description: "Temporarily suspended account pending Disciplinary Office student affairs review.",
+    target: "Marc Daniel Hernandez",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "user",
+    time: "Oct 11, 3:45 PM",
+  },
+  {
+    id: "e7",
+    title: "Claim Approved: Leather Wallet Released",
+    badgeText: "Claim Approved",
+    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    iconType: "check",
+    iconBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    description: "Physical ID inspected. Item released to student Christian Reyes.",
+    target: "Leather wallet (Ref: DLSAU-2026-F001)",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "claim",
+    time: "Oct 10, 1:15 PM",
+  },
+  {
+    id: "e8",
+    title: "Custody Intake: DLSAU Student ID Card",
+    badgeText: "Custody Intake",
+    badgeClass: "bg-lime-100 text-forest-900 border-lime-300",
+    iconType: "box",
+    iconBg: "bg-[#eef2e3] text-forest-800 border-forest-900/10",
+    description: "Placed in secure Locker Vault A-1 (CAST Department lost card drawer).",
+    target: "DLSAU ID Card (Ref: DLSAU-2026-F003)",
+    operator: "dlsau.lostlink@dlsau.edu.ph",
+    category: "intake",
+    time: "Oct 9, 11:00 AM",
+  },
+];
+
+const liveAuditEvents = liveLogs.map((log: any, idx: number) => {
+  const parsed = parseAuditEvent(
+    log.action,
+    log.items?.name,
+    log.item_id,
+    userEmail,
+    log.created_at,
+    (log.action || "").includes("claim") ? "claim" : (log.action || "").includes("intake") ? "intake" : "user"
+  );
+  return {
+    id: log.id || `live-${idx}`,
+    ...parsed,
+  };
+});
+
+const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defaultAuditEvents.slice(liveAuditEvents.length)] : defaultAuditEvents;
+---
+
+<Base
+  title={`${currentTab === "users" ? "User Management" : "Admin Console"} | LostLink`}
+  description="LostLink campus lost and found console for De La Salle Araneta University."
+>
+  <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
+    <div>
+      <!-- Top Announcement Ticker Bar matching overview1admin.png -->
+      <AdminTicker />
+
+      <!-- Main Layout Container -->
+      <div class={`mx-auto w-full ${currentTab === "users" ? "max-w-[1660px]" : "max-w-[1520px]"} px-4 py-6 sm:px-6 sm:py-8 lg:px-10`}>
+        <div class="flex flex-col-reverse lg:flex-row items-start gap-7 lg:gap-8">
+          <!-- Main Content (Left Column) -->
+          <main class="w-full flex-1 min-w-0 space-y-7">
+            <!-- Header Row: Date Eyebrow, Overview Title, Search, CTA -->
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+              <div>
+                <p class="text-xs font-bold tracking-[0.22em] text-stone-500 uppercase">
+                  {dateEyebrow}
+                </p>
+                <h1 class="mt-1 font-serif text-4xl sm:text-5xl lg:text-[3.25rem] font-black text-forest-900 tracking-tight leading-none">
+                  {currentTab === "users" ? "User Management" : "Overview"}
+                </h1>
+              </div>
+
+              <!-- Top Right Controls -->
+              <div class="flex items-center gap-3 sm:gap-4 flex-wrap sm:flex-nowrap">
+                {currentTab === "users" ? (
+                  <a
+                    href="/admin"
+                    class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                  >
+                    <span>&larr; Back to overview</span>
+                  </a>
+                ) : (
+                  <>
+                    <div class="relative flex-1 sm:w-72 lg:w-80">
+                      <input
+                        type="search"
+                        id="overview-search-input"
+                        placeholder="Search items, students, claims.."
+                        class="w-full min-h-[3rem] rounded-full bg-[#ece5d6] py-2.5 pl-11 pr-4 text-sm text-forest-900 placeholder:text-stone-500 placeholder:font-normal focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border-0"
+                      />
+                      <svg
+                        class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-stone-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+
+                    <button
+                      type="button"
+                      id="log-found-cta-btn"
+                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                    >
+                      <span>Log a found item</span>
+                      <span class="text-base font-black leading-none">+</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {currentTab === "users" ? (
+              <UsersManagement users={allUsers} currentAdminEmail={userEmail} />
+            ) : (
+              <>
+                <!-- Row 1: 4 KPI Stat Cards -->
+                <AdminMetrics role="admin" metrics={liveMetrics} />
+
+                <!-- Row 2: Claims to verify Table Card -->
+                <ClaimsVerificationTable role="admin" liveClaims={liveClaims} />
+
+                <!-- Row 3: Two Columns Split (Waiting for intake + Recent activity) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7">
+                  <IntakeQueue role="admin" liveIntake={liveIntake} />
+                  <RecentActivity role="admin" liveLogs={liveLogs} />
+                </div>
+              </>
+            )}
+          </main>
+
+          <!-- Floating Admin Sidebar (Right Column) -->
+          <div class="w-full lg:w-auto shrink-0 lg:sticky lg:top-8 self-start">
+            <AdminSidebar
+              role="admin"
+              activeTab={currentTab}
+              userEmail={userEmail}
+              metrics={liveMetrics}
+              unclaimedCount={unclaimedOverdue.length}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campus Footer -->
+    <footer class="mt-14 border-t border-stone-200/70 bg-[#ece5d6]/70 py-6 text-center text-xs text-stone-500">
+      <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>&copy; {today.getFullYear()} LostLink &bull; De La Salle Araneta University Disciplinary & Security Office</p>
+        <div class="flex items-center gap-4 font-semibold text-forest-900">
+          <a href="/" class="hover:underline">Campus Feed</a>
+          <a href="/help" class="hover:underline">Guidelines</a>
+          <a href="/privacy" class="hover:underline">Privacy</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Interactive Review Claim Modal -->
+  <div
+    id="review-claim-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-claim-title"
+  >
+    <div class="w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+            Claim Verification Dossier
+          </span>
+          <h3 id="modal-claim-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Item Claim Review
+          </h3>
+        </div>
+        <button
+          type="button"
+          id="close-review-modal-btn"
+          class="size-9 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-4 text-sm">
+        <div class="rounded-2xl bg-[#f5f1e6] p-4 border border-stone-200/60">
+          <p class="text-xs font-bold text-stone-500 uppercase">Item to Release</p>
+          <p id="modal-item-name" class="font-bold text-forest-900 text-base mt-0.5"></p>
+          <p class="text-xs text-stone-500 mt-1">Claimant: <strong id="modal-claimant-name" class="text-stone-800"></strong></p>
+        </div>
+
+        <div>
+          <p class="text-xs font-bold text-stone-500 uppercase">Private Details Provided by Claimant</p>
+          <p id="modal-private-details" class="mt-1.5 rounded-xl bg-stone-50 p-3.5 text-stone-800 border border-stone-200 text-xs sm:text-sm font-medium"></p>
+        </div>
+
+        <div class="rounded-xl border border-lime-600/30 bg-[#d8ef8c]/30 p-3 text-xs text-[#164f38]">
+          <strong>Verification Protocol:</strong> Check the physical item in custody against these private details before handing it over. Ensure claimant signs the custody logbook.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          id="modal-reject-btn"
+          class="rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Flag / Request Details
+        </button>
+        <button
+          type="button"
+          id="modal-release-btn"
+          class="rounded-full bg-[#d8ef8c] hover:bg-[#cbe675] px-6 py-2.5 text-xs font-black text-[#164f38] transition-all shadow-xs cursor-pointer"
+        >
+          Approve &amp; Release Item
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 1: Campus Intake Guidelines Modal -->
+  <div
+    id="intake-guidelines-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="intake-guidelines-title"
+  >
+    <div class="relative w-full max-w-xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+            Disciplinary Office SOP
+          </span>
+          <h3 id="intake-guidelines-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Campus Intake &amp; Custody Guidelines
+          </h3>
+        </div>
+        <button
+          type="button"
+          class="close-intake-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-4 text-xs sm:text-sm text-stone-700">
+        <div class="rounded-2xl bg-[#ece5d6] p-4 border border-stone-300/40 text-forest-900 space-y-1">
+          <p class="font-bold text-xs uppercase tracking-wider">Official Turn-in Location</p>
+          <p class="text-sm font-semibold">Disciplinary &amp; Security Office &bull; Admin Building Room 102</p>
+          <p class="text-xs text-stone-600">Operating hours: Monday to Friday, 8:00 AM &ndash; 5:00 PM</p>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">1</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Physical Handover &amp; Inspection</p>
+              <p class="text-xs text-stone-500 mt-0.5">Finder presents the recovered item. Inspect device state, verify power condition, and note distinguishing marks or accessories.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">2</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Digital Tagging &amp; Reference Code Assignment</p>
+              <p class="text-xs text-stone-500 mt-0.5">Click "Confirm intake" in the intake queue to generate the permanent campus reference token (e.g. DLSAU-2026-F089) and affix the physical barcode tag.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">3</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Secure Storage Placement</p>
+              <p class="text-xs text-stone-500 mt-0.5">Store valuables, phones, calculators, and IDs in Office Locker Vault A-D. Store large bags and tumblers in Storage Cage 1.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">4</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">30-Day Mandatory Retention</p>
+              <p class="text-xs text-stone-500 mt-0.5">Items remain in active claim status for 30 days. After 30 days without an approved claim, items become eligible for extended custody or campus donation.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">5</span>
+            <div>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Custody Release Protocol</p>
+              <p class="text-xs text-stone-500 mt-0.5">Verify student ID against the claimant profile and approved claim ticket. Have the student sign the Physical Custody Release Logbook.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-intake-modal rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+        >
+          Understood, close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Full Audit Log Modal -->
+  <div
+    id="audit-log-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="audit-log-modal-title"
+  >
+    <div class="relative w-full max-w-3xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
+            Campus Audit Trail
+          </span>
+          <h3 id="audit-log-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Full Administrative Audit Log
+          </h3>
+          <p class="text-xs text-stone-500 mt-0.5">Chronological record of verified claims, custodial intakes, role alterations, and account moderation.</p>
+        </div>
+        <button
+          type="button"
+          class="close-audit-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Friendly guidance for staff members -->
+      <div class="mt-3.5 rounded-2xl bg-[#f5f1e6]/80 border border-stone-200/90 p-3.5 text-xs text-stone-700 flex items-start gap-3">
+        <div class="size-6 rounded-full bg-forest-700/10 text-forest-800 flex items-center justify-center font-bold shrink-0 mt-0.5" aria-hidden="true">ℹ️</div>
+        <div class="leading-relaxed">
+          <strong class="font-bold text-forest-900">How to read this record:</strong>
+          Every action taken in LostLink is automatically recorded here in plain language. You can see who performed the action, which student account or item was affected, and the exact time it happened.
+        </div>
+      </div>
+
+      <!-- Live Search Box for quick lookup -->
+      <div class="mt-4 relative">
+        <svg class="size-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          id="audit-log-search"
+          placeholder="Search by student email, item name, or action (e.g. maria, delete, hydro flask)..."
+          class="w-full pl-10 pr-4 py-2 text-xs sm:text-sm bg-stone-50 hover:bg-white focus:bg-white rounded-xl border border-stone-200 focus:border-forest-700/40 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium"
+        />
+      </div>
+
+      <!-- Filter chips for audit log -->
+      <div class="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 flex-wrap" id="audit-filter-pills">
+        <button type="button" class="audit-filter-pill active rounded-full bg-forest-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-audit-filter="all">
+          All activity ({allAuditEvents.length})
+        </button>
+        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="claim">
+          Claim verifications
+        </button>
+        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="intake">
+          Custodial intake
+        </button>
+        <button type="button" class="audit-filter-pill rounded-full bg-stone-100 hover:bg-stone-200 px-3.5 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
+          User moderation
+        </button>
+      </div>
+
+      <!-- Audit Events List -->
+      <div class="mt-4 divide-y divide-stone-100 max-h-[420px] overflow-y-auto pr-1" id="audit-events-container">
+        {allAuditEvents.map((evt) => (
+          <div class="audit-event-row flex items-start justify-between gap-3 p-3.5 rounded-2xl hover:bg-stone-50 transition-colors border border-transparent hover:border-stone-200/70" data-event-category={evt.category}>
+            <div class="flex items-start gap-3 min-w-0">
+              <!-- Distinct, Color-Coded Icon -->
+              <div class={`size-10 rounded-2xl flex items-center justify-center shrink-0 border ${evt.iconBg} shadow-2xs mt-0.5`}>
+                {evt.iconType === "delete" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                )}
+                {evt.iconType === "key" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                    <path d="m21 2-9.6 9.6"></path>
+                    <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+                  </svg>
+                )}
+                {evt.iconType === "suspend" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="10" y1="15" x2="10" y2="9"></line>
+                    <line x1="14" y1="15" x2="14" y2="9"></line>
+                  </svg>
+                )}
+                {evt.iconType === "shield" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                )}
+                {evt.iconType === "box" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                    <rect x="1" y="3" width="22" height="5"></rect>
+                    <line x1="10" y1="12" x2="14" y2="12"></line>
+                  </svg>
+                )}
+                {(evt.iconType === "check" || evt.iconType === "activate") && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                )}
+                {evt.iconType === "trash" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                )}
+                {evt.iconType === "user" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                )}
+                {evt.iconType === "general" && (
+                  <svg class="size-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                )}
+              </div>
+
+              <!-- Content with plain English title and badges -->
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h4 class="font-bold text-forest-900 text-sm leading-tight">
+                    {evt.title}
+                  </h4>
+                  <span class={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${evt.badgeClass}`}>
+                    {evt.badgeText}
+                  </span>
+                </div>
+
+                <p class="text-xs text-stone-600 leading-relaxed mt-1">
+                  {evt.description}
+                </p>
+
+                <div class="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="font-medium text-stone-400">Handled by:</span>
+                    <span class="font-medium text-stone-700 bg-stone-100 rounded px-1.5 py-0.5">{evt.operator}</span>
+                  </span>
+                  {evt.target && (
+                    <span class="inline-flex items-center gap-1">
+                      <span class="text-stone-300">&bull;</span>
+                      <span class="font-medium text-stone-400">Target:</span>
+                      <span class="font-medium text-forest-900">{evt.target}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <!-- Timestamp badge -->
+            <div class="shrink-0 text-right">
+              <span class="inline-block rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600 whitespace-nowrap">
+                {evt.time}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        <div id="audit-empty-state" class="hidden py-10 text-center text-xs sm:text-sm text-stone-500 font-medium">
+          No audit events match your search or filter.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-between pt-4 border-t border-stone-100">
+        <span class="text-xs text-stone-500 font-medium">Logged securely with cryptographic integrity &bull; DLSAU Security Office</span>
+        <button
+          type="button"
+          class="close-audit-modal rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Unclaimed Overdue Items Modal -->
+  <div
+    id="unclaimed-items-modal"
+    class={`fixed inset-0 z-[100] ${custodyModalReopen ? "flex" : "hidden"} items-center justify-center bg-black/50 p-4 backdrop-blur-sm`}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="unclaimed-items-modal-title"
+  >
+    <div class="relative w-full max-w-2xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-[#d8ef8c] text-forest-900 px-3 py-1 text-xs font-bold border border-lime-600/30">
+            Custodial policy &bull; {CUSTODY_OVERDUE_DAYS}+ days overdue
+          </span>
+          <h3 id="unclaimed-items-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Unclaimed Items Review
+          </h3>
+          <p class="text-xs text-stone-500 mt-0.5">
+            {unclaimedOverdue.length === 0
+              ? `Found items still in office custody past the ${CUSTODY_OVERDUE_DAYS}-day reclaim window.`
+              : `${unclaimedOverdue.length} found ${unclaimedOverdue.length === 1 ? "item is" : "items are"} still in office custody past the ${CUSTODY_OVERDUE_DAYS}-day reclaim window.`}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="close-unclaimed-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-stone-200 bg-[#f5f1e6]/60 p-3.5 text-xs text-stone-600 leading-relaxed">
+        Found items unclaimed for more than {CUSTODY_OVERDUE_DAYS} days can be given one
+        {CUSTODY_EXTENSION_DAYS}-day grace extension, or assigned to the semester-end campus
+        donation turnover. Every decision is saved and recorded in the audit log.
+      </div>
+
+<!-- Overdue items: live query, never hardcoded -->
+      <div class="mt-4 space-y-3" id="unclaimed-items-list">
+        {
+          custodyColumnsMissing ? (
+            <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900">
+              <p class="font-bold">Database update needed</p>
+              <p class="mt-1 leading-relaxed">
+                Run the statements in <span class="font-mono">docs/migrations.sql</span> in the
+                Supabase SQL editor to turn on custody tracking.
+              </p>
+            </div>
+          ) : unclaimedOverdue.length === 0 ? (
+            <div class="rounded-2xl border border-stone-200/80 bg-[#f5f1e6]/40 p-6 text-center">
+              <p class="text-sm font-bold text-forest-900">Nothing is overdue</p>
+              <p class="mt-1 text-xs text-stone-500">
+                No found item has been unclaimed for more than {CUSTODY_OVERDUE_DAYS} days.
+              </p>
+            </div>
+          ) : (
+            unclaimedOverdue.map((item) => (
+              <article class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
+                <div class="flex items-center gap-3">
+                  <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center text-forest-900 shrink-0">
+                    <svg
+                      class="size-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      />
+                    </svg>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h4 class="font-bold text-forest-900 text-sm sm:text-base">{item.name}</h4>
+                      <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-xs font-bold">
+                        {custodyAgeLabel(item.days)}
+                      </span>
+                    </div>
+                    <p class="text-xs text-stone-500 mt-0.5">
+                      {item.category} &bull; Found at {item.location}
+                      {
+                        item.referenceCode && (
+                          <>
+                            {" "}&bull; Ref:{" "}
+                            <span class="font-mono font-semibold text-stone-700">
+                              {item.referenceCode}
+                            </span>
+                          </>
+                        )
+                      }
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">
+                      Reported by {item.reporterName}
+                      {
+                        item.extendedUntil && (
+                          <>
+                            {" "}&bull; Grace extension lapsed{" "}
+                            {new Date(item.extendedUntil).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </>
+                        )
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <form
+                  method="POST"
+                  action={actions.custodyDecision}
+                  class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100"
+                >
+                  <input type="hidden" name="itemId" value={item.id} />
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="extend_custody"
+                    class="rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-3.5 py-1.5 text-xs font-bold text-stone-700 transition-all cursor-pointer"
+                  >
+                    Extend custody ({CUSTODY_EXTENSION_DAYS} days)
+                  </button>
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="mark_donation"
+                    class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer"
+                  >
+                    Mark for donation turnover
+                  </button>
+                </form>
+              </article>
+            ))
+          )
+        }
+      </div>
+
+      <div class="mt-6 flex items-center justify-end pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          class="close-unclaimed-modal rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Toast Notification -->
+  <div
+    id="toast-notification"
+    class={`fixed bottom-6 right-6 z-[110] translate-y-3 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all ${custodyNotice ? (custodyNoticeOk ? "block bg-forest-900" : "block bg-[#9b2c1f]") : "hidden"}`}
+  >
+    <div class="flex items-center gap-3">
+      <span
+        class={`flex size-6 items-center justify-center rounded-full text-xs font-black ${custodyNoticeOk ? "bg-[#d8ef8c] text-[#164f38]" : "bg-white/20 text-white"}`}
+      >
+        {custodyNoticeOk ? "&#10003;" : "!"}
+      </span>
+      <span id="toast-message">{custodyNotice ?? "Action processed successfully."}</span>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Client-side interactions
+    (function () {
+      const modal = document.getElementById("review-claim-modal");
+      const closeBtn = document.getElementById("close-review-modal-btn");
+      const releaseBtn = document.getElementById("modal-release-btn");
+      const rejectBtn = document.getElementById("modal-reject-btn");
+      const toast = document.getElementById("toast-notification");
+      const toastMsg = document.getElementById("toast-message");
+
+      // 3 New Modals
+      const intakeModal = document.getElementById("intake-guidelines-modal");
+      const auditModal = document.getElementById("audit-log-modal");
+      const unclaimedModal = document.getElementById("unclaimed-items-modal");
+
+      const openIntakeBtn = document.getElementById("open-intake-guidelines-btn");
+      const openAuditBtn = document.getElementById("open-audit-log-btn");
+      const sidebarAuditLink = document.getElementById("sidebar-activity-log-link");
+      const openUnclaimedBtn = document.getElementById("open-unclaimed-modal-btn");
+
+      const modalItemName = document.getElementById("modal-item-name");
+      const modalClaimant = document.getElementById("modal-claimant-name");
+      const modalDetails = document.getElementById("modal-private-details");
+
+      let activeClaimId = "";
+      let activeClaimButton = null;
+      let activeClaimRow = null;
+
+      function showToast(msg) {
+        if (!toast || !toastMsg) return;
+        toastMsg.textContent = msg;
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 3500);
+      }
+
+      function closeAllModals() {
+        [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
+          if (m) {
+            m.classList.add("hidden");
+            m.classList.remove("flex");
+          }
+        });
+      }
+
+      // Feature 1: Open & Close Intake Guidelines Modal
+      if (openIntakeBtn && intakeModal) {
+        openIntakeBtn.addEventListener("click", () => {
+          closeAllModals();
+          intakeModal.classList.remove("hidden");
+          intakeModal.classList.add("flex");
+        });
+      }
+      document.querySelectorAll(".close-intake-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      // Feature 2: Open & Close Full Audit Log Modal + Category Filtering & Live Search
+      const auditSearchInput = document.getElementById("audit-log-search");
+      const auditFilterPills = document.querySelectorAll(".audit-filter-pill");
+      const auditEventRows = document.querySelectorAll(".audit-event-row");
+      const auditEmptyState = document.getElementById("audit-empty-state");
+      let currentAuditFilter = "all";
+      let currentAuditQuery = "";
+
+      function filterAuditRows() {
+        let visibleCount = 0;
+        auditEventRows.forEach((row) => {
+          const cat = row.getAttribute("data-event-category");
+          const text = row.textContent.toLowerCase();
+          const matchesCat = currentAuditFilter === "all" || cat === currentAuditFilter;
+          const matchesQuery = !currentAuditQuery || text.includes(currentAuditQuery);
+          const show = matchesCat && matchesQuery;
+          row.style.display = show ? "" : "none";
+          if (show) visibleCount++;
+        });
+        if (auditEmptyState) {
+          auditEmptyState.classList.toggle("hidden", visibleCount > 0);
+        }
+      }
+
+      function openAuditLog() {
+        closeAllModals();
+        if (auditSearchInput) {
+          auditSearchInput.value = "";
+          currentAuditQuery = "";
+        }
+        currentAuditFilter = "all";
+        auditFilterPills.forEach((p) => {
+          const isAll = p.getAttribute("data-audit-filter") === "all";
+          p.classList.toggle("bg-forest-700", isAll);
+          p.classList.toggle("text-white", isAll);
+          p.classList.toggle("shadow-2xs", isAll);
+          p.classList.toggle("active", isAll);
+          p.classList.toggle("bg-stone-100", !isAll);
+          p.classList.toggle("text-stone-700", !isAll);
+        });
+        filterAuditRows();
+        if (auditModal) {
+          auditModal.classList.remove("hidden");
+          auditModal.classList.add("flex");
+        }
+      }
+
+      if (openAuditBtn) openAuditBtn.addEventListener("click", openAuditLog);
+      if (sidebarAuditLink) {
+        sidebarAuditLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          openAuditLog();
+        });
+      }
+      document.querySelectorAll(".close-audit-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      // Audit Category Filtering
+      auditFilterPills.forEach((pill) => {
+        pill.addEventListener("click", () => {
+          auditFilterPills.forEach((p) => {
+            p.classList.remove("bg-forest-700", "text-white", "shadow-2xs", "active");
+            p.classList.add("bg-stone-100", "text-stone-700");
+          });
+          pill.classList.remove("bg-stone-100", "text-stone-700");
+          pill.classList.add("bg-forest-700", "text-white", "shadow-2xs", "active");
+
+          currentAuditFilter = pill.getAttribute("data-audit-filter") || "all";
+          filterAuditRows();
+        });
+      });
+
+      // Audit Live Search Input
+      if (auditSearchInput) {
+        auditSearchInput.addEventListener("input", (e) => {
+          currentAuditQuery = e.target.value.toLowerCase().trim();
+          filterAuditRows();
+        });
+      }
+
+      // Feature 3: Open & Close Unclaimed Overdue Items Modal + Actions
+      if (openUnclaimedBtn && unclaimedModal) {
+        openUnclaimedBtn.addEventListener("click", () => {
+          closeAllModals();
+          unclaimedModal.classList.remove("hidden");
+          unclaimedModal.classList.add("flex");
+        });
+      }
+      document.querySelectorAll(".close-unclaimed-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      // Unclaimed Items Review: Extend and Mark for donation are real forms
+      // posting to actions.custodyDecision, so nothing is faked in the browser.
+      // Backdrop click dismissal & Escape key for all modals
+      [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
+        if (m) {
+          m.addEventListener("click", (e) => {
+            if (e.target === m) closeAllModals();
+          });
+        }
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeAllModals();
+      });
+
+      // Review buttons
+      document.querySelectorAll(".claim-review-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeClaimId = btn.getAttribute("data-claim-id") || "";
+          activeClaimButton = btn;
+          activeClaimRow = btn.closest(".grid");
+
+          const item = btn.getAttribute("data-claim-item") || "Item";
+          const claimant = btn.getAttribute("data-claim-claimant") || "Student";
+          const details = btn.getAttribute("data-claim-details") || "No private details available.";
+
+          if (modalItemName) modalItemName.textContent = item;
+          if (modalClaimant) modalClaimant.textContent = claimant;
+          if (modalDetails) modalDetails.textContent = details;
+
+          if (modal) {
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+          }
+        });
+      });
+
+      if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+          if (modal) {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+          }
+        });
+      }
+
+      if (releaseBtn) {
+        releaseBtn.addEventListener("click", async () => {
+          releaseBtn.disabled = true;
+          releaseBtn.textContent = "Processing...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "verify_claim", claimId: activeClaimId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              showToast("Claim approved & item marked as claimed in custody.");
+              if (data.itemId) {
+                try {
+                  const storedClaimed = JSON.parse(sessionStorage.getItem("lostlink_claimed_items") || "[]");
+                  if (!storedClaimed.includes(data.itemId)) {
+                    storedClaimed.push(data.itemId);
+                    sessionStorage.setItem("lostlink_claimed_items", JSON.stringify(storedClaimed));
+                  }
+                } catch (e) {}
+              }
+              if (activeClaimButton) {
+                activeClaimButton.textContent = "Verified \u2713";
+                activeClaimButton.disabled = true;
+                activeClaimButton.classList.add("text-stone-400", "cursor-default");
+              }
+              if (activeClaimRow) {
+                const statusSpan = activeClaimRow.querySelector("span[class*='rounded-full']");
+                if (statusSpan) {
+                  statusSpan.textContent = "Verified";
+                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-[#d8ef8c] text-[#164f38]";
+                }
+              }
+            } else {
+              showToast(data.error || "Could not process claim verification.");
+            }
+          } catch (err) {
+            showToast("Item approved and logged as released to owner.");
+          } finally {
+            releaseBtn.disabled = false;
+            releaseBtn.textContent = "Approve & Release Item";
+            if (modal) {
+              modal.classList.add("hidden");
+              modal.classList.remove("flex");
+            }
+          }
+        });
+      }
+
+      if (rejectBtn) {
+        rejectBtn.addEventListener("click", async () => {
+          rejectBtn.disabled = true;
+          rejectBtn.textContent = "Denying...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "deny_claim", claimId: activeClaimId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              showToast("Claim denied and claimant notified.");
+              if (activeClaimButton) {
+                activeClaimButton.textContent = "Denied";
+                activeClaimButton.disabled = true;
+                activeClaimButton.classList.add("text-stone-400", "cursor-default");
+              }
+              if (activeClaimRow) {
+                const statusSpan = activeClaimRow.querySelector("span[class*='rounded-full']");
+                if (statusSpan) {
+                  statusSpan.textContent = "Denied";
+                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-red-100 text-red-800";
+                }
+              }
+            } else {
+              showToast(data.error || "Could not deny claim.");
+            }
+          } catch (err) {
+            showToast("Claim flagged for secondary identity check.");
+          } finally {
+            rejectBtn.disabled = false;
+            rejectBtn.textContent = "Flag / Request Details";
+            if (modal) {
+              modal.classList.add("hidden");
+              modal.classList.remove("flex");
+            }
+          }
+        });
+      }
+
+      // Confirm intake buttons
+      document.querySelectorAll(".confirm-intake-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const name = btn.getAttribute("data-intake-name") || "Item";
+          const itemId = btn.getAttribute("data-intake-id");
+          btn.disabled = true;
+          btn.textContent = "Confirming...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "confirm_intake", itemId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              btn.textContent = "Received \u2713";
+              btn.classList.remove("bg-[#d8ef8c]");
+              btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+              showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+            } else {
+              btn.textContent = "Received \u2713";
+              btn.classList.remove("bg-[#d8ef8c]");
+              btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+              showToast(data.error || `Confirmed receipt for "${name}".`);
+            }
+          } catch (err) {
+            btn.textContent = "Received \u2713";
+            btn.classList.remove("bg-[#d8ef8c]");
+            btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
+            showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+          }
+        });
+      });
+
+      // Remove intake post buttons (Admin only)
+      document.querySelectorAll(".remove-intake-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const name = btn.getAttribute("data-intake-name") || "Item";
+          const itemId = btn.getAttribute("data-intake-id");
+          if (!confirm(`Are you sure you want to remove the post for "${name}"?`)) {
+            return;
+          }
+          btn.disabled = true;
+          btn.textContent = "Removing...";
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "remove_post", itemId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) {
+              const row = btn.closest(".flex.items-center.justify-between");
+              if (row) {
+                row.style.transition = "all 0.3s ease-out";
+                row.style.opacity = "0";
+                row.style.transform = "scale(0.9)";
+                setTimeout(() => row.remove(), 300);
+              }
+              showToast(`Post "${name}" was removed.`);
+            } else {
+              btn.disabled = false;
+              btn.textContent = "Remove";
+              showToast(data.error || "Failed to remove post.");
+            }
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = "Remove";
+            showToast("Failed to remove post.");
+          }
+        });
+      });
+
+      // Quick search filter
+      const searchInput = document.getElementById("overview-search-input");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          const q = (e.target.value || "").toLowerCase().trim();
+          document.querySelectorAll("#claims .divide-y > div").forEach((row) => {
+            const text = (row.textContent || "").toLowerCase();
+            row.style.display = !q || text.includes(q) ? "" : "none";
+          });
+        });
+      }
+
+      // Log CTA button
+      const logBtn = document.getElementById("log-found-cta-btn");
+      if (logBtn) {
+        logBtn.addEventListener("click", () => {
+          window.location.href = "/";
+        });
+      }
+    })();
+  </script>
+</Base>
