@@ -16,6 +16,11 @@ The agent updates this file after every step. Keep it short.
 - [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
+Done: Relocated search bar from top navbar into FilterBar beside Category and Date.
+- Removed crowded desktop and mobile search bars from `StudentNavbar.astro` so the top navbar stays clean, uncluttered, and spacious.
+- Integrated the pill search bar directly into `FilterBar.astro` alongside the Category, Location, and Date filter pills with matching height (`min-h-9 sm:min-h-10`), smooth animated sliding keywords (`Search Laptops`, `Search Wallets`, etc.), and magnifying glass icon.
+- Connected search input to `#global-search-input` so live search filtering and reset filters continue working seamlessly with the campus card grid.
+
 Done: Register area refined onto UI design system and aligned with `context/createnewacc.png`.
 - Replaced role buttons with full 3-column pill group (`Student`, `Faculty`, `Admin`) with standard `rounded-full`, active `bg-forest-700 text-white shadow-2xs` vs. inactive `border border-line bg-white text-forest-900/80 hover:bg-canvas`, and dynamic ARIA state sync.
 - Aligned helper captions: switched form hints under fields from centered `.caption` to left-aligned `text-xs text-sage-600 leading-relaxed` so helper text sits naturally under inputs.

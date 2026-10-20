@@ -133,7 +133,7 @@ const initials = getInitials(userEmail);
           </span>
         </a>
 
-        <nav class="hidden xl:flex items-center gap-5 2xl:gap-6 shrink-0" aria-label="Main Navigation">
+        <nav class="hidden md:flex items-center gap-5 lg:gap-6 shrink-0" aria-label="Main Navigation">
           <a
             href="/#feed"
             data-nav-filter="found"
@@ -160,56 +160,6 @@ const initials = getInitials(userEmail);
             </a>
           )}
         </nav>
-      </div>
-
-      <!-- Center: Search Pill Input (Desktop/Tablet) -->
-      <div class="hidden md:flex flex-1 min-w-0 max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-2 sm:mx-3 transition-[max-width] duration-300">
-        <div class="relative w-full flex items-center">
-          <input
-            type="search"
-            id="global-search-input"
-            autocomplete="off"
-            aria-label="Search campus lost and found items"
-            class="peer w-full min-h-[3rem] sm:min-h-[3.25rem] rounded-full bg-[#ece5d6] py-2.5 pl-5 pr-11 text-sm sm:text-base text-forest-900 placeholder:text-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs"
-          />
-
-          <!-- Sliding Words Animated Placeholder -->
-          <div
-            id="global-search-slider"
-            class="pointer-events-none absolute left-5 right-11 flex items-center h-full select-none text-sm sm:text-base text-stone-500 font-normal transition-opacity duration-200"
-            aria-hidden="true"
-          >
-            <span class="shrink-0 text-stone-500 mr-1.5 font-normal">Search</span>
-            <div class="relative h-6 overflow-hidden flex-1">
-              <div
-                id="global-search-slider-track"
-                class="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
-                style="transform: translateY(0px);"
-              >
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Wallets</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Student IDs</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Keys & lanyards</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Hydro Flasks</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Laptops</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">AirPods</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Backpacks</span>
-                <span class="h-6 flex items-center truncate text-stone-600 font-medium">Umbrellas</span>
-              </div>
-            </div>
-          </div>
-
-          <svg
-            class="pointer-events-none absolute right-4 size-5 text-stone-500 transition-colors peer-focus:text-forest-700"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
       </div>
 
       <!-- Right: Post Button, Notification Bell, User Avatar (Natural utility grouping) -->
@@ -408,54 +358,6 @@ const initials = getInitials(userEmail);
         </div>
       </div>
     </div>
-
-    <!-- Mobile Search Bar (Phone screens) -->
-    <div class="mt-3 md:hidden">
-      <div class="relative w-full flex items-center">
-        <input
-          type="search"
-          id="mobile-search-input"
-          autocomplete="off"
-          aria-label="Search campus lost and found items"
-          class="peer w-full min-h-[2.85rem] rounded-full bg-[#ece5d6] py-2 pl-4 pr-10 text-sm text-forest-900 placeholder:text-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs"
-        />
-
-        <!-- Mobile Sliding Words Animated Placeholder -->
-        <div
-          id="mobile-search-slider"
-          class="pointer-events-none absolute left-4 right-10 flex items-center h-full select-none text-sm text-stone-500 font-normal transition-opacity duration-200"
-          aria-hidden="true"
-        >
-          <span class="shrink-0 text-stone-500 mr-1.5 font-normal">Search</span>
-          <div class="relative h-5 overflow-hidden flex-1">
-            <div
-              id="mobile-search-slider-track"
-              class="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
-              style="transform: translateY(0px);"
-            >
-              <span class="h-5 flex items-center truncate text-stone-600 font-medium">Wallets</span>
-              <span class="h-5 flex items-center truncate text-stone-600 font-medium">Student IDs</span>
-              <span class="h-5 flex items-center truncate text-stone-600 font-medium">Keys</span>
-              <span class="h-5 flex items-center truncate text-stone-600 font-medium">Tumblers</span>
-              <span class="h-5 flex items-center truncate text-stone-600 font-medium">Laptops</span>
-              <span class="h-5 flex items-center truncate text-stone-600 font-medium">Backpacks</span>
-            </div>
-          </div>
-        </div>
-
-        <svg
-          class="pointer-events-none absolute right-3.5 size-4 text-stone-500 transition-colors peer-focus:text-forest-700"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
-    </div>
   </div>
 
   <script is:inline>
@@ -635,69 +537,6 @@ const initials = getInitials(userEmail);
         }
       });
 
-      // Handle search on non-index pages
-      function handleSearchEnter(input) {
-        if (!input) return;
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const val = input.value.trim();
-            if (window.location.pathname === "/") {
-              const mainSearch = document.getElementById("global-search-input");
-              if (mainSearch && mainSearch !== input) {
-                mainSearch.value = val;
-                mainSearch.dispatchEvent(new Event("input"));
-              }
-            } else {
-              window.location.href = `/?search=${encodeURIComponent(val)}`;
-            }
-          }
-        });
-      }
-
-      handleSearchEnter(document.getElementById("global-search-input"));
-      handleSearchEnter(document.getElementById("mobile-search-input"));
-
-      // Sliding words ticker for search inputs
-      function initSearchSlider(inputId, sliderId, trackId, itemHeight) {
-        const input = document.getElementById(inputId);
-        const slider = document.getElementById(sliderId);
-        const track = document.getElementById(trackId);
-        if (!input || !slider || !track) return;
-
-        const count = track.children.length;
-        if (count <= 1) return;
-
-        let currentIndex = 0;
-
-        function updateVisibility() {
-          const hasFocus = document.activeElement === input;
-          const hasValue = input.value.trim().length > 0;
-          if (hasFocus || hasValue) {
-            slider.style.opacity = "0";
-            slider.style.pointerEvents = "none";
-          } else {
-            slider.style.opacity = "1";
-          }
-        }
-
-        function slideNext() {
-          if (document.activeElement === input || input.value.trim().length > 0) return;
-          currentIndex = (currentIndex + 1) % count;
-          track.style.transform = `translateY(-${currentIndex * itemHeight}px)`;
-        }
-
-        setInterval(slideNext, 2500);
-
-        input.addEventListener("focus", updateVisibility);
-        input.addEventListener("blur", updateVisibility);
-        input.addEventListener("input", updateVisibility);
-
-        updateVisibility();
-      }
-
-      initSearchSlider("global-search-input", "global-search-slider", "global-search-slider-track", 24);
-      initSearchSlider("mobile-search-input", "mobile-search-slider", "mobile-search-slider-track", 20);
     })();
   </script>
 </header>
