@@ -13,15 +13,10 @@ const {
   availableCategories = [],
   availableLocations = [],
 } = Astro.props;
-// Only the known category list is shown. Custom/prank categories that exist on
-// DB items (merged in via availableCategories) must never appear in the menu.
+// Only known category and official campus location lists are shown. Prank or
+// arbitrary text that exists on DB items must never appear in the filter menus.
 const categoryOptions = [...CATEGORIES];
-const locationOptions = [
-  ...new Set([
-    ...LOCATION_FILTER_OPTIONS,
-    ...availableLocations.filter((option) => option.trim()),
-  ]),
-];
+const locationOptions = [...LOCATION_FILTER_OPTIONS];
 ---
 
 <section class="relative z-30 mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-8 lg:px-10 xl:px-14" aria-label="Campus feed filters">
