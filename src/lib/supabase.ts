@@ -1,11 +1,11 @@
 import type { Env } from "./env";
 import { createClient } from "@supabase/supabase-js";
-import { type SupabaseSession, type SupabaseUser, pkcePair, randomToken } from "./auth";
+import { type SupabaseSession, type SupabaseUser, randomToken } from "./auth";
 
 const TOKEN_PATH = "/auth/v1/token";
 const USER_PATH = "/auth/v1/user";
 const SIGNUP_PATH = "/auth/v1/signup";
-const RECOVER_PATH = "/auth/v1/recover";
+const ADMIN_USERS_PATH = "/auth/v1/admin/users";
 
 function base(env: Env): string {
   return `${env.PUBLIC_SUPABASE_URL.replace(/\/$/, "")}`;
@@ -82,27 +82,27 @@ export async function signUpWithPassword(
   return { session: null };
 }
 
-/** Sends the reset link. The link lands on /auth/recovery with a PKCE code. */
-export async function requestPasswordRecovery(
+/**
+ * Sets a user's password directly (admin recovery). Requires the service-role
+ * key and the Supabase auth user id. Used by the Security Office temp-password
+ * flow because students cannot open their @dlsau.edu.ph inboxes.
+ */
+export async function adminSetUserPassword(
   env: Env,
-  email: string,
-  redirectTo: string,
-): Promise<{ ok: boolean; verifier: string; error?: string }> {
-  const { verifier, challenge } = await pkcePair();
-  const response = await fetch(`${base(env)}${RECOVER_PATH}`, {
-    method: "POST",
-    headers: jsonHeaders(env),
-    body: JSON.stringify({
-      email,
-      redirect_to: redirectTo,
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-    }),
+  authUserId: string,
+  newPassword: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return { ok: false, error: "Service role key is not configured." };
+  const response = await fetch(`${base(env)}${ADMIN_USERS_PATH}/${authUserId}`, {
+    method: "PUT",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ password: newPassword }),
   });
   if (!response.ok) {
-    return { ok: false, verifier, error: plainAuthError(await safeJson(response)) };
+    return { ok: false, error: plainAuthError(await safeJson(response)) };
   }
-  return { ok: true, verifier };
+  return { ok: true };
 }
 
 export async function exchangeCodeForSession(
@@ -215,6 +215,23 @@ export async function ensureProfileRow(
 }
 
 export { randomToken };
+
+/**
+ * True when the Security Office flagged this account with a temporary
+ * password. The student must set a new one before using the app.
+ */
+export async function mustChangePassword(env: Env, accessToken: string): Promise<boolean> {
+  const user = await fetchUser(env, accessToken);
+  if (!user?.id) return false;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, { auth: { persistSession: false } });
+  const { data } = await supabase
+    .from("profiles")
+    .select("must_change_password")
+    .eq("id", user.id)
+    .maybeSingle();
+  return Boolean(data?.must_change_password);
+}
 
 async function safeJson(response: Response): Promise<AuthErrorBody | null> {
   try {

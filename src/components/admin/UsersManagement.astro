@@ -1366,7 +1366,7 @@ const defaultSelectedUser = users[0] || null;
         pendingTarget = { userEmail, userName };
 
         if (pwdModalDesc) {
-          pwdModalDesc.textContent = `Dispatch an encrypted password recovery link to ${userName} at ${userEmail}?`;
+          pwdModalDesc.textContent = `Issue a temporary password for ${userName} (${userEmail})? They must change it after signing in.`;
         }
 
         if (pwdModal) {
@@ -1399,15 +1399,15 @@ const defaultSelectedUser = users[0] || null;
           });
           const data = await res.json().catch(() => ({}));
           if (data.ok) {
-            showToast(`Password recovery link dispatched to ${userName} (${userEmail}).`);
+            showToast(`Temporary password for ${userName}: ${data.tempPassword}. Give it to them at the counter.`);
           } else {
-            showToast(data.error || "Could not dispatch password recovery link.");
+            showToast(data.error || "Could not issue a temporary password.");
           }
         } catch {
-          showToast("Dispatched password reset instructions to email.");
+          showToast("Could not issue a temporary password. Try again.");
         } finally {
           confirmPwdBtn.disabled = false;
-          confirmPwdBtn.textContent = "Send reset link";
+          confirmPwdBtn.textContent = "Issue temp password";
           closeAllModals();
         }
       });

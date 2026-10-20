@@ -1,7 +1,6 @@
 export const ACCESS_COOKIE = "ll_access_token";
 export const REFRESH_COOKIE = "ll_refresh_token";
 export const OAUTH_STATE_COOKIE = "ll_oauth_state";
-export const PKCE_VERIFIER_COOKIE = "ll_pkce_verifier";
 export const DEV_SESSION_COOKIE = "ll_dev_session";
 export const LAST_ACTIVE_COOKIE = "ll_last_active";
 
@@ -117,12 +116,6 @@ export interface SupabaseSession {
 export interface SupabaseUser {
   id: string;
   email: string | null;
-}
-
-export async function pkcePair(): Promise<{ verifier: string; challenge: string }> {
-  const verifier = base64UrlEncode(randomBytes(32));
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-  return { verifier, challenge: base64UrlEncode(new Uint8Array(digest)) };
 }
 
 export function randomBytes(length: number): Uint8Array {

@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { CUSTODY_EXTENSION_DAYS, extensionDeadline } from "~/lib/custody";
 import {
   DEV_SESSION_COOKIE,
-  PKCE_VERIFIER_COOKIE,
   isAllowedEmail,
   safeNextPath,
   signDevSession,
@@ -21,7 +20,7 @@ import {
 import {
   ensureProfileRow,
   fetchUser,
-  requestPasswordRecovery,
+  mustChangePassword,
   signInWithPassword,
   signUpWithPassword,
   updateUserPassword,
@@ -132,6 +131,16 @@ export const server = {
       clearRateLimit(emailKey);
 
       setSessionCookies(context.cookies, result.session, remember);
+
+      // Security Office issued a temp password: block the dashboard until a
+      // new password is chosen.
+      if (result.session.access_token) {
+        const flagged = await mustChangePassword(context.locals.env, result.session.access_token);
+        if (flagged) {
+          return { redirect: "/reset-password" };
+        }
+      }
+
       const defaultPath = roleForEmail(email) === "admin" ? "/admin" : "/";
       const targetPath = next && next !== "/" ? safeNextPath(next) : defaultPath;
       return { redirect: targetPath };
@@ -178,26 +187,67 @@ export const server = {
     },
   }),
 
+  /**
+   * Account recovery request. Students cannot open their @dlsau.edu.ph
+   * inboxes, so no email is ever sent. The request notifies the Security
+   * Office admins; the student verifies their ID in person and an admin
+   * issues a temporary password from the Users Management panel.
+   */
   forgotPassword: defineAction({
     accept: "form",
     input: forgotPasswordSchema,
     handler: async ({ email }, context) => {
       requireSupabase(context.locals);
+      assertDomain(context.locals, email);
 
-      const redirectTo = new URL("/auth/recovery", context.url.origin).toString();
-      const result = await requestPasswordRecovery(context.locals.env, email, redirectTo);
-      if (!result.ok) {
+      const clientIp =
+        context.request.headers.get("cf-connecting-ip") ||
+        context.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        context.clientAddress ||
+        "unknown-ip";
+      const ipKey = `forgot:ip:${clientIp}`;
+      const limit = isRateLimited(ipKey);
+      if (limit.isBlocked) {
+        const mins = Math.max(1, Math.ceil(limit.remainingSeconds / 60));
         throw new ActionError({
-          code: "BAD_REQUEST",
-          message: result.error ?? "Could not send the reset email. Try again.",
+          code: "TOO_MANY_REQUESTS",
+          message: `Too many recovery requests from this network. Please wait ${mins} minute(s).`,
         });
       }
+      recordFailedAttempt(ipKey, { maxFailures: 3, lockoutDurationMs: 15 * 60 * 1000 });
 
-      context.cookies.set(PKCE_VERIFIER_COOKIE, result.verifier, sessionCookieOptions(900));
+      // Notify every admin so the office sees the request in their bell.
+      // Failures are swallowed: the student always gets the same answer.
+      try {
+        const supabase = serviceClient(context.locals.env);
+        const { data: admins } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("role", "admin")
+          .eq("active", true);
+        if (admins && admins.length > 0) {
+          await supabase.from("notifications").insert(
+            admins.map((admin) => ({
+              user_id: admin.id,
+              message: `Password recovery request for ${email}. Visit the Security Office with a valid DLSAU ID.`,
+              link: "/admin",
+              read: false,
+            })),
+          );
+        }
+      } catch (err) {
+        console.warn("[forgotPassword] admin notify failed:", err);
+      }
+
+      // Same answer whether or not the address has an account (no enumeration).
       return { redirect: "/forgot-password?sent=1" };
     },
   }),
 
+  /**
+   * Student picks a new password while signed in with the temporary
+   * password the Security Office issued.
+   */
   resetPassword: defineAction({
     accept: "form",
     input: resetPasswordSchema,
@@ -208,7 +258,7 @@ export const server = {
       if (!accessToken) {
         throw new ActionError({
           code: "PRECONDITION_FAILED",
-          message: "That reset link expired. Request a new one.",
+          message: "Sign in with your temporary password first.",
         });
       }
 
@@ -218,6 +268,19 @@ export const server = {
           code: "BAD_REQUEST",
           message: result.error ?? "Could not save the new password. Try again.",
         });
+      }
+
+      // Clear the forced-change flag so the next sign-in goes to the dashboard.
+      try {
+        const user = await fetchUser(context.locals.env, accessToken);
+        if (user?.id) {
+          await serviceClient(context.locals.env)
+            .from("profiles")
+            .update({ must_change_password: false })
+            .eq("id", user.id);
+        }
+      } catch (err) {
+        console.warn("[resetPassword] flag clear failed:", err);
       }
 
       clearSessionCookies(context.cookies);

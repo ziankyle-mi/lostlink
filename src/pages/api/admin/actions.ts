@@ -445,7 +445,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ACTION: Send Password Reset Link
+    // ACTION: Issue temporary password (office-verified recovery; no email)
     if (action === "reset_user_password") {
       if (!email || typeof email !== "string" || !email.includes("@")) {
         return new Response(JSON.stringify({ ok: false, error: "Valid email address required." }), {
@@ -455,21 +455,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       const cleanEmail = email.toLowerCase().trim();
-      const origin = new URL(request.url).origin;
+
+      // profiles.id references auth.users, so it is also the auth user id.
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("email", cleanEmail)
+        .maybeSingle();
+
+      if (!targetProfile?.id) {
+        return new Response(JSON.stringify({ ok: false, error: "No account found for that email." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Temp password the student reads off the office screen / notification.
+      const tempPassword = `Reset-${Math.random().toString(36).slice(2, 6)}${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const { error: authErr } = await supabase.auth.admin.updateUserById(targetProfile.id, {
+        password: tempPassword,
+      });
+      if (authErr) {
+        return new Response(JSON.stringify({ ok: false, error: authErr.message || "Could not set the temporary password." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Force the student to pick a new password on next sign-in.
+      await supabase.from("profiles").update({ must_change_password: true }).eq("id", targetProfile.id);
 
       try {
-        await supabase.auth.resetPasswordForEmail(cleanEmail, {
-          redirectTo: `${origin}/reset-password`,
+        await supabase.from("notifications").insert({
+          user_id: targetProfile.id,
+          message: `Recovery approved. Sign in with temporary password ${tempPassword}, then set a new password.`,
+          link: "/reset-password",
+          read: false,
         });
-      } catch (authErr) {
-        console.warn("[admin/actions] Password reset note:", authErr);
+      } catch (notifErr) {
+        console.warn("[admin/actions] Notification insert error:", notifErr);
       }
 
       if (adminProfileId) {
         try {
           await supabase.from("admin_log").insert({
             admin_id: adminProfileId,
-            action: `password_reset_sent: ${cleanEmail}`,
+            action: `temp_password_issued: ${cleanEmail}`,
           });
         } catch (logErr) {
           console.warn("[admin/actions] Log warning:", logErr);
@@ -479,7 +511,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({
         ok: true,
         email: cleanEmail,
-        message: `Password reset link dispatched to ${cleanEmail}.`,
+        tempPassword,
+        message: `Temporary password issued for ${cleanEmail}.`,
       }), {
         status: 200,
         headers: { "Content-Type": "application/json" },

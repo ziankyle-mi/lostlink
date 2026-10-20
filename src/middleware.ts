@@ -5,6 +5,7 @@ import {
   resolveUser,
   touchActivityCookie,
 } from "~/lib/session";
+import { mustChangePassword } from "~/lib/supabase";
 import {
   INACTIVITY_TIMEOUT_SECONDS,
   LAST_ACTIVE_COOKIE,
@@ -27,7 +28,6 @@ const PUBLIC_PATHS = new Set([
   "/register",
   "/forgot-password",
   "/reset-password",
-  "/auth/recovery",
   "/privacy",
   "/terms",
   "/help",
@@ -91,6 +91,25 @@ export const onRequest = defineMiddleware(async (context, next) => {
     clearSessionCookies(context.cookies);
     const nextPath = encodeURIComponent(pathname + context.url.search);
     return context.redirect(`/login?next=${nextPath}`, 302);
+  }
+
+  // Temporary password issued by the Security Office: the student must set a
+  // new password before anything else loads.
+  if (pathname !== "/reset-password" && pathname !== "/api/auth/logout") {
+    const accessToken = context.cookies.get("ll_access_token")?.value ?? "";
+    const needsReset = accessToken ? await mustChangePassword(env, accessToken) : false;
+    if (needsReset) {
+      if (isAction || pathname.startsWith("/api/")) {
+        return withSecurityHeaders(
+          new Response(
+            JSON.stringify({ ok: false, error: "Set a new password before continuing.", mustChangePassword: true }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          ),
+          "no-store",
+        );
+      }
+      return context.redirect("/reset-password", 302);
+    }
   }
 
   // Inactivity timeout defense-in-depth:
