@@ -7,10 +7,11 @@ import { readEnv } from "~/lib/env";
 
 interface Props {
   userEmail?: string;
+  userRole?: string;
 }
 
-const { userEmail = "student@dlsau.edu.ph" } = Astro.props;
-const isAdmin = roleForEmail(userEmail) === "admin";
+const { userEmail = "student@dlsau.edu.ph", userRole } = Astro.props;
+let isAdmin = userRole === "admin" || Astro.locals.user?.role === "admin" || roleForEmail(userEmail) === "admin";
 
 const env = Astro.locals.env || readEnv();
 interface LiveNotif {
@@ -31,9 +32,13 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
     });
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, role")
       .eq("email", userEmail.toLowerCase().trim())
       .maybeSingle();
+
+    if (prof?.role === "admin") {
+      isAdmin = true;
+    }
 
     if (prof?.id) {
       const { data: nList } = await supabase

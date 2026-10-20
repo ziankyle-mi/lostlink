@@ -353,6 +353,11 @@ export function enrichCampusUser(raw: {
     affiliationText: isFaculty
       ? `This faculty account is provisioned under the ${program.collegeName} with academic teaching and LMS instructor access.`
       : program.affiliationText,
-    portalLevel: isFaculty ? "Faculty Member (Standard Privileges)" : "Student",
+    portalLevel:
+      raw.role === "admin"
+        ? "Disciplinary Office Administrator"
+        : isFaculty
+          ? "Faculty Member (Standard Privileges)"
+          : "Student",
   };
 }

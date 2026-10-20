@@ -365,6 +365,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { "Content-Type": "application/json" },
           });
         }
+      } else if (targetEmail) {
+        const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("email", targetEmail);
+        if (updateErr) {
+          console.warn("[admin/actions] Profile role update by email note:", updateErr.message);
+        }
       }
 
       if (adminProfileId) {

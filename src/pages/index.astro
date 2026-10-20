@@ -108,7 +108,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
   <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between selection:bg-lime">
     <div>
       <!-- Top Navigation and Announcement Ticker -->
-      <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} />
+      <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} userRole={user?.role} />
 
       <!-- Campus Feed Headline & Two CTA Action Cards -->
       <HeroFeed foundCount={feedFoundCount} lostCount={feedLostCount} />

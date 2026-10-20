@@ -547,10 +547,16 @@ const defaultSelectedUser = users[0] || null;
             <div class="rounded-2xl bg-[#f5f1e6]/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-[#f5f1e6]">
               <p class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Portal privileges</p>
               <p id="dossier-portal-level" class="mt-1.5 font-bold text-sm sm:text-base text-forest-900 leading-snug">
-                {defaultSelectedUser?.portalLevel || "Student"}
+                {defaultSelectedUser?.role === "admin"
+                  ? "Disciplinary Office Administrator"
+                  : (defaultSelectedUser?.portalLevel || "Student")}
               </p>
               <p id="dossier-portal-subtext" class="mt-1 text-xs text-stone-500 font-medium leading-relaxed">
-                Standard LostLink reporting and claim submission privileges.
+                {defaultSelectedUser?.role === "admin"
+                  ? "Full Disciplinary Office privileges: review claims, approve custody intake, and moderate reports."
+                  : (defaultSelectedUser?.isFaculty
+                    ? "Academic teaching and campus reporting privileges."
+                    : "Standard LostLink reporting and claim submission privileges.")}
               </p>
             </div>
           </div>
@@ -982,6 +988,7 @@ const defaultSelectedUser = users[0] || null;
     const dossierCampus = document.getElementById("dossier-campus");
     const dossierCampusSubtext = document.getElementById("dossier-campus-subtext");
     const dossierPortalLevel = document.getElementById("dossier-portal-level");
+    const dossierPortalSubtext = document.getElementById("dossier-portal-subtext");
     const dossierJoinedDate = document.getElementById("dossier-joined-date");
     const dossierAccountIdLabel = document.getElementById("dossier-account-id-label");
 
@@ -1134,7 +1141,18 @@ const defaultSelectedUser = users[0] || null;
       }
       if (dossierCampus) dossierCampus.textContent = campus;
       if (dossierCampusSubtext) dossierCampusSubtext.textContent = campusSubtext;
-      if (dossierPortalLevel) dossierPortalLevel.textContent = portalLevel;
+      if (dossierPortalLevel) {
+        dossierPortalLevel.textContent = role === "admin"
+          ? "Disciplinary Office Administrator"
+          : (portalLevel || (isFaculty ? "Faculty Member (Standard Privileges)" : "Student"));
+      }
+      if (dossierPortalSubtext) {
+        dossierPortalSubtext.textContent = role === "admin"
+          ? "Full Disciplinary Office privileges: review claims, approve custody intake, and moderate reports."
+          : (isFaculty
+            ? "Academic teaching and campus reporting privileges."
+            : "Standard LostLink reporting and claim submission privileges.");
+      }
       if (dossierJoinedDate) dossierJoinedDate.textContent = formatDate(createdAt);
       if (dossierAccountIdLabel) dossierAccountIdLabel.textContent = `Account ID: ${studentId}`;
 
@@ -1432,7 +1450,14 @@ const defaultSelectedUser = users[0] || null;
           if (data.ok) {
             showToast(`Role updated: ${pendingTarget.userName} is now ${targetRole === "admin" ? "an Administrator" : "a Student"}.`);
             if (card) {
+              const isFac = card.getAttribute("data-is-faculty") === "true";
               card.setAttribute("data-user-role", targetRole);
+              card.setAttribute(
+                "data-portal-level",
+                targetRole === "admin"
+                  ? "Disciplinary Office Administrator"
+                  : (isFac ? "Faculty Member (Standard Privileges)" : "Student")
+              );
               updateDossier(card);
             }
             // Recalculate metrics

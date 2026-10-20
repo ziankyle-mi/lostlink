@@ -16,6 +16,11 @@ The agent updates this file after every step. Keep it short.
 - [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
+Done: Fixed Disciplinary Office Administrator privileges display and role propagation.
+- Resolved discrepancy in `UsersManagement.astro` and `campusPrograms.ts`: when an account has `role: 'admin'`, the user dossier 'Portal privileges' card now displays 'Disciplinary Office Administrator' along with DO moderation subtext instead of default 'Student' text.
+- Updated `StudentNavbar.astro`, `index.astro`, `profile.astro`, and `item/[id].astro` so promoted administrators immediately receive DO status in the navigation bar, direct access to the Admin Console, and Disciplinary Admin badge in the user dropdown.
+- Added non-UUID fallback to `/api/admin/actions.ts` so role updates reliably sync against Supabase profiles by email.
+
 Done: Relocated search bar from top navbar into FilterBar beside Category and Date.
 - Removed crowded desktop and mobile search bars from `StudentNavbar.astro` so the top navbar stays clean, uncluttered, and spacious.
 - Integrated the pill search bar directly into `FilterBar.astro` alongside the Category, Location, and Date filter pills with matching height (`min-h-9 sm:min-h-10`), smooth animated sliding keywords (`Search Laptops`, `Search Wallets`, etc.), and magnifying glass icon.
