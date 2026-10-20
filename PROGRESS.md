@@ -16,6 +16,13 @@ The agent updates this file after every step. Keep it short.
 - [x] 10. Security and polish pass
 - [ ] 11. Deploy and demo run
 
+Done: Resolved admin Users tab password reset issue and added in-person recovery alerts.
+- Fixed `reset_user_password` action in `/api/admin/actions.ts` to reliably handle campus demo users and format credentials cleanly as `Reset-XXXX-YYYY`.
+- Upgraded the "Issue temporary password" modal in `UsersManagement.astro` into a two-step flow: Step 1 confirms identity check, and Step 2 reveals the temporary password with a 1-click clipboard copy button and counter instructions (no longer abruptly closes).
+- Connected `/forgot-password` student requests to `admin_log` (`password_recovery_requested: <email>`) and admin notification inboxes.
+- Added a dedicated "Password Recovery Requests" banner to the admin Users tab with quick-action "Issue Password" buttons, student card badges (`⚡ Reset Requested`), and an alert badge on the Admin Sidebar "Users" link.
+- Verified: All 98 tests pass (`npm test`), `npm run build` succeeds cleanly.
+
 Done: Redesigned the Full Administrative Audit Log modal with UI design system tokens.
 - Replaced off-palette colors with brand tokens (`danger`, `forest-700`, `lime`, `stone`).
 - Upgraded modal header with Fraunces serif display typography, shield badge lockup, and 40px circular close button.
