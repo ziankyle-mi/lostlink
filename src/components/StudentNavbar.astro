@@ -284,16 +284,17 @@ const initials = getInitials(userEmail);
             <div id="notif-list-container" class="mt-3 space-y-2.5 max-h-72 sm:max-h-80 overflow-y-auto overscroll-contain pr-1 custom-scrollbar">
               {liveNotifications.length > 0 ? (
                 liveNotifications.map((notif) => (
-                  <a
-                    href={notif.link || "#"}
-                    class={`block rounded-xl p-3 text-xs sm:text-sm border transition-all ${
+                  <div
+                    data-notif-id={notif.id}
+                    data-notif-read={notif.read ? "true" : "false"}
+                    class={`notif-card group relative block rounded-xl p-3 text-xs sm:text-sm border transition-all ${
                       !notif.read
                         ? "bg-[#f5f1e6]/90 border-line/70 font-medium"
                         : "bg-white border-transparent hover:bg-stone-50"
                     }`}
                   >
                     <div class="flex items-start justify-between gap-2">
-                      <p class="font-bold text-forest-900 leading-tight">
+                      <a href={notif.link || "#"} class="font-bold text-forest-900 leading-tight hover:underline flex-1">
                         {notif.message.includes("submitted")
                           ? "Report Submitted"
                           : notif.message.includes("approved")
@@ -303,18 +304,34 @@ const initials = getInitials(userEmail);
                           : notif.message.includes("denied")
                           ? "Claim Update"
                           : "Campus Notification"}
-                      </p>
-                      {!notif.read && (
-                        <span class="size-1.5 shrink-0 rounded-full bg-[#164f38] mt-1"></span>
-                      )}
+                      </a>
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        {!notif.read && (
+                          <span class="size-1.5 shrink-0 rounded-full bg-[#164f38]"></span>
+                        )}
+                        <button
+                          type="button"
+                          class="delete-notif-btn p-1 -mr-1 rounded-md text-stone-400 hover:text-rose-600 hover:bg-stone-200/60 transition-colors cursor-pointer"
+                          data-notif-id={notif.id}
+                          title="Delete notification"
+                          aria-label="Delete notification"
+                        >
+                          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <p class="mt-1 text-stone-600 leading-relaxed text-xs">
-                      {notif.message}
-                    </p>
-                    <span class="mt-1.5 block text-[10px] text-stone-400">
-                      {formatNotifTime(notif.created_at)}
-                    </span>
-                  </a>
+                    <a href={notif.link || "#"} class="block mt-1">
+                      <p class="text-stone-600 leading-relaxed text-xs">
+                        {notif.message}
+                      </p>
+                      <span class="mt-1.5 block text-[10px] text-stone-400">
+                        {formatNotifTime(notif.created_at)}
+                      </span>
+                    </a>
+                  </div>
                 ))
               ) : (
                 <div class="py-6 text-center text-xs text-stone-500">
@@ -534,6 +551,64 @@ const initials = getInitials(userEmail);
             });
           } catch (err) {
             console.warn("[notifs] Mark read notice:", err);
+          }
+        });
+      }
+
+      // Delete individual notification handler
+      const notifContainer = document.getElementById("notif-list-container");
+      if (notifContainer) {
+        notifContainer.addEventListener("click", async (e) => {
+          const deleteBtn = e.target.closest(".delete-notif-btn");
+          if (!deleteBtn) return;
+          e.stopPropagation();
+          e.preventDefault();
+
+          const notifCard = deleteBtn.closest(".notif-card");
+          if (!notifCard) return;
+
+          const notifId = deleteBtn.dataset.notifId;
+
+          // Smooth slide-fade out
+          notifCard.style.transition = "opacity 180ms ease, transform 180ms ease";
+          notifCard.style.opacity = "0";
+          notifCard.style.transform = "translateX(16px)";
+          setTimeout(() => {
+            notifCard.remove();
+            const remaining = notifContainer.querySelectorAll(".notif-card");
+            if (remaining.length === 0) {
+              notifContainer.innerHTML = `
+                <div class="py-6 text-center text-xs text-stone-500">
+                  <p class="font-semibold text-forest-900">No notifications yet</p>
+                  <p class="mt-1">When reports or claims update, they will appear here.</p>
+                </div>
+              `;
+            }
+            // Recount unread
+            const remainingUnread = notifContainer.querySelectorAll('.notif-card[data-notif-read="false"]').length;
+            const dot = document.getElementById("notif-unread-dot");
+            const badge = document.getElementById("notif-unread-badge");
+            const markAllBtn = document.getElementById("mark-all-notifs-read-btn");
+            if (remainingUnread > 0) {
+              if (dot) dot.classList.remove("hidden");
+              if (badge) badge.textContent = `${remainingUnread} new`;
+            } else {
+              if (dot) dot.classList.add("hidden");
+              if (badge) badge.textContent = "All caught up";
+              if (markAllBtn) markAllBtn.classList.add("hidden");
+            }
+          }, 180);
+
+          if (notifId) {
+            try {
+              await fetch("/api/notifications", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ notificationId: notifId }),
+              });
+            } catch (err) {
+              console.warn("[notifs] Delete notification notice:", err);
+            }
           }
         });
       }

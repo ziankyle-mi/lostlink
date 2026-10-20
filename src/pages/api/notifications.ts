@@ -150,3 +150,72 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 };
+
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  const user = locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const supabase = getAdminClient(locals.env);
+  const userEmail = user.email.toLowerCase().trim();
+
+  try {
+    const url = new URL(request.url);
+    const body = await request.json().catch(() => ({}));
+    const notificationId = url.searchParams.get("id") || body.notificationId;
+
+    if (!notificationId) {
+      return new Response(JSON.stringify({ ok: false, error: "Missing notification id." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    let profileId: string | null = null;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", userEmail)
+      .maybeSingle();
+
+    if (profile?.id) profileId = profile.id;
+    else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+      profileId = user.id;
+    }
+
+    if (!profileId) {
+      return new Response(JSON.stringify({ ok: false, error: "Profile not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("id", notificationId)
+      .eq("user_id", profileId);
+
+    if (error) {
+      return new Response(JSON.stringify({ ok: false, error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, message: "Notification deleted." }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error deleting notification";
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};

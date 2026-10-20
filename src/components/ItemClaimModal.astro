@@ -49,6 +49,7 @@ const { isAdmin = false } = Astro.props;
       <div id="modal-images-gallery" class="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
         <!-- Dynamically populated thumbnails -->
       </div>
+      <p class="mt-1 text-xs text-stone-400">Click a photo to zoom in.</p>
     </div>
 
     <div class="mt-4 grid grid-cols-2 gap-3.5 rounded-2xl bg-[#f5f1e6]/80 p-4 text-sm">
@@ -165,4 +166,30 @@ const { isAdmin = false } = Astro.props;
       </div>
     </div>
   </div>
+</div>
+
+<!-- Photo Zoom Lightbox (opened from the item photo gallery) -->
+<div
+  id="photo-lightbox"
+  class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/80 p-4"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Zoomed item photo"
+>
+  <button
+    type="button"
+    id="close-photo-lightbox"
+    class="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 cursor-pointer"
+    aria-label="Close photo"
+  >
+    <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  </button>
+  <img
+    id="photo-lightbox-img"
+    src=""
+    alt=""
+    class="max-h-[85dvh] max-w-[92vw] rounded-2xl object-contain shadow-2xl"
+  />
 </div>

@@ -18,6 +18,11 @@ The agent updates this file after every step. Keep it short.
 
 ## Current step
 
+Done: Added delete button for individual notifications and fixed filter dropdown overlap.
+- Added a subtle trash icon button on each notification card in `StudentNavbar.astro` with slide-fade removal animation, live unread badge recalculation, and `DELETE /api/notifications` handler.
+- Fixed Location/Category/Date dropdown overlap in `FilterBar.astro` & `index.astro`: assigned `relative z-30` to the FilterBar section and wrapper, elevated dropdown menus to `z-50`, and adjusted max-height to prevent clipping underneath the `HeroFeed` cards. Added gentle debounce on building search.
+- Verified: `astro check` 0 errors, 0 warnings; `npm test` 89/89 passed; production build succeeded.
+
 Done: Admin sidebar's Student View button now opens the campus feed (`/`)
 instead of the separate profile page. No visual changes.
 

@@ -111,7 +111,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       <StudentNavbar userEmail={user?.email ?? "student@dlsau.edu.ph"} />
 
       <!-- Filter Controls Toolbar -->
-      <div class="mt-4">
+      <div class="mt-4 relative z-30">
         <FilterBar
           totalCount={allFeedItems.length}
           availableCategories={allFeedItems.map((item) => item.category)}
@@ -391,22 +391,26 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         });
       }
 
-      // Location inline search
+      // Location inline search (with gentle debounce for smooth typing)
       const locSearchInput = document.getElementById("location-search-input");
       if (locSearchInput) {
         locSearchInput.addEventListener("click", (e) => e.stopPropagation());
+        let locDebounceTimer;
         locSearchInput.addEventListener("input", (e) => {
-          const query = e.target.value.toLowerCase().trim();
-          const locOptions = document.querySelectorAll(".location-option");
-          let matchCount = 0;
-          locOptions.forEach((opt) => {
-            const locName = (opt.dataset.location || opt.textContent || "").toLowerCase();
-            const matches = !query || locName.includes(query);
-            opt.classList.toggle("hidden", !matches);
-            if (matches) matchCount++;
-          });
-          const noResults = document.getElementById("location-no-results");
-          if (noResults) noResults.classList.toggle("hidden", matchCount > 0);
+          clearTimeout(locDebounceTimer);
+          locDebounceTimer = setTimeout(() => {
+            const query = e.target.value.toLowerCase().trim();
+            const locOptions = document.querySelectorAll(".location-option");
+            let matchCount = 0;
+            locOptions.forEach((opt) => {
+              const locName = (opt.dataset.location || opt.textContent || "").toLowerCase();
+              const matches = !query || locName.includes(query);
+              opt.classList.toggle("hidden", !matches);
+              if (matches) matchCount++;
+            });
+            const noResults = document.getElementById("location-no-results");
+            if (noResults) noResults.classList.toggle("hidden", matchCount > 0);
+          }, 80);
         });
       }
 
@@ -588,7 +592,12 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               const imgEl = document.createElement("img");
               imgEl.src = imgSrc;
               imgEl.alt = `${name} - Photo ${idx + 1}`;
-              imgEl.className = "h-24 w-28 shrink-0 rounded-xl border border-stone-200 object-cover shadow-2xs";
+              imgEl.className = "h-24 w-28 shrink-0 rounded-xl border border-stone-200 object-cover shadow-2xs cursor-zoom-in hover:opacity-85 transition-opacity";
+              imgEl.title = "Click to zoom";
+              imgEl.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                openPhotoLightbox(imgSrc, imgEl.alt);
+              });
               imagesGallery.appendChild(imgEl);
             });
           } else {
@@ -632,6 +641,39 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         claimModal.classList.add("hidden");
         claimModal.classList.remove("flex");
       }
+
+      // Photo zoom lightbox (opened from gallery thumbnails in the item modal)
+      const photoLightbox = document.getElementById("photo-lightbox");
+      const photoLightboxImg = document.getElementById("photo-lightbox-img");
+      const closePhotoLightboxBtn = document.getElementById("close-photo-lightbox");
+
+      function openPhotoLightbox(src, alt) {
+        if (!photoLightbox || !photoLightboxImg) return;
+        photoLightboxImg.src = src;
+        photoLightboxImg.alt = alt || "Zoomed item photo";
+        photoLightbox.classList.remove("hidden");
+        photoLightbox.classList.add("flex");
+        closePhotoLightboxBtn?.focus();
+      }
+
+      function hidePhotoLightbox() {
+        if (!photoLightbox || !photoLightboxImg) return;
+        photoLightbox.classList.add("hidden");
+        photoLightbox.classList.remove("flex");
+        photoLightboxImg.src = "";
+      }
+
+      if (closePhotoLightboxBtn) closePhotoLightboxBtn.addEventListener("click", hidePhotoLightbox);
+      if (photoLightbox) {
+        photoLightbox.addEventListener("click", (e) => {
+          if (e.target === photoLightbox) hidePhotoLightbox();
+        });
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && photoLightbox && !photoLightbox.classList.contains("hidden")) {
+          hidePhotoLightbox();
+        }
+      });
 
       // Delegated card click listener on grid (supports both initial and dynamically added cards)
       if (itemsGrid) {
