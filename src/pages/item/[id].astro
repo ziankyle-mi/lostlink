@@ -2,9 +2,9 @@
 import { actions } from "astro:actions";
 import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
-import { ALL_ITEMS } from "~/data/mockItems";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
+import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 
 const { id } = Astro.params;
 
@@ -16,57 +16,56 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
 // Resolve user session (if logged in)
 const user = Astro.locals.user;
 const userEmail = user?.email || "";
+const isAdmin = user?.role === "admin";
 
 const env = Astro.locals.env || readEnv();
 let item: any = null;
 let isReporter = false;
 
-// 1. Check Supabase
-if (id && env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+if (id && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
-    const supabase = createClient(
-      env.PUBLIC_SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
 
     const { data: dbItem } = await supabase
       .from("items")
-      .select("*, profiles!reporter_id(id, full_name, email)")
+      .select(
+        "id,name,type,category,location,event_date,description,status,reference_code,photo_path,hide_photo,reporter_id,created_at,profiles!reporter_id(id, full_name, email)",
+      )
       .eq("id", id)
       .maybeSingle();
 
     if (dbItem) {
-      let photos: string[] = [];
-      if (dbItem.photo_path) {
-        try {
-          if (dbItem.photo_path.startsWith("[")) {
-            photos = JSON.parse(dbItem.photo_path);
-          } else {
-            photos = [dbItem.photo_path];
-          }
-        } catch {
-          photos = [dbItem.photo_path];
-        }
-      }
+      const reporterEmail = (dbItem.profiles as unknown as { email?: string } | null)?.email;
+      isReporter = Boolean(
+        user &&
+          (dbItem.reporter_id === user.id ||
+            (reporterEmail && reporterEmail.toLowerCase() === userEmail.toLowerCase())),
+      );
 
-      item = {
-        id: dbItem.id,
-        name: dbItem.name,
-        type: dbItem.type,
-        category: dbItem.category,
-        location: dbItem.location,
-        eventDate: dbItem.event_date || (dbItem.created_at ? dbItem.created_at.split("T")[0] : "Recently"),
-        description: dbItem.description,
-        status: dbItem.status,
-        referenceCode: dbItem.reference_code,
-        images: photos,
-        reporterId: dbItem.reporter_id,
-        reporterEmail: dbItem.profiles?.email,
-      };
+      // Unapproved reports are visible only to their reporter and admins.
+      const isPublic = ["approved", "claimed", "resolved"].includes(dbItem.status);
+      if (isPublic || isReporter || isAdmin) {
+        // IDs and cards must never be shown to the public.
+        const canSeePhoto = !dbItem.hide_photo || isReporter || isAdmin;
+        const paths = canSeePhoto ? photoPathsFromColumn(dbItem.photo_path) : [];
+        const photos = paths.length > 0 ? (await signPhotoPaths(env, paths)).filter((url) => url.length > 0) : [];
 
-      if (user && dbItem.profiles?.email) {
-        isReporter = dbItem.profiles.email.toLowerCase() === userEmail.toLowerCase();
+        item = {
+          id: dbItem.id,
+          name: dbItem.name,
+          type: dbItem.type,
+          category: dbItem.category,
+          location: dbItem.location,
+          eventDate: dbItem.event_date || (dbItem.created_at ? dbItem.created_at.split("T")[0] : "Recently"),
+          description: dbItem.description,
+          status: dbItem.status,
+          // The reference code is a claim secret: reporter and admins only.
+          referenceCode: isReporter || isAdmin ? dbItem.reference_code : null,
+          images: photos,
+          reporterId: dbItem.reporter_id,
+        };
       }
     }
   } catch (err) {
@@ -74,26 +73,8 @@ if (id && env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLI
   }
 }
 
-// 2. Fallback: Only check mock items array if live Supabase is not configured
-const isDbConfigured = Boolean(env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY));
-if (!item && id && !isDbConfigured) {
-  const mock = ALL_ITEMS.find((m) => m.id === id);
-  if (mock) {
-    item = {
-      id: mock.id,
-      name: mock.name,
-      type: mock.type,
-      category: mock.category,
-      location: mock.location,
-      eventDate: mock.eventDate || mock.date,
-      description: mock.description,
-      status: "approved",
-      referenceCode: mock.referenceCode,
-      images: mock.images ?? [],
-      reporterId: null,
-      reporterEmail: null,
-    };
-  }
+if (!item) {
+  Astro.response.status = 404;
 }
 ---
 
@@ -101,7 +82,7 @@ if (!item && id && !isDbConfigured) {
   title={item ? `${item.name} | LostLink` : "Item Not Found | LostLink"}
   description={item ? `${item.type.toUpperCase()}: ${item.name} at De La Salle Araneta University` : "Item details on LostLink"}
 >
-  <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
+  <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between selection:bg-lime">
     <div>
       <!-- Top Navbar -->
       <StudentNavbar userEmail={userEmail} userRole={user?.role} />
@@ -132,7 +113,7 @@ if (!item && id && !isDbConfigured) {
             </p>
             <a
               href="/"
-              class="mt-6 inline-block rounded-full bg-forest-900 px-6 py-2.5 text-xs font-bold text-[#d8ef8c] hover:bg-forest-800 transition-colors shadow-xs"
+              class="mt-6 inline-block rounded-full bg-forest-900 px-6 py-2.5 text-xs font-bold text-lime hover:bg-forest-900 transition-colors shadow-xs"
             >
               Browse Campus Feed
             </a>
@@ -145,15 +126,15 @@ if (!item && id && !isDbConfigured) {
                 <!-- Status Badges -->
                 <div class="absolute left-3 top-3 z-10 flex items-center gap-2">
                   <span class={`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
-                    item.type === "found" ? "bg-forest-700 text-white shadow-2xs" : "bg-[#d8ef8c] text-forest-900 shadow-2xs border border-lime-600/30"
+                    item.type === "found" ? "bg-forest-700 text-white shadow-2xs" : "bg-lime text-forest-900 shadow-2xs border border-lime-600/30"
                   }`}>
                     {item.type}
                   </span>
                   <span class={`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
                     item.status === "approved"
-                      ? "bg-[#d8ef8c] text-forest-900 shadow-2xs"
+                      ? "bg-lime text-forest-900 shadow-2xs"
                       : item.status === "claimed" || item.status === "resolved"
-                        ? "bg-forest-700 text-[#d8ef8c] shadow-2xs"
+                        ? "bg-forest-700 text-lime shadow-2xs"
                         : "bg-[#ece5d6] text-forest-900 shadow-2xs"
                   }`}>
                     {item.status}
@@ -184,7 +165,7 @@ if (!item && id && !isDbConfigured) {
                     <button
                       type="button"
                       class="size-16 shrink-0 overflow-hidden rounded-xl border border-stone-200 hover:border-forest-700 transition-colors cursor-pointer"
-                      onclick={`document.getElementById('main-item-photo').src = '${photo}';`}
+                      data-photo-src={photo}
                     >
                       <img src={photo} alt={`Photo ${idx + 1}`} class="h-full w-full object-cover" />
                     </button>
@@ -193,7 +174,7 @@ if (!item && id && !isDbConfigured) {
               )}
 
               {item.referenceCode && (
-                <div class="rounded-2xl bg-[#f5f1e6] p-4 border border-stone-200/80 text-center">
+                <div class="rounded-2xl bg-canvas p-4 border border-stone-200/80 text-center">
                   <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Security Office Tag Code</p>
                   <div class="mt-1 flex items-center justify-center gap-2">
                     <span id="item-detail-ref-code" class="font-mono text-xl font-black text-forest-900 tracking-wider">{item.referenceCode}</span>
@@ -212,7 +193,7 @@ if (!item && id && !isDbConfigured) {
                       <span class="copy-ref-tooltip">Copied!</span>
                     </button>
                   </div>
-                  <p class="mt-1.5 text-[11px] text-stone-500">Bring this code to the campus security office for identification.</p>
+                  <p class="mt-1.5 text-xs text-stone-500">Bring this code to the campus security office for identification.</p>
                 </div>
               )}
             </div>
@@ -240,7 +221,7 @@ if (!item && id && !isDbConfigured) {
 
                 <div>
                   <h3 class="text-xs font-bold uppercase tracking-wider text-stone-400">Description</h3>
-                  <p class="mt-1 text-sm text-stone-700 whitespace-pre-line leading-relaxed bg-[#fbf9f4] p-4 rounded-2xl border border-stone-200/60">
+                  <p class="mt-1 text-sm text-stone-700 whitespace-pre-line leading-relaxed bg-stone-50 p-4 rounded-2xl border border-stone-200/60">
                     {item.description}
                   </p>
                 </div>
@@ -251,7 +232,7 @@ if (!item && id && !isDbConfigured) {
                 {item.type === "found" && item.status === "approved" && (
                   <div>
                     {isReporter ? (
-                      <div class="rounded-2xl bg-forest-50 p-4 border border-forest-200 text-forest-900 text-xs">
+                      <div class="rounded-2xl bg-sage-200 p-4 border border-line text-forest-900 text-xs">
                         <p class="font-bold">You reported this found item.</p>
                         <p class="mt-0.5 text-stone-600">Thank you for turning it over to the Security Office. It is registered on the campus network.</p>
                       </div>
@@ -299,13 +280,13 @@ if (!item && id && !isDbConfigured) {
 
                 {item.type === "found" && item.status === "claimed" && (
                   <div class="rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 text-xs">
-                    <p class="font-bold">✓ Item Claimed & Returned</p>
+                    <p class="font-bold">Item claimed and returned</p>
                     <p class="mt-0.5 text-stone-600">This item has been verified by the Security Office and successfully returned to its owner.</p>
                   </div>
                 )}
 
                 {item.type === "lost" && (
-                  <div class="rounded-2xl bg-lime-50 p-4 border border-lime-200 text-forest-900 text-xs">
+                  <div class="rounded-2xl bg-lime/20 p-4 border border-lime-600/30 text-forest-900 text-xs">
                     <p class="font-bold">Have you found this lost item?</p>
                     <p class="mt-0.5 text-stone-600">
                       Please drop it off at the DLSAU Disciplinary &amp; Security Office at Life Science Building (LSB, Building #3) or post a "Found" report on the feed so the owner can be notified.
@@ -357,6 +338,16 @@ if (!item && id && !isDbConfigured) {
         }
       });
     }
+
+    // Thumbnail switcher without inline event handlers (CSP-safe, no string
+    // interpolation of URLs into executable JavaScript).
+    document.querySelectorAll<HTMLButtonElement>("[data-photo-src]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const main = document.getElementById("main-item-photo") as HTMLImageElement | null;
+        const src = btn.dataset.photoSrc;
+        if (main && src) main.src = src;
+      });
+    });
 
     const claimForm = document.getElementById("standalone-claim-form");
     const claimSuccess = document.getElementById("standalone-claim-success");

@@ -1,14 +1,25 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
-import { roleForEmail } from "~/lib/session";
-import { INITIAL_CAMPUS_USERS } from "~/data/mockUsers";
 
 function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("Supabase service role key is not configured.");
+  }
   return createClient(env.PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false },
   });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** CSPRNG temporary password. Never Math.random(). */
+function generateTempPassword(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  const chars = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+  return `Lk-${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -21,7 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const userEmail = user.email.toLowerCase().trim();
-  const isAdmin = user.role === "admin" || roleForEmail(userEmail) === "admin";
+  const isAdmin = user.role === "admin";
   if (!isAdmin) {
     return new Response(JSON.stringify({ ok: false, error: "Admin access required." }), {
       status: 403,
@@ -31,18 +42,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const supabase = getAdminClient(locals.env);
 
-  // Resolve admin profile ID
+  // Resolve the acting admin's real profile id for the audit trail. Never fall
+  // back to an arbitrary profile: a wrong attribution poisons the audit log.
   let adminProfileId: string | null = null;
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+  if (UUID_RE.test(user.id)) {
     adminProfileId = user.id;
   } else {
-    const { data: adminProf } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
-    if (adminProf?.id) {
-      adminProfileId = adminProf.id;
-    } else {
-      const { data: anyProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
-      adminProfileId = anyProf?.id ?? null;
-    }
+    const { data: adminProf } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", userEmail)
+      .maybeSingle();
+    adminProfileId = adminProf?.id ?? null;
   }
 
   try {
@@ -58,16 +69,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const isItemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId);
-      if (!isItemUuid) {
-        // Fallback demo intake item
-        return new Response(JSON.stringify({ ok: true, message: "Item intake confirmed into custody." }), {
-          status: 200,
+      if (!UUID_RE.test(itemId)) {
+        return new Response(JSON.stringify({ ok: false, error: "Item ID is invalid." }), {
+          status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      const { data: item } = await supabase.from("items").select("id, name, reporter_id, reference_code").eq("id", itemId).maybeSingle();
+      const { data: item } = await supabase.from("items").select("id, name, reporter_id, reference_code, status").eq("id", itemId).maybeSingle();
 
       if (!item) {
         return new Response(JSON.stringify({ ok: false, error: "Item not found in database." }), {
@@ -76,7 +85,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await supabase.from("items").update({ status: "approved" }).eq("id", itemId);
+      if (item.status !== "pending") {
+        return new Response(JSON.stringify({ ok: false, error: "This report is not waiting for intake." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: intakeErr } = await supabase
+        .from("items")
+        .update({ status: "approved" })
+        .eq("id", itemId)
+        .eq("status", "pending");
+
+      if (intakeErr) {
+        console.error("[admin/actions] Intake error:", intakeErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not confirm intake." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
       if (adminProfileId) {
         await supabase.from("admin_log").insert({
@@ -109,26 +137,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const isClaimUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claimId);
-      if (!isClaimUuid) {
-        // Fallback demo claim item: map demo claims to item IDs
-        const demoClaimToItem: Record<string, string> = {
-          "claim-1": "item-1",
-          "claim-2": "item-2",
-          "claim-3": "item-3",
-          "claim-4": "item-4",
-          "claim-5": "item-5",
-        };
-        const mappedItemId = demoClaimToItem[claimId] || null;
-        return new Response(JSON.stringify({ ok: true, status: "verified", itemId: mappedItemId }), {
-          status: 200,
+      if (!UUID_RE.test(claimId)) {
+        return new Response(JSON.stringify({ ok: false, error: "Claim ID is invalid." }), {
+          status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
 
       const { data: claim } = await supabase
         .from("claims")
-        .select("id, item_id, claimant_id, items ( name, reference_code )")
+        .select("id, item_id, claimant_id, status, items ( name, reference_code, status )")
         .eq("id", claimId)
         .maybeSingle();
 
@@ -139,8 +157,40 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await supabase.from("claims").update({ status: "verified" }).eq("id", claimId);
-      await supabase.from("items").update({ status: "claimed" }).eq("id", claim.item_id);
+      if (claim.status !== "pending") {
+        return new Response(JSON.stringify({ ok: false, error: "This claim was already decided." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const claimItem = claim.items as unknown as { status?: string } | null;
+      if (claimItem?.status !== "approved") {
+        return new Response(JSON.stringify({ ok: false, error: "This item is no longer available to claim." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: verifyErr } = await supabase
+        .from("claims")
+        .update({ status: "verified" })
+        .eq("id", claimId)
+        .eq("status", "pending");
+
+      if (verifyErr) {
+        console.error("[admin/actions] Verify error:", verifyErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not verify the claim." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      await supabase
+        .from("items")
+        .update({ status: "claimed" })
+        .eq("id", claim.item_id)
+        .eq("status", "approved");
 
       // Auto-deny other pending claims on this item
       const { data: competing } = await supabase
@@ -198,16 +248,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const isClaimUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(claimId);
-      if (!isClaimUuid) {
-        // Fallback demo claim item
-        return new Response(JSON.stringify({ ok: true, status: "denied" }), {
-          status: 200,
+      if (!UUID_RE.test(claimId)) {
+        return new Response(JSON.stringify({ ok: false, error: "Claim ID is invalid." }), {
+          status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      const { data: claim } = await supabase.from("claims").select("id, item_id, claimant_id").eq("id", claimId).maybeSingle();
+      const { data: claim } = await supabase.from("claims").select("id, item_id, claimant_id, status").eq("id", claimId).maybeSingle();
       if (!claim) {
         return new Response(JSON.stringify({ ok: false, error: "Claim not found." }), {
           status: 404,
@@ -215,7 +263,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await supabase.from("claims").update({ status: "denied" }).eq("id", claimId);
+      if (claim.status !== "pending") {
+        return new Response(JSON.stringify({ ok: false, error: "This claim was already decided." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      await supabase.from("claims").update({ status: "denied" }).eq("id", claimId).eq("status", "pending");
 
       await supabase.from("notifications").insert({
         user_id: claim.claimant_id,
@@ -247,28 +302,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const isItemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId);
-      if (!isItemUuid) {
-        // Fallback for mock demo items
-        if (adminProfileId) {
-          try {
-            await supabase.from("admin_log").insert({
-              admin_id: adminProfileId,
-              action: `post_removed: demo item ${itemId}`,
-            });
-          } catch {
-            // Ignore demo logging error
-          }
-        }
-        return new Response(
-          JSON.stringify({
-            ok: true,
-            status: "removed",
-            itemId,
-            message: "Post removed from campus feed.",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+      if (!UUID_RE.test(itemId)) {
+        return new Response(JSON.stringify({ ok: false, error: "Item ID is invalid." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
       const { data: item } = await supabase
@@ -284,19 +322,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // 1. Remove or unlink references in admin_log to prevent foreign key errors
-      await supabase.from("admin_log").delete().eq("item_id", itemId);
+      // Soft removal: keep claims and the audit trail intact.
+      const { error: removeErr } = await supabase
+        .from("items")
+        .update({ status: "rejected", reject_reason: "Removed by admin" })
+        .eq("id", itemId);
 
-      // 2. Remove related claims
-      await supabase.from("claims").delete().eq("item_id", itemId);
-
-      // 3. Delete the item record (with fallback to status rejection if cascade is restricted)
-      const { error: deleteError } = await supabase.from("items").delete().eq("id", itemId);
-      if (deleteError) {
-        await supabase
-          .from("items")
-          .update({ status: "rejected", reject_reason: "Removed by admin" })
-          .eq("id", itemId);
+      if (removeErr) {
+        console.error("[admin/actions] Remove error:", removeErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not remove the post." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
       // 4. Log the deletion in admin_log
@@ -427,6 +464,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { "Content-Type": "application/json" },
           });
         }
+
+        // Mirror the app-level flag into Supabase Auth so a suspended user
+        // cannot keep a direct Supabase session on another device.
+        const { error: banErr } = await supabase.auth.admin.updateUserById(userId, {
+          ban_duration: active ? "none" : "876000h",
+        });
+        if (banErr) {
+          console.warn("[admin/actions] Auth status mirror failed:", banErr.message);
+        }
       }
 
       if (adminProfileId) {
@@ -469,43 +515,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .eq("email", cleanEmail)
         .maybeSingle();
 
-      const isKnownCampusEmail =
-        cleanEmail.endsWith("@dlsau.edu.ph") ||
-        INITIAL_CAMPUS_USERS.some((u) => u.email.toLowerCase() === cleanEmail);
-
-      if (!targetProfile?.id && !isKnownCampusEmail) {
+      if (!targetProfile?.id) {
         return new Response(JSON.stringify({ ok: false, error: "No account found for that email." }), {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      // Temp password the student reads off the office screen / notification.
-      const tempPassword = `Reset-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      // Shown once to the admin at the counter; never persisted in plaintext.
+      const tempPassword = generateTempPassword();
 
-      if (targetProfile?.id) {
-        try {
-          await supabase.auth.admin.updateUserById(targetProfile.id, {
-            password: tempPassword,
-          });
-        } catch (authErr: any) {
-          console.warn("[admin/actions] updateUserById note:", authErr?.message || authErr);
-        }
+      const { error: authErr } = await supabase.auth.admin.updateUserById(targetProfile.id, {
+        password: tempPassword,
+      });
 
-        // Force the student to pick a new password on next sign-in.
-        await supabase.from("profiles").update({ must_change_password: true }).eq("id", targetProfile.id);
-
-        try {
-          await supabase.from("notifications").insert({
-            user_id: targetProfile.id,
-            message: `Recovery approved. Sign in with temporary password ${tempPassword}, then set a new password.`,
-            link: "/reset-password",
-            read: false,
-          });
-        } catch (notifErr) {
-          console.warn("[admin/actions] Notification insert error:", notifErr);
-        }
+      if (authErr) {
+        console.error("[admin/actions] Password reset failed:", authErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not issue a temporary password." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
       }
+
+      // Force the student to pick a new password on next sign-in.
+      const { error: flagErr } = await supabase
+        .from("profiles")
+        .update({ must_change_password: true })
+        .eq("id", targetProfile.id);
+
+      if (flagErr) {
+        console.error("[admin/actions] Reset flag failed:", flagErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Password changed but the reset flag failed." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      await supabase.from("notifications").insert({
+        user_id: targetProfile.id,
+        message: "The Security Office issued you a temporary password. Sign in with it, then set a new password.",
+        link: "/reset-password",
+        read: false,
+      });
 
       if (adminProfileId) {
         try {
@@ -529,7 +580,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ACTION: Delete / Remove Account
+    // ACTION: Deactivate Account
+    // Keeps the profile, claims, reports, and audit history intact. The
+    // previous hard delete destroyed evidence and could cascade away claims.
     if (action === "delete_user") {
       if (!userId && !email) {
         return new Response(JSON.stringify({ ok: false, error: "User ID or email required." }), {
@@ -549,52 +602,56 @@ export const POST: APIRoute = async ({ request, locals }) => {
         targetEmail = p?.email;
       }
 
-      // Prevent self-deletion of current acting admin account
-      if ((targetProfileId && targetProfileId === user.id) || (targetEmail && targetEmail.toLowerCase() === userEmail.toLowerCase())) {
-        return new Response(JSON.stringify({ ok: false, error: "Administrators cannot delete their own active account." }), {
+      if (targetProfileId === user.id || (targetEmail && targetEmail.toLowerCase() === userEmail.toLowerCase())) {
+        return new Response(JSON.stringify({ ok: false, error: "Administrators cannot deactivate their own active account." }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      // 1. Delete associated claims
-      if (targetProfileId) {
-        await supabase.from("claims").delete().eq("claimant_id", targetProfileId);
+      if (!targetProfileId || !UUID_RE.test(targetProfileId)) {
+        return new Response(JSON.stringify({ ok: false, error: "No matching account found." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
-      // 2. Delete auth user (cascades to profiles)
-      if (targetProfileId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetProfileId)) {
-        try {
-          await supabase.auth.admin.deleteUser(targetProfileId);
-        } catch (e) {
-          console.warn("[admin/actions] auth.admin.deleteUser note:", e);
-        }
-      }
-
-      // Fallback: Delete from profiles directly
-      if (targetProfileId) {
-        await supabase.from("profiles").delete().eq("id", targetProfileId);
-      } else if (targetEmail) {
-        await supabase.from("profiles").delete().eq("email", targetEmail.toLowerCase().trim());
-      }
-
-      // 3. Log to admin_log
+      // 1. Audit first, so the action is recorded even if a later call fails.
       if (adminProfileId) {
-        try {
-          await supabase.from("admin_log").insert({
-            admin_id: adminProfileId,
-            action: `user_deleted: ${targetEmail || targetProfileId}`,
-          });
-        } catch (logErr) {
-          console.warn("[admin/actions] Delete log note:", logErr);
-        }
+        const { error: auditErr } = await supabase.from("admin_log").insert({
+          admin_id: adminProfileId,
+          action: `user_deactivated: ${targetEmail || targetProfileId}`,
+        });
+        if (auditErr) console.error("[admin/actions] Audit log failed:", auditErr.message);
+      }
+
+      // 2. Block the app session and any direct Supabase session.
+      const { error: statusErr } = await supabase
+        .from("profiles")
+        .update({ active: false })
+        .eq("id", targetProfileId);
+      if (statusErr) {
+        console.error("[admin/actions] Deactivate profile failed:", statusErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not deactivate the account." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: banErr } = await supabase.auth.admin.updateUserById(targetProfileId, {
+        ban_duration: "876000h",
+      });
+      if (banErr) {
+        // The app-level `active=false` check still blocks this account, so
+        // report success but surface the weaker auth-layer state in logs.
+        console.warn("[admin/actions] Auth ban failed:", banErr.message);
       }
 
       return new Response(JSON.stringify({
         ok: true,
         userId: targetProfileId,
         email: targetEmail,
-        message: `Account ${targetEmail || targetProfileId} has been successfully removed from campus records.`,
+        message: `Account ${targetEmail || targetProfileId} has been deactivated. Records and claims were preserved.`,
       }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -606,8 +663,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error executing admin action";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[admin/actions] Exception:", err);
+    return new Response(JSON.stringify({ ok: false, error: "Could not complete the admin action." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

@@ -11,12 +11,11 @@ import ReportModal from "~/components/ReportModal.astro";
 import AdminRemoveModal from "~/components/admin/AdminRemoveModal.astro";
 import { createClient } from "@supabase/supabase-js";
 import { ALL_ITEMS, type DashboardItem } from "~/data/mockItems";
-import { roleForEmail } from "~/lib/session";
+import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 
 // The middleware redirects unauthenticated visitors to /login.
 const user = Astro.locals.user;
-const userEmail = user?.email ?? "";
-const isRealAdmin = user?.role === "admin" || (userEmail ? roleForEmail(userEmail) === "admin" : false);
+const isRealAdmin = user?.role === "admin";
 
 const logoutResult = Astro.getActionResult(actions.logout);
 if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
@@ -26,16 +25,16 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
 const env = Astro.locals.env;
 let liveItems: DashboardItem[] = [];
 
-if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
     const supabase = createClient(
       env.PUBLIC_SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
+      env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { persistSession: false } }
     );
     const { data: dbItems } = await supabase
       .from("items")
-      .select("*")
+      .select("id,type,name,category,location,event_date,description,photo_path,status,hide_photo,created_at")
       .order("created_at", { ascending: false });
     // Campus feed only displays active, approved items waiting to be claimed or found.
     // When an item is claimed, resolved, or rejected, it is automatically hidden from this public feed.
@@ -43,20 +42,23 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
       (item) => item.status === "approved",
     );
 
+    // Sign every private-bucket path once, then reuse the URLs. Items flagged
+    // hide_photo (IDs, cards, wallets) never get a signed URL in the public feed.
+    const uniquePaths = Array.from(
+      new Set(
+        visibleDbItems.flatMap((row) =>
+          row.hide_photo ? [] : photoPathsFromColumn(row.photo_path),
+        ),
+      ),
+    );
+    const signedUrls = await signPhotoPaths(env, uniquePaths);
+    const urlByPath = new Map(uniquePaths.map((path, i) => [path, signedUrls[i]]));
+
     if (visibleDbItems.length > 0) {
       liveItems = visibleDbItems.map((row) => {
-        let images: string[] = [];
-        if (row.photo_path) {
-          try {
-            if (typeof row.photo_path === "string" && row.photo_path.startsWith("[")) {
-              images = JSON.parse(row.photo_path);
-            } else {
-              images = [row.photo_path];
-            }
-          } catch {
-            images = [row.photo_path];
-          }
-        }
+        const images = (row.hide_photo ? [] : photoPathsFromColumn(row.photo_path))
+          .map((path) => urlByPath.get(path) ?? "")
+          .filter((url) => url.length > 0);
 
         const d = row.event_date ? new Date(row.event_date) : new Date(row.created_at);
         const formattedDate = !isNaN(d.getTime())
@@ -85,9 +87,8 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
           date: formattedDate,
           eventDate: row.event_date || (row.created_at ? row.created_at.split("T")[0] : ""),
           icon: iconMap[row.category] || "wallet",
-          tint: row.type === "found" ? "#e4ecd6" : "#dee8e0",
+          tint: "var(--color-sage-200)",
           actionLabel: row.type === "found" ? "Claim this item" : "I found this",
-          referenceCode: row.reference_code ?? undefined,
           description: row.description || "",
           images,
         };
@@ -98,7 +99,7 @@ if (env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUP
   }
 }
 
-const isDbConfigured = Boolean(env?.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY));
+const isDbConfigured = Boolean(env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
 const allFeedItems: DashboardItem[] = isDbConfigured ? liveItems : ALL_ITEMS;
 const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
 const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
@@ -135,7 +136,8 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
   {isRealAdmin && <AdminRemoveModal />}
 
   <!-- Client-side Interactive Filtering, Modals, and Search Logic -->
-  <script is:inline>
+  <script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
     (function () {
       // State
       let currentFilterType = "all";
@@ -353,7 +355,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           const isSelected = optVal === selectedVal || (!optVal && selectedVal === "all");
           opt.classList.toggle("bg-[#ece5d6]/70", isSelected);
           opt.classList.toggle("font-semibold", isSelected);
-          opt.classList.toggle("text-forest-950", isSelected);
+          opt.classList.toggle("text-forest-900", isSelected);
           const check = opt.querySelector(".location-check, .category-check, .date-check");
           if (check) check.classList.toggle("hidden", !isSelected);
         });
@@ -620,7 +622,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           if (submitBtn) submitBtn.textContent = "Submit Claim Verification";
         } else {
           typeBadge.textContent = "LOST";
-          typeBadge.className = "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#d8ef8c] text-forest-900 border border-lime-600/30";
+          typeBadge.className = "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-lime text-forest-900 border border-lime-600/30";
           if (refContainer) refContainer.classList.add("hidden");
           if (proofLabel) proofLabel.textContent = "Did you find this? Let the owner know";
           if (submitBtn) submitBtn.textContent = "Notify Finder / Report Found";
@@ -794,22 +796,38 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         const targetCard = window.activeModalCard;
         const itemId = targetCard ? targetCard.dataset.itemId : "";
 
+        if (!itemId) {
+          showToast("Open an item before submitting a claim.", "error");
+          return;
+        }
+        if (proofText.length < 20) {
+          showToast("Describe your proof of ownership in at least 20 characters.", "error");
+          return;
+        }
+
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.textContent = "Submitting claim verification...";
         }
 
         try {
-          await fetch("/api/claims", {
+          const res = await fetch("/api/claims", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              itemId: itemId || "item-1",
-              proofDescription: proofText || "Identifying marks and proof of ownership provided.",
-            }),
+            body: JSON.stringify({ itemId, proofDescription: proofText }),
           });
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok || !data?.ok) {
+            throw new Error(data?.error || "Could not submit the claim. Try again.");
+          }
         } catch (err) {
-          console.warn("[claims] Submit notice:", err);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Submit Claim Verification";
+          }
+          showToast(err instanceof Error ? err.message : "Could not submit the claim.", "error");
+          return;
         }
 
         if (submitBtn) {
@@ -979,7 +997,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             foundCheck.classList.add("flex");
           }
 
-          lostChoice.classList.remove("border-forest-700", "bg-[#d8ef8c]/25");
+          lostChoice.classList.remove("border-forest-700", "bg-lime/25");
           lostChoice.classList.add("border-line", "bg-white");
           const lostCheck = lostChoice.querySelector(".choice-check");
           if (lostCheck) {
@@ -997,7 +1015,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           }
         } else {
           typeInput.value = "lost";
-          lostChoice.classList.add("border-forest-700", "bg-[#d8ef8c]/25");
+          lostChoice.classList.add("border-forest-700", "bg-lime/25");
           lostChoice.classList.remove("border-line", "bg-white");
           const lostCheck = lostChoice.querySelector(".choice-check");
           if (lostCheck) {
@@ -1116,8 +1134,9 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         const itemDesc = descInput ? descInput.value.trim() : "";
         const locationPrefix = reportType === "found" ? "Found at" : "Last seen at";
         const actionLabel = reportType === "found" ? "Claim this item" : "I found this";
-        let refCode = reportType === "found" ? `LL-${Math.floor(4000 + Math.random() * 900)}` : "";
-        let itemId = `item-${Date.now()}`;
+        // Server is the source of truth for ids and reference codes.
+        let refCode = "";
+        let itemId = "";
         const currentDate = "Just now";
         const now = new Date();
         let reportEventDate = [
@@ -1127,7 +1146,8 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         ].join("-");
 
         // Step 1: Upload Photos to Supabase Storage Bucket
-        let finalPhotoUrls = photos;
+        let finalPhotoUrls = [];
+        let finalPhotoPaths = [];
         if (photos.length > 0) {
           try {
             const uploadRes = await fetch("/api/upload", {
@@ -1135,17 +1155,22 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ images: photos }),
             });
-            if (uploadRes.ok) {
-              const uploadJson = await uploadRes.json();
-              if (uploadJson.urls && uploadJson.urls.length > 0) {
-                finalPhotoUrls = uploadJson.urls;
-              }
-            } else {
-              const errJson = await uploadRes.json().catch(() => ({}));
-              console.warn("[upload] Storage API response:", errJson);
+            const uploadJson = await uploadRes.json().catch(() => null);
+            if (!uploadRes.ok || !uploadJson?.ok || !Array.isArray(uploadJson.paths)) {
+              if (submitBtn) submitBtn.disabled = false;
+              if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
+              if (submitBtnText) submitBtnText.textContent = "Submit Report";
+              showToast(uploadJson?.error || "Photo upload failed. Please try again.", "error");
+              return;
             }
-          } catch (uploadErr) {
-            console.warn("[upload] Storage fetch failed, using local preview:", uploadErr);
+            finalPhotoPaths = uploadJson.paths;
+            finalPhotoUrls = Array.isArray(uploadJson.urls) ? uploadJson.urls : [];
+          } catch {
+            if (submitBtn) submitBtn.disabled = false;
+            if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
+            if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            showToast("Photo upload failed. Check your connection and try again.", "error");
+            return;
           }
         }
 
@@ -1162,23 +1187,30 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               location: itemLocation,
               description: itemDesc,
               eventDate: reportEventDate,
-              photoUrls: finalPhotoUrls,
+              photoPaths: finalPhotoPaths,
             }),
           });
-          if (itemRes.ok) {
-            const itemJson = await itemRes.json();
-            if (itemJson.item) {
-              itemId = itemJson.item.id;
-              if (typeof itemJson.item.event_date === "string") {
-                reportEventDate = itemJson.item.event_date;
-              }
-              if (itemJson.item.reference_code) {
-                refCode = itemJson.item.reference_code;
-              }
-            }
+          const itemJson = await itemRes.json().catch(() => null);
+
+          if (!itemRes.ok || !itemJson?.ok || !itemJson.item?.id) {
+            if (submitBtn) submitBtn.disabled = false;
+            if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
+            if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            showToast(itemJson?.error || "Could not save the report. Try again.", "error");
+            return;
           }
-        } catch (itemErr) {
-          console.warn("[items] Database save notice:", itemErr);
+
+          itemId = itemJson.item.id;
+          if (typeof itemJson.item.event_date === "string") {
+            reportEventDate = itemJson.item.event_date;
+          }
+          refCode = itemJson.item.reference_code || itemJson.referenceCode || "";
+        } catch {
+          if (submitBtn) submitBtn.disabled = false;
+          if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
+          if (submitBtnText) submitBtnText.textContent = "Submit Report";
+          showToast("Could not save the report. Check your connection and try again.", "error");
+          return;
         }
 
         // Build newly created card DOM with confirmed photo URLs
@@ -1202,7 +1234,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           <span class="absolute left-4 top-4 z-20 rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
             reportType === "found"
               ? "bg-forest-700 text-white shadow-xs"
-              : "bg-[#d8ef8c] text-forest-900 border border-lime-600/30 shadow-xs"
+              : "bg-lime text-forest-900 border border-lime-600/30 shadow-xs"
           }">
             ${reportType.toUpperCase()}
           </span>
@@ -1240,7 +1272,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           `;
         } else {
           topGraphicHtml = `
-            <div class="relative flex h-48 sm:h-52 lg:h-56 w-full items-center justify-center overflow-hidden transition-colors" style="background-color: #dee8e0;">
+            <div class="relative flex h-48 sm:h-52 lg:h-56 w-full items-center justify-center overflow-hidden bg-sage-200 transition-colors">
               ${statusBadge}
               <div class="flex size-16 items-center justify-center rounded-full bg-forest-700/10 text-forest-700">
                 <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1275,23 +1307,14 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             </div>
             <div class="mt-4 flex items-center justify-between border-t border-line/60 pt-4 text-sm font-bold text-forest-900 group-hover:text-forest-700">
               <span>${safeActionLabel}</span>
-              <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true">→</span>
+              <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
             </div>
           </div>
         `;
 
-        // Prepend to items grid so it immediately appears in "Latest on campus"
-        if (itemsGrid) {
-          itemsGrid.prepend(newCard);
-        }
-
-        // Update counts
-        const allCards = document.querySelectorAll(".item-card:not(.hidden)");
-        const totalCards = document.querySelectorAll(".item-card");
-        if (counterBadge) counterBadge.textContent = String(totalCards.length);
-        if (feedSubtitle) {
-          feedSubtitle.textContent = `Showing ${allCards.length} of ${totalCards.length} items, newest first.`;
-        }
+        // Pending reports are not added to the public feed. The Security Office
+        // reviews them first; the reporter sees the status on /profile.
+        void newCard;
 
         // Reset submit button state
         if (submitBtn) submitBtn.disabled = false;
@@ -1339,11 +1362,33 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           };
         }
 
-        showToast("Report posted to Campus Feed! Ref: " + refCode, "success");
+        showToast(
+          reportType === "found" && refCode
+            ? "Report submitted for review. Reference: " + refCode
+            : "Report submitted for Security Office review.",
+          "success",
+        );
 
         // Give the reporter time to read and copy the code before auto-closing.
         setTimeout(hideReportModal, hasRef ? 6000 : 1600);
       };
+
+      // Bind form submissions without inline handlers so a strict CSP can drop
+      // 'unsafe-inline' for scripts in a later pass.
+      const claimForm = document.getElementById("claim-submit-form");
+      if (claimForm) {
+        claimForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (typeof window.handleClaimSubmit === "function") window.handleClaimSubmit();
+        });
+      }
+      const reportForm = document.getElementById("quick-report-form");
+      if (reportForm) {
+        reportForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (typeof window.handleReportSubmit === "function") window.handleReportSubmit();
+        });
+      }
 
       // Parse search from URL params if arriving from another page
       const urlParams = new URLSearchParams(window.location.search);

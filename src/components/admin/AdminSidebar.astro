@@ -46,7 +46,7 @@ const userName = isAdmin
 ---
 
 <aside
-  class="w-full lg:w-[20.5rem] shrink-0 rounded-[2rem] bg-[#164f38] p-6 sm:p-7 text-white shadow-xl flex flex-col justify-between"
+  class="w-full lg:w-[20.5rem] shrink-0 rounded-[2rem] bg-forest-700 p-6 sm:p-7 text-white shadow-xl flex flex-col justify-between"
   aria-label="Console Navigation"
 >
   <div>
@@ -55,13 +55,13 @@ const userName = isAdmin
       <div class="flex items-center gap-3">
         <BrandMark class="size-10" />
         <span class="font-serif text-2xl font-black tracking-tight text-white">
-          Lost<span class="italic font-bold text-[#d8ef8c]">Link</span>
+          Lost<span class="italic font-bold text-lime">Link</span>
         </span>
       </div>
 
       <div class="mt-3">
         <span
-          class="inline-block rounded-full border border-[#2d6e4f] bg-[#134631] px-3.5 py-1 text-[10px] font-black tracking-[0.2em] text-[#d8ef8c] uppercase shadow-inner"
+          class="inline-block rounded-full border border-[#2d6e4f] bg-[#134631] px-3.5 py-1 text-[10px] font-black tracking-[0.2em] text-lime uppercase shadow-inner"
         >
           {isAdmin ? "ADMIN CONSOLE" : "STUDENT CONSOLE"}
         </span>
@@ -75,7 +75,7 @@ const userName = isAdmin
         href={isAdmin ? "/admin" : "/profile"}
         class={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold transition-all ${
           activeTab === "overview"
-            ? "bg-[#d8ef8c] text-[#164f38] shadow-xs"
+            ? "bg-lime text-forest-700 shadow-xs"
             : "text-white/85 hover:bg-white/10 hover:text-white"
         }`}
       >
@@ -111,7 +111,7 @@ const userName = isAdmin
             href="/admin#claims"
             class={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
               activeTab === "claims"
-                ? "bg-[#d8ef8c] text-[#164f38]"
+                ? "bg-lime text-forest-700"
                 : "text-white/85 hover:bg-white/10 hover:text-white"
             }`}
           >
@@ -122,7 +122,7 @@ const userName = isAdmin
               </svg>
               Claims
             </span>
-            <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-xs font-black text-[#164f38]">
+            <span class="flex size-6 items-center justify-center rounded-full bg-lime text-xs font-black text-forest-700">
               {metrics?.claimsToVerify ?? 0}
             </span>
           </a>
@@ -164,7 +164,7 @@ const userName = isAdmin
             href={isAdmin ? "/admin?tab=users" : "/profile"}
             class={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
               activeTab === "users"
-                ? "bg-[#d8ef8c] text-[#164f38] shadow-xs font-bold"
+                ? "bg-lime text-forest-700 shadow-xs font-bold"
                 : "text-white/85 hover:bg-white/10 hover:text-white"
             }`}
           >
@@ -217,7 +217,7 @@ const userName = isAdmin
               </svg>
               My reports
             </span>
-            <span class="flex size-6 items-center justify-center rounded-full bg-[#d8ef8c] text-xs font-black text-[#164f38]">
+            <span class="flex size-6 items-center justify-center rounded-full bg-lime text-xs font-black text-forest-700">
               {DEMO_STATS.myActiveReports}
             </span>
           </a>
@@ -272,7 +272,7 @@ const userName = isAdmin
 
   <div class="mt-8">
     <!-- Callout Card -->
-    <div class="rounded-2xl bg-[#d8ef8c] p-4.5 text-[#164f38] shadow-sm">
+    <div class="rounded-2xl bg-lime p-4.5 text-forest-700 shadow-sm">
       {isAdmin ? (
         <>
           <p class="text-sm font-bold leading-snug">
@@ -293,7 +293,7 @@ const userName = isAdmin
           <p class="text-sm font-bold leading-snug">
             Have an item to drop off?
           </p>
-          <p class="mt-1 text-xs text-[#164f38]/90">
+          <p class="mt-1 text-xs text-forest-700/90">
             Disciplinary Office (Admin 1F) is open Mon–Fri, 8AM–5PM.
           </p>
           <a
@@ -307,10 +307,10 @@ const userName = isAdmin
     </div>
 
     <!-- User Profile Footer: identity on top, actions as full-size buttons below -->
-    <div class="mt-4 rounded-2xl bg-[#1c5c42] p-4 text-white">
+    <div class="mt-4 rounded-2xl bg-forest-600 p-4 text-white">
       <div class="flex items-center gap-3 min-w-0">
         <span
-          class="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#d8ef8c] text-sm font-black text-[#164f38]"
+          class="flex size-11 shrink-0 items-center justify-center rounded-full bg-lime text-sm font-black text-forest-700"
         >
           {initials}
         </span>
@@ -335,7 +335,7 @@ const userName = isAdmin
         <form method="POST" action={actions.logout} class="flex-1">
           <button
             type="submit"
-            class="flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#d8ef8c] px-3 text-sm font-bold text-[#164f38] transition-all hover:bg-[#c9e376] active:scale-95"
+            class="flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-forest-700 transition-all hover:bg-[#c9e376] active:scale-95"
           >
             <svg
               class="size-4"

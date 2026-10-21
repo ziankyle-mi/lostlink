@@ -7,7 +7,6 @@ import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.
 import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
 import UsersManagement from "~/components/admin/UsersManagement.astro";
-import { INITIAL_CAMPUS_USERS, type CampusUser } from "~/data/mockUsers";
 import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
 import { actions } from "astro:actions";
 import {
@@ -18,7 +17,6 @@ import {
   isCustodyOverdue,
 } from "~/lib/custody";
 
-import { roleForEmail } from "~/lib/session";
 import { readEnv } from "~/lib/env";
 import { createClient } from "@supabase/supabase-js";
 
@@ -29,7 +27,7 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
 
 const user = Astro.locals.user;
 const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
-const isRealAdmin = user?.role === "admin" || roleForEmail(userEmail) === "admin";
+const isRealAdmin = user?.role === "admin";
 
 // The admin console is guarded on the server: non-admins are sent back to the feed.
 if (!isRealAdmin) {
@@ -93,11 +91,11 @@ const custodyNoticeOk = Boolean(custodyResult?.data?.ok);
 // Keep the modal open after a decision so the officer can continue working.
 const custodyModalReopen = Boolean(custodyResult);
 
-if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
     const supabase = createClient(
       env.PUBLIC_SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
+      env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { persistSession: false } },
     );
 
@@ -117,7 +115,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
         .from("items")
         .select("id", { count: "exact", head: true })
         .eq("type", "found")
-        .neq("status", "returned"),
+        .eq("status", "approved"),
       supabase
         .from("items")
         .select("id", { count: "exact", head: true })
@@ -130,7 +128,7 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
       supabase
         .from("items")
         .select("id", { count: "exact", head: true })
-        .in("status", ["claimed", "returned"]),
+        .eq("status", "claimed"),
       supabase
         .from("claims")
         .select(`
@@ -263,8 +261,6 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
           user_metadata: meta,
         });
       });
-    } else {
-      allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
     }
 
     // Process Password Recovery Requests from admin_log
@@ -338,8 +334,6 @@ if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPA
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
   }
-} else {
-  allUsers = INITIAL_CAMPUS_USERS.map((u) => enrichCampusUser(u));
 }
 
 // Helper function to turn raw system logs into friendly, plain English for university staff
@@ -408,7 +402,7 @@ function parseAuditEvent(
       badgeText: "Recovery",
       badgeClass: "bg-[#ece5d6] text-forest-900 border-stone-300",
       iconType: "key",
-      iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+      iconBg: "bg-stone-50 text-forest-700 border-line",
       description: `Dispatched official security verification and temporary credentials to ${target}.`,
       target,
       operator,
@@ -424,9 +418,9 @@ function parseAuditEvent(
     return {
       title: isSuspended ? "User Account Suspended" : "User Account Reactivated",
       badgeText: isSuspended ? "Suspended" : "Active",
-      badgeClass: isSuspended ? "bg-[#ece5d6] text-forest-900 border-stone-300" : "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+      badgeClass: isSuspended ? "bg-[#ece5d6] text-forest-900 border-stone-300" : "bg-lime text-forest-900 border-lime-600/30",
       iconType: isSuspended ? "suspend" : "activate",
-      iconBg: isSuspended ? "bg-[#faf8f4] text-forest-900 border-line" : "bg-forest-700/10 text-forest-700 border-forest-700/20",
+      iconBg: isSuspended ? "bg-stone-50 text-forest-900 border-line" : "bg-forest-700/10 text-forest-700 border-forest-700/20",
       description: isSuspended ? `Temporarily suspended access for ${target}.` : `Restored full active access for ${target}.`,
       target,
       operator,
@@ -442,9 +436,9 @@ function parseAuditEvent(
     return {
       title: isAdminRole ? "Granted Administrator Privileges" : "Permissions Changed to Student",
       badgeText: isAdminRole ? "Admin Promoted" : "Role Changed",
-      badgeClass: isAdminRole ? "bg-forest-700 text-[#d8ef8c] border-forest-800" : "bg-stone-100 text-stone-700 border-stone-200",
+      badgeClass: isAdminRole ? "bg-forest-700 text-lime border-forest-900" : "bg-stone-100 text-stone-700 border-stone-200",
       iconType: isAdminRole ? "shield" : "user",
-      iconBg: isAdminRole ? "bg-forest-700 text-[#d8ef8c] border-forest-800" : "bg-stone-100 text-stone-600 border-stone-200",
+      iconBg: isAdminRole ? "bg-forest-700 text-lime border-forest-900" : "bg-stone-100 text-stone-600 border-stone-200",
       description: isAdminRole
         ? `Promoted ${target} to Disciplinary Office Administrator.`
         : `Changed permissions for ${target} to standard campus student.`,
@@ -478,9 +472,9 @@ function parseAuditEvent(
     return {
       title: "Claim Approved & Released",
       badgeText: "Claim Approved",
-      badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+      badgeClass: "bg-lime text-forest-900 border-lime-600/30",
       iconType: "check",
-      iconBg: "bg-forest-700 text-white border-forest-800",
+      iconBg: "bg-forest-700 text-white border-forest-900",
       description: action.replace(/^System log:\s*/i, ""),
       target: item,
       operator,
@@ -495,9 +489,9 @@ function parseAuditEvent(
     return {
       title: "Item Received in Vault Custody",
       badgeText: "Custody Intake",
-      badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+      badgeClass: "bg-lime text-forest-900 border-lime-600/30",
       iconType: "box",
-      iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+      iconBg: "bg-stone-50 text-forest-700 border-line",
       description: action.replace(/^System log:\s*/i, ""),
       target: item,
       operator,
@@ -532,9 +526,9 @@ const defaultAuditEvents = [
     id: "e1",
     title: "Claim Approved: iPhone 13 Pro Released",
     badgeText: "Claim Approved",
-    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+    badgeClass: "bg-lime text-forest-900 border-lime-600/30",
     iconType: "check",
-    iconBg: "bg-forest-700 text-white border-forest-800",
+    iconBg: "bg-forest-700 text-white border-forest-900",
     description: "Identity verified. Item released to student Maria Santos (ID: 2024-10144).",
     target: "iPhone 13 Pro (Ref: DLSAU-2026-F002)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -545,9 +539,9 @@ const defaultAuditEvents = [
     id: "e2",
     title: "Custody Intake: Hydro Flask 32oz",
     badgeText: "Custody Intake",
-    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+    badgeClass: "bg-lime text-forest-900 border-lime-600/30",
     iconType: "box",
-    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+    iconBg: "bg-stone-50 text-forest-700 border-line",
     description: "Physical tag affixed. Placed in Disciplinary Office Vault Shelf C-1.",
     target: "Hydro Flask 32oz (Ref: DLSAU-2026-F005)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -558,9 +552,9 @@ const defaultAuditEvents = [
     id: "e3",
     title: "Account Promoted to Administrator",
     badgeText: "Admin Promoted",
-    badgeClass: "bg-forest-700 text-[#d8ef8c] border-forest-800",
+    badgeClass: "bg-forest-700 text-lime border-forest-900",
     iconType: "shield",
-    iconBg: "bg-forest-700 text-[#d8ef8c] border-forest-800",
+    iconBg: "bg-forest-700 text-lime border-forest-900",
     description: "Granted Disciplinary Office administrative privileges to Prof. Lourdes Carandang (Faculty).",
     target: "Prof. Lourdes Carandang",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -571,9 +565,9 @@ const defaultAuditEvents = [
     id: "e4",
     title: "Custody Intake: Casio Scientific Calculator",
     badgeText: "Custody Intake",
-    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+    badgeClass: "bg-lime text-forest-900 border-lime-600/30",
     iconType: "box",
-    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+    iconBg: "bg-stone-50 text-forest-700 border-line",
     description: "Intake verified and custody logged at Disciplinary Office Room 102.",
     target: "Casio fx-991EX (Ref: DLSAU-2026-F009)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -586,7 +580,7 @@ const defaultAuditEvents = [
     badgeText: "Proof Submitted",
     badgeClass: "bg-[#ece5d6] text-forest-900 border-stone-300",
     iconType: "key",
-    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+    iconBg: "bg-stone-50 text-forest-700 border-line",
     description: "Claimant submitted proof photo and identifying characteristics.",
     target: "Blue backpack (Ref: DLSAU-2026-F014)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -599,7 +593,7 @@ const defaultAuditEvents = [
     badgeText: "Suspended",
     badgeClass: "bg-[#ece5d6] text-forest-900 border-stone-300",
     iconType: "suspend",
-    iconBg: "bg-[#faf8f4] text-forest-900 border-line",
+    iconBg: "bg-stone-50 text-forest-900 border-line",
     description: "Temporarily suspended account pending Disciplinary Office student affairs review.",
     target: "Marc Daniel Hernandez",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -610,9 +604,9 @@ const defaultAuditEvents = [
     id: "e7",
     title: "Claim Approved: Leather Wallet Released",
     badgeText: "Claim Approved",
-    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+    badgeClass: "bg-lime text-forest-900 border-lime-600/30",
     iconType: "check",
-    iconBg: "bg-forest-700 text-white border-forest-800",
+    iconBg: "bg-forest-700 text-white border-forest-900",
     description: "Physical ID inspected. Item released to student Christian Reyes.",
     target: "Leather wallet (Ref: DLSAU-2026-F001)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -623,9 +617,9 @@ const defaultAuditEvents = [
     id: "e8",
     title: "Custody Intake: DLSAU Student ID Card",
     badgeText: "Custody Intake",
-    badgeClass: "bg-[#d8ef8c] text-forest-900 border-lime-600/30",
+    badgeClass: "bg-lime text-forest-900 border-lime-600/30",
     iconType: "box",
-    iconBg: "bg-[#faf8f4] text-forest-700 border-line",
+    iconBg: "bg-stone-50 text-forest-700 border-line",
     description: "Placed in secure Locker Vault A-1 (CAST Department lost card drawer).",
     target: "DLSAU ID Card (Ref: DLSAU-2026-F003)",
     operator: "dlsau.lostlink@dlsau.edu.ph",
@@ -656,7 +650,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
   title={`${currentTab === "users" ? "User Management" : "Admin Console"} | LostLink`}
   description="LostLink campus lost and found console for De La Salle Araneta University."
 >
-  <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
+  <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between selection:bg-lime">
     <div>
       <!-- Top Announcement Ticker Bar matching overview1admin.png -->
       <AdminTicker />
@@ -783,7 +777,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     <div class="w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div>
-          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+          <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
             Claim Verification Dossier
           </span>
           <h3 id="modal-claim-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
@@ -800,7 +794,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       </div>
 
       <div class="mt-5 space-y-4 text-sm">
-        <div class="rounded-2xl bg-[#f5f1e6] p-4 border border-stone-200/60">
+        <div class="rounded-2xl bg-canvas p-4 border border-stone-200/60">
           <p class="text-xs font-bold text-stone-500 uppercase">Item to Release</p>
           <p id="modal-item-name" class="font-bold text-forest-900 text-base mt-0.5"></p>
           <p class="text-xs text-stone-500 mt-1">Claimant: <strong id="modal-claimant-name" class="text-stone-800"></strong></p>
@@ -811,7 +805,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           <p id="modal-private-details" class="mt-1.5 rounded-xl bg-stone-50 p-3.5 text-stone-800 border border-stone-200 text-xs sm:text-sm font-medium"></p>
         </div>
 
-        <div class="rounded-xl border border-lime-600/30 bg-[#d8ef8c]/30 p-3 text-xs text-[#164f38]">
+        <div class="rounded-xl border border-lime-600/30 bg-lime/30 p-3 text-xs text-forest-700">
           <strong>Verification Protocol:</strong> Check the physical item in custody against these private details before handing it over. Ensure claimant signs the custody logbook.
         </div>
       </div>
@@ -827,7 +821,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         <button
           type="button"
           id="modal-release-btn"
-          class="rounded-full bg-[#d8ef8c] hover:bg-[#cbe675] px-6 py-2.5 text-xs font-black text-[#164f38] transition-all shadow-xs cursor-pointer"
+          class="rounded-full bg-lime hover:bg-[#c9e376] px-6 py-2.5 text-xs font-black text-forest-700 transition-all shadow-xs cursor-pointer"
         >
           Approve &amp; Release Item
         </button>
@@ -846,7 +840,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     <div class="relative w-full max-w-xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div>
-          <span class="rounded-full bg-[#164f38]/10 px-3 py-1 text-xs font-bold text-[#164f38]">
+          <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
             Disciplinary Office SOP
           </span>
           <h3 id="intake-guidelines-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
@@ -936,7 +930,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       <!-- Header with Shield Lockup & Close Button -->
       <div class="flex items-start justify-between gap-4 border-b border-line/80 pb-5">
         <div class="flex items-center gap-3.5">
-          <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-forest-700 text-[#d8ef8c] shadow-xs">
+          <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-forest-700 text-lime shadow-xs">
             <svg class="size-5.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               <path d="m9 12 2 2 4-4"></path>
@@ -968,7 +962,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       </div>
 
       <!-- Friendly guidance for staff members (No emojis, tokenized) -->
-      <div class="mt-4 rounded-2xl bg-[#faf8f4] border border-line/80 p-4 text-xs text-stone-600 flex items-start gap-3 shadow-2xs">
+      <div class="mt-4 rounded-2xl bg-stone-50 border border-line/80 p-4 text-xs text-stone-600 flex items-start gap-3 shadow-2xs">
         <div class="flex size-6 shrink-0 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 mt-0.5" aria-hidden="true">
           <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
@@ -1015,7 +1009,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       <!-- Audit Events List -->
       <div class="mt-4 space-y-2.5 max-h-[440px] overflow-y-auto custom-scrollbar pr-1" id="audit-events-container">
         {allAuditEvents.map((evt) => (
-          <div class="audit-event-row flex items-start justify-between gap-3.5 p-4 rounded-2xl border border-line/80 bg-white hover:border-forest-700/40 hover:bg-[#faf8f4]/60 transition-all shadow-2xs group" data-event-category={evt.category}>
+          <div class="audit-event-row flex items-start justify-between gap-3.5 p-4 rounded-2xl border border-line/80 bg-white hover:border-forest-700/40 hover:bg-stone-50/60 transition-all shadow-2xs group" data-event-category={evt.category}>
             <div class="flex items-start gap-3.5 min-w-0">
               <!-- Distinct, Color-Coded Icon -->
               <div class={`size-11 rounded-2xl flex items-center justify-center shrink-0 border ${evt.iconBg} shadow-2xs mt-0.5`}>
@@ -1092,7 +1086,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                   {evt.description}
                 </p>
 
-                <div class="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-stone-500">
+                <div class="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-stone-500">
                   <span class="inline-flex items-center gap-1">
                     <span class="font-medium text-stone-400">Handled by:</span>
                     <span class="font-semibold text-forest-900 bg-stone-100 rounded px-1.5 py-0.5 border border-stone-200/60">{evt.operator}</span>
@@ -1151,7 +1145,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     <div class="relative w-full max-w-2xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div>
-          <span class="rounded-full bg-[#d8ef8c] text-forest-900 px-3 py-1 text-xs font-bold border border-lime-600/30">
+          <span class="rounded-full bg-lime text-forest-900 px-3 py-1 text-xs font-bold border border-lime-600/30">
             Custodial policy &bull; {CUSTODY_OVERDUE_DAYS}+ days overdue
           </span>
           <h3 id="unclaimed-items-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
@@ -1172,7 +1166,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         </button>
       </div>
 
-      <div class="mt-4 rounded-xl border border-stone-200 bg-[#f5f1e6]/60 p-3.5 text-xs text-stone-600 leading-relaxed">
+      <div class="mt-4 rounded-xl border border-stone-200 bg-canvas/60 p-3.5 text-xs text-stone-600 leading-relaxed">
         Found items unclaimed for more than {CUSTODY_OVERDUE_DAYS} days can be given one
         {CUSTODY_EXTENSION_DAYS}-day grace extension, or assigned to the semester-end campus
         donation turnover. Every decision is saved and recorded in the audit log.
@@ -1190,7 +1184,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
               </p>
             </div>
           ) : unclaimedOverdue.length === 0 ? (
-            <div class="rounded-2xl border border-stone-200/80 bg-[#f5f1e6]/40 p-6 text-center">
+            <div class="rounded-2xl border border-stone-200/80 bg-canvas/40 p-6 text-center">
               <p class="text-sm font-bold text-forest-900">Nothing is overdue</p>
               <p class="mt-1 text-xs text-stone-500">
                 No found item has been unclaimed for more than {CUSTODY_OVERDUE_DAYS} days.
@@ -1200,7 +1194,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             unclaimedOverdue.map((item) => (
               <article class="unclaimed-item-card rounded-2xl border border-stone-200/80 bg-white p-4 shadow-2xs space-y-3">
                 <div class="flex items-center gap-3">
-                  <div class="size-11 rounded-xl bg-[#eef2e3] flex items-center justify-center text-forest-900 shrink-0">
+                  <div class="size-11 rounded-xl bg-sage-200 flex items-center justify-center text-forest-900 shrink-0">
                     <svg
                       class="size-5"
                       fill="none"
@@ -1271,7 +1265,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                     type="submit"
                     name="decision"
                     value="mark_donation"
-                    class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-2xs cursor-pointer"
+                    class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-lime transition-all shadow-2xs cursor-pointer"
                   >
                     Mark for donation turnover
                   </button>
@@ -1296,19 +1290,26 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
   <!-- Quick Toast Notification -->
   <div
     id="toast-notification"
-    class={`fixed bottom-6 right-6 z-[110] translate-y-3 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all ${custodyNotice ? (custodyNoticeOk ? "block bg-forest-900" : "block bg-[#9b2c1f]") : "hidden"}`}
+    class={`fixed bottom-6 right-6 z-[110] translate-y-3 rounded-2xl px-5 py-3.5 text-sm font-bold text-white shadow-xl transition-all ${custodyNotice ? (custodyNoticeOk ? "block bg-forest-900" : "block bg-danger") : "hidden"}`}
   >
     <div class="flex items-center gap-3">
       <span
-        class={`flex size-6 items-center justify-center rounded-full text-xs font-black ${custodyNoticeOk ? "bg-[#d8ef8c] text-[#164f38]" : "bg-white/20 text-white"}`}
+        class={`flex size-6 items-center justify-center rounded-full text-xs font-black ${custodyNoticeOk ? "bg-lime text-forest-700" : "bg-white/20 text-white"}`}
       >
-        {custodyNoticeOk ? "&#10003;" : "!"}
+        {custodyNoticeOk ? (
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ) : (
+          "!"
+        )}
       </span>
       <span id="toast-message">{custodyNotice ?? "Action processed successfully."}</span>
     </div>
   </div>
 
-  <script is:inline>
+  <script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
     // Client-side interactions
     (function () {
       const modal = document.getElementById("review-claim-modal");
@@ -1535,7 +1536,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                 const statusSpan = activeClaimRow.querySelector("span[class*='rounded-full']");
                 if (statusSpan) {
                   statusSpan.textContent = "Verified";
-                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-[#d8ef8c] text-[#164f38]";
+                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-lime text-forest-700";
                 }
               }
             } else {
@@ -1613,18 +1614,18 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             const data = await res.json().catch(() => ({}));
             if (data.ok) {
               btn.textContent = "Received \u2713";
-              btn.classList.remove("bg-[#d8ef8c]");
+              btn.classList.remove("bg-lime");
               btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
               showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
             } else {
               btn.textContent = "Received \u2713";
-              btn.classList.remove("bg-[#d8ef8c]");
+              btn.classList.remove("bg-lime");
               btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
               showToast(data.error || `Confirmed receipt for "${name}".`);
             }
           } catch (err) {
             btn.textContent = "Received \u2713";
-            btn.classList.remove("bg-[#d8ef8c]");
+            btn.classList.remove("bg-lime");
             btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
             showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
           }

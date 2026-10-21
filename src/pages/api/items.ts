@@ -1,13 +1,25 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
-import { roleForEmail } from "~/lib/session";
+import { photoPathsFromColumn } from "~/lib/storage";
 
 function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("Supabase service role key is not configured.");
+  }
   return createClient(env.PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false },
   });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PUBLIC_STATUSES = new Set(["approved", "claimed", "resolved"]);
+
+function referenceCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `LL-${hex.toUpperCase()}`;
 }
 
 export const GET: APIRoute = async ({ url, locals }) => {
@@ -21,37 +33,55 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
   const supabase = getAdminClient(locals.env);
   const typeFilter = url.searchParams.get("type"); // "lost" | "found" | null
-  const statusFilter = url.searchParams.get("status"); // "approved" | "claimed" | "all" | null
+  const statusFilter = url.searchParams.get("status");
+  const isAdmin = user.role === "admin";
 
   try {
-    let query = supabase.from("items").select("*").order("created_at", { ascending: false });
+    // Never let the browser choose arbitrary columns or arbitrary statuses.
+    // Reference codes are claim secrets and are only returned to admins.
+    const columns = isAdmin
+      ? "id,type,name,category,location,event_date,description,photo_path,status,hide_photo,reporter_id,reference_code,created_at"
+      : "id,type,name,category,location,event_date,description,photo_path,status,hide_photo,created_at";
+    let query = supabase.from("items").select(columns).order("created_at", { ascending: false });
 
     if (typeFilter && (typeFilter === "lost" || typeFilter === "found")) {
       query = query.eq("type", typeFilter);
     }
 
-    if (statusFilter && statusFilter !== "all") {
+    if (isAdmin && statusFilter === "all") {
+      // Full inventory for the Security Office only.
+    } else if (isAdmin && statusFilter && PUBLIC_STATUSES.has(statusFilter)) {
       query = query.eq("status", statusFilter);
-    } else if (!statusFilter) {
-      // Default to approved active items so claimed and resolved items are not returned publicly
+    } else {
+      // Students only ever see approved items.
       query = query.eq("status", "approved");
     }
 
     const { data, error } = await query;
     if (error) {
-      return new Response(JSON.stringify({ ok: false, error: error.message }), {
+      console.error("[api/items] Query error:", error.message);
+      return new Response(JSON.stringify({ ok: false, error: "Could not load items." }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, items: data }), {
+    // Hidden photos never leave the server as usable object paths for students.
+    const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+    const items = rows.map((item) => {
+      if (!isAdmin && item.hide_photo) {
+        return { ...item, photo_path: null };
+      }
+      return item;
+    });
+
+    return new Response(JSON.stringify({ ok: true, items }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error querying items";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[api/items] Exception:", err);
+    return new Response(JSON.stringify({ ok: false, error: "Could not load items." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -78,6 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       eventDate,
       photos,
       photoUrls,
+      photoPaths,
     } = body;
 
     // Basic Validations
@@ -116,9 +147,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const allPhotos: string[] = photoUrls || photos || [];
+    // Store storage object paths, not public URLs. Photos live in a private
+    // bucket and are signed when rendered.
+    const incoming = [
+      ...(Array.isArray(photoPaths) ? photoPaths : []),
+      ...(Array.isArray(photoUrls) ? photoUrls : []),
+      ...(Array.isArray(photos) ? photos : []),
+    ];
+    const allPhotos = Array.from(
+      new Set(incoming.flatMap((value) => photoPathsFromColumn(String(value)))),
+    );
+
     if (type === "found" && allPhotos.length < 1) {
       return new Response(JSON.stringify({ ok: false, error: "Found items require at least 1 photo." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (allPhotos.length > 3) {
+      return new Response(JSON.stringify({ ok: false, error: "Maximum of 3 photos allowed." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
@@ -126,7 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const supabase = getAdminClient(locals.env);
 
-    // Resolve or find reporter profile
+    // Resolve the reporter profile. Never fall back to another person's row.
     let reporterId: string | null = null;
     const userEmail = user.email.toLowerCase().trim();
 
@@ -138,27 +185,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (profile?.id) {
       reporterId = profile.id;
-    } else {
-      // Fallback: search by user.id if it is a valid UUID
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
-      if (isUuid) {
-        reporterId = user.id;
-      } else {
-        // Pick first existing admin or user profile as fallback
-        const { data: anyProfile } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
-        reporterId = anyProfile?.id || null;
-      }
+    } else if (UUID_RE.test(user.id)) {
+      reporterId = user.id;
     }
 
     if (!reporterId) {
-      return new Response(JSON.stringify({ ok: false, error: "Reporter profile could not be found." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ ok: false, error: "Your account profile is missing. Contact the Security Office." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     const hidePhoto = category === "IDs, Cards & Wallets" || category.toLowerCase().includes("id");
-    const refCode = type === "found" ? `LL-${Math.floor(4000 + Math.random() * 900)}` : null;
+    const refCode = type === "found" ? referenceCode() : null;
     const photoPath = allPhotos.length > 0 ? (allPhotos.length === 1 ? allPhotos[0] : JSON.stringify(allPhotos)) : null;
     const today = new Date().toISOString().split("T")[0];
     const itemDate = eventDate || today;
@@ -176,14 +215,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         reference_code: refCode,
         hide_photo: hidePhoto,
         reporter_id: reporterId,
-        status: "approved", // Set approved for live campus feed display
+        status: "pending",
       })
       .select()
       .single();
 
     if (insertError) {
       console.error("[api/items] Insert error:", insertError.message);
-      return new Response(JSON.stringify({ ok: false, error: insertError.message }), {
+      return new Response(JSON.stringify({ ok: false, error: "Could not save the report. Try again." }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -193,7 +232,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       await supabase.from("notifications").insert({
         user_id: reporterId,
-        message: "Your report has been submitted successfully.",
+        message: "Your report was submitted and is waiting for Security Office review.",
         link: "/",
         read: false,
       });
@@ -229,8 +268,7 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
     });
   }
 
-  const userEmail = user.email.toLowerCase().trim();
-  const isAdmin = user.role === "admin" || roleForEmail(userEmail) === "admin";
+  const isAdmin = user.role === "admin";
   if (!isAdmin) {
     return new Response(JSON.stringify({ ok: false, error: "Admin access required to remove posts." }), {
       status: 403,
@@ -257,13 +295,12 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
     }
 
     const supabase = getAdminClient(locals.env);
-    const isItemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId);
 
-    if (!isItemUuid) {
-      return new Response(
-        JSON.stringify({ ok: true, status: "removed", itemId, message: "Post removed from campus feed." }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
+    if (!UUID_RE.test(itemId)) {
+      return new Response(JSON.stringify({ ok: false, error: "Item ID is invalid." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const { data: item } = await supabase
@@ -279,22 +316,33 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
       });
     }
 
-    // Clean up foreign dependencies before deleting item
-    await supabase.from("admin_log").delete().eq("item_id", itemId);
-    await supabase.from("claims").delete().eq("item_id", itemId);
+    // Soft removal. The audit trail and claim history must survive moderation,
+    // so never cascade-delete admin_log or claims here.
+    const { error: updErr } = await supabase
+      .from("items")
+      .update({ status: "rejected", reject_reason: "Removed by admin" })
+      .eq("id", itemId);
 
-    const { error: delErr } = await supabase.from("items").delete().eq("id", itemId);
-    if (delErr) {
-      await supabase.from("items").update({ status: "rejected", reject_reason: "Removed by admin" }).eq("id", itemId);
+    if (updErr) {
+      console.error("[api/items] Remove error:", updErr.message);
+      return new Response(JSON.stringify({ ok: false, error: "Could not remove the post. Try again." }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Resolve admin profile ID
-    const { data: adminProf } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
-    const adminProfileId = adminProf?.id ?? (isItemUuid ? user.id : null);
+    // Resolve the acting admin's profile for the audit row.
+    const { data: adminProf } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+    const adminProfileId = adminProf?.id ?? (UUID_RE.test(user.id) ? user.id : null);
     if (adminProfileId) {
       await supabase.from("admin_log").insert({
         admin_id: adminProfileId,
         action: `post_removed: ${item.name}`,
+        item_id: itemId,
       });
     }
 

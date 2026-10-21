@@ -29,15 +29,14 @@ import {
   clearSessionCookies,
   devBypassEnabled,
   policyFromEnv,
-  roleForEmail,
   sessionCookieOptions,
   setSessionCookies,
   touchActivityCookie,
 } from "~/lib/session";
 import {
-  clearRateLimit,
-  isRateLimited,
-  recordFailedAttempt,
+  clearRateLimitDurable,
+  isRateLimitedDurable,
+  recordFailedAttemptDurable,
 } from "~/lib/rateLimit";
 
 function requireSupabase(locals: { env: import("~/lib/env").Env }): void {
@@ -87,7 +86,7 @@ export const server = {
       const emailKey = `login:email:${email.toLowerCase().trim()}`;
 
       // Check IP lockout
-      const ipLimit = isRateLimited(ipKey);
+      const ipLimit = await isRateLimitedDurable(context.locals.env, ipKey);
       if (ipLimit.isBlocked) {
         const mins = Math.max(1, Math.ceil(ipLimit.remainingSeconds / 60));
         throw new ActionError({
@@ -97,7 +96,7 @@ export const server = {
       }
 
       // Check Email lockout
-      const emailLimit = isRateLimited(emailKey);
+      const emailLimit = await isRateLimitedDurable(context.locals.env, emailKey);
       if (emailLimit.isBlocked) {
         const mins = Math.max(1, Math.ceil(emailLimit.remainingSeconds / 60));
         throw new ActionError({
@@ -108,8 +107,8 @@ export const server = {
 
       const result = await signInWithPassword(context.locals.env, email, password);
       if ("error" in result) {
-        const ipFail = recordFailedAttempt(ipKey);
-        const emailFail = recordFailedAttempt(emailKey);
+        const ipFail = await recordFailedAttemptDurable(context.locals.env, ipKey);
+        const emailFail = await recordFailedAttemptDurable(context.locals.env, emailKey);
 
         if (ipFail.isBlocked || emailFail.isBlocked) {
           throw new ActionError({
@@ -127,8 +126,8 @@ export const server = {
       }
 
       // Clear failed attempt tracking on successful login
-      clearRateLimit(ipKey);
-      clearRateLimit(emailKey);
+      await clearRateLimitDurable(context.locals.env, ipKey);
+      await clearRateLimitDurable(context.locals.env, emailKey);
 
       setSessionCookies(context.cookies, result.session, remember);
 
@@ -141,7 +140,7 @@ export const server = {
         }
       }
 
-      const defaultPath = roleForEmail(email) === "admin" ? "/admin" : "/";
+      const defaultPath = "/";
       const targetPath = next && next !== "/" ? safeNextPath(next) : defaultPath;
       return { redirect: targetPath };
     },
@@ -185,7 +184,7 @@ export const server = {
             user.id,
             user.email ?? email,
             name,
-            roleForEmail(email) === "admin" ? "admin" : "user",
+            "user",
             program,
             studentId,
             yearLevel,
@@ -217,7 +216,7 @@ export const server = {
         context.clientAddress ||
         "unknown-ip";
       const ipKey = `forgot:ip:${clientIp}`;
-      const limit = isRateLimited(ipKey);
+      const limit = await isRateLimitedDurable(context.locals.env, ipKey);
       if (limit.isBlocked) {
         const mins = Math.max(1, Math.ceil(limit.remainingSeconds / 60));
         throw new ActionError({
@@ -225,7 +224,10 @@ export const server = {
           message: `Too many recovery requests from this network. Please wait ${mins} minute(s).`,
         });
       }
-      recordFailedAttempt(ipKey, { maxFailures: 3, lockoutDurationMs: 15 * 60 * 1000 });
+      await recordFailedAttemptDurable(context.locals.env, ipKey, {
+        maxFailures: 3,
+        lockoutDurationMs: 15 * 60 * 1000,
+      });
 
       const cleanEmail = email.toLowerCase().trim();
 
@@ -383,7 +385,7 @@ export const server = {
         throw new ActionError({ code: "UNAUTHORIZED", message: "Sign in to continue." });
       }
       const actorEmail = actor.email.toLowerCase().trim();
-      const isAdmin = actor.role === "admin" || roleForEmail(actorEmail) === "admin";
+      const isAdmin = actor.role === "admin";
       if (!isAdmin) {
         throw new ActionError({ code: "FORBIDDEN", message: "Admin access required." });
       }

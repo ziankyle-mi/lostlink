@@ -2,6 +2,22 @@
 
 The agent updates this file after every step. Keep it short.
 
+## Production-readiness hardening (2026-10-21)
+
+Done: P0/P1 security pass, deploy scaffolding, and dependency upgrade. No commit or push.
+
+- **Credentials:** deleted `scripts/generate-credentials-doc.mjs`, root `account_credentials.md`, `database/ACCOUNTS_CREDENTIALS.md`, and both login `.xlsx` files. Seed script now requires `SEED_PASSWORD` (12+ chars), refuses the old universal password, and only auto-confirms emails with `SEED_CONFIRM_EMAILS=true`. `DEV_LOGIN_BYPASS=false` in `.env` and `.dev.vars`.
+- **Auth:** role and `active` now come from `profiles`, never the email string; `ADMIN_EMAILS`/`roleForEmail` removed. Suspended accounts cannot resolve a session. Email confirmation required. Rotated refresh tokens are persisted (fixes forced re-login).
+- **Reports:** insert as `pending` (admin intake queue is now real); `status=all` is admin-only; item detail hides unapproved reports, reporter email, and reference codes from non-owners; `hide_photo` is enforced in the feed/API/item page.
+- **Claims:** server-side found/approved/own-item/duplicate/admin checks; `withdraw`; approval marks the item `claimed` and denies competing claims; no arbitrary profile/item fallbacks.
+- **Admin:** CSPRNG temporary passwords, no plaintext in `notifications`, auth errors surfaced (no fake success), soft removal instead of deleting items/claims/audit rows.
+- **XSS:** removed `innerHTML` for user name/email; removed all inline event handlers (report, claim, photo thumbnails).
+- **Photos:** store private-bucket object paths and render signed URLs; magic-byte image validation. `docs/migrations-production.sql` makes the bucket private (manual step).
+- **Stack:** Astro 7.4.1, `@astrojs/cloudflare` 14.4.1, Zod 4, wrangler. `npm audit --omit=dev`: 0 vulnerabilities.
+- **Ops:** `wrangler.jsonc`, `.nvmrc` (Node 22+), `public/robots.txt`, `public/_headers`, `404`/`500` pages, GitHub Actions CI. `npm test` no longer runs live mutations (`test:live` is explicit).
+- **Verified:** `astro check` 0 errors / 0 warnings; `npm test` 93 passed, 1 live test skipped; `npm run build` success.
+- **Conflict to resolve:** `AGENTS.md` says Astro 5 and demo scope. The critical Astro advisory required Astro 7. Confirm the upgrade and update `AGENTS.md`, or revert.
+
 ## Steps
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)
@@ -343,7 +359,11 @@ Done: Admin Post Removal Control & Moderation Option for Disciplinary Office.
 
 ## Blockers and questions for the owner
 
-- None at this time. Supabase database and storage are fully configured and functioning.
+- **Security incident (do first):** `github.com/ziankyle-mi/lostlink` is public, and prior commits contain credential documents. Rotate the Supabase anon + service-role keys, reset every seeded account password, purge history with `git filter-repo` (or make the repo private and rotate anyway), then force-push.
+- **Apply `docs/migrations-production.sql`** in Supabase: private `items-photos` bucket, claim/status triggers, indexes, timestamps. Without it the new photo signing still works, but the bucket stays public.
+- **Cloudflare:** create the project, add secrets (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_EMAIL_DOMAIN`), and bind KV `SESSION` + Images `IMAGES` if the adapter requires them. Confirm Node 22+.
+- **Turnstile** keys are still unset and there is no `siteverify` call; decide whether to enforce it.
+- **Remaining known gaps:** in-memory rate limiting is ineffective on Cloudflare isolates; CSP still allows `'unsafe-inline'` for scripts; hard delete of accounts still removes claim history; no staging project or uptime/backup monitoring.
 
 ## Last test report
 

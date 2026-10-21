@@ -82,26 +82,26 @@ const defaultSelectedUser = users[0] || null;
     </div>
 
     <!-- Card 3: Administrators (Signature Lime Accent Card from SKILL.md) -->
-    <div class="rounded-3xl bg-[#d8ef8c] p-6 sm:p-7 text-forest-900 shadow-xs flex flex-col justify-between">
+    <div class="rounded-3xl bg-lime p-6 sm:p-7 text-forest-900 shadow-xs flex flex-col justify-between">
       <p class="text-sm font-bold text-forest-900">Administrators</p>
       <div class="mt-4">
         <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none" id="metric-admins">
           {adminCount}
         </p>
-        <p class="mt-3 text-xs font-semibold text-forest-800">
+        <p class="mt-3 text-xs font-semibold text-forest-900">
           Security &amp; DO staff
         </p>
       </div>
     </div>
 
     <!-- Card 4: Suspended Accounts (Signature Dark Forest Green Card from SKILL.md) -->
-    <div class="rounded-3xl bg-[#164f38] p-6 sm:p-7 text-white shadow-xs flex flex-col justify-between">
+    <div class="rounded-3xl bg-forest-700 p-6 sm:p-7 text-white shadow-xs flex flex-col justify-between">
       <p class="text-sm font-medium text-stone-200">Suspended accounts</p>
       <div class="mt-4">
         <p class="font-serif text-4xl sm:text-5xl font-black text-white tracking-tight leading-none" id="metric-suspended">
           {suspendedCount}
         </p>
-        <p class="mt-3 text-xs font-semibold text-[#d8ef8c]">
+        <p class="mt-3 text-xs font-semibold text-lime">
           {suspendedCount > 0 ? `${suspendedCount} restricted from reporting` : "All accounts in good standing"}
         </p>
       </div>
@@ -110,7 +110,7 @@ const defaultSelectedUser = users[0] || null;
 
   <!-- Pending Password Recovery Requests Alert Card -->
   {pendingRecoveryRequests.length > 0 && (
-    <section class="rounded-3xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50/60 p-5 sm:p-6 shadow-sm" id="pending-recovery-banner" aria-label="Pending password recovery requests">
+    <section class="rounded-3xl border-2 border-amber-300 bg-amber-50 p-5 sm:p-6 shadow-sm" id="pending-recovery-banner" aria-label="Pending password recovery requests">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-amber-200/70 pb-4">
         <div class="flex items-center gap-3">
           <div class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-xs">
@@ -145,7 +145,7 @@ const defaultSelectedUser = users[0] || null;
                   {req.name || req.email.split("@")[0]}
                 </span>
                 {req.program && (
-                  <span class="rounded-full bg-forest-700/10 px-2 py-0.5 text-[10px] font-bold text-forest-800">
+                  <span class="rounded-full bg-forest-700/10 px-2 py-0.5 text-[10px] font-bold text-forest-900">
                     {req.program}
                   </span>
                 )}
@@ -153,7 +153,7 @@ const defaultSelectedUser = users[0] || null;
               <p class="truncate text-xs text-stone-500 font-mono mt-0.5">
                 {req.email}
               </p>
-              <div class="flex items-center gap-2 mt-1 text-[11px] text-amber-800 font-medium">
+              <div class="flex items-center gap-2 mt-1 text-xs text-amber-800 font-medium">
                 <span>Requested: {formatDate(req.requestedAt)}</span>
                 {req.studentId && <span>&bull; ID: {req.studentId}</span>}
               </div>
@@ -303,7 +303,7 @@ const defaultSelectedUser = users[0] || null;
         </span>
         <span class="text-stone-300">&bull;</span>
         <span class="inline-flex items-center gap-1.5 text-stone-600 font-bold">
-          <span class="size-2 rounded-full bg-[#9b2c1f]"></span> Suspended
+          <span class="size-2 rounded-full bg-danger"></span> Suspended
         </span>
         <span class="text-stone-300">&bull;</span>
         <button
@@ -347,7 +347,7 @@ const defaultSelectedUser = users[0] || null;
                 class={`student-select-card group relative flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
                   isFirst
                     ? "border-2 border-forest-700 bg-forest-700/5 shadow-2xs selected-user"
-                    : "border-stone-200/80 bg-white hover:border-stone-300 hover:bg-[#f5f1e6]/50 hover:shadow-2xs"
+                    : "border-stone-200/80 bg-white hover:border-stone-300 hover:bg-canvas/50 hover:shadow-2xs"
                 }`}
                 data-user-id={u.id}
                 data-user-name={u.full_name}
@@ -375,7 +375,7 @@ const defaultSelectedUser = users[0] || null;
               >
                 <!-- Left: Avatar + Details -->
                 <div class="flex items-center gap-3 min-w-0">
-                  <div class="size-10 rounded-xl flex items-center justify-center font-serif text-xs font-black bg-[#eef2e3] text-forest-900 shrink-0 border border-stone-200/80 group-hover:bg-[#d8ef8c] group-hover:border-lime-600/30 transition-colors">
+                  <div class="size-10 rounded-xl flex items-center justify-center font-serif text-xs font-black bg-sage-200 text-forest-900 shrink-0 border border-stone-200/80 group-hover:bg-lime group-hover:border-lime-600/30 transition-colors">
                     {initials}
                   </div>
                   <div class="min-w-0">
@@ -389,8 +389,8 @@ const defaultSelectedUser = users[0] || null;
                         </span>
                       )}
                     </div>
-                    <p class="text-[11px] text-stone-500 font-medium truncate mt-0.5">
-                      <span class="font-semibold text-forest-800">{u.programCode}</span> &bull; {u.collegeCode}
+                    <p class="text-xs text-stone-500 font-medium truncate mt-0.5">
+                      <span class="font-semibold text-forest-900">{u.programCode}</span> &bull; {u.collegeCode}
                       {u.isFaculty && <span class="text-amber-800 font-bold"> &bull; Faculty</span>}
                     </p>
                   </div>
@@ -400,14 +400,14 @@ const defaultSelectedUser = users[0] || null;
                 <div class="shrink-0 pl-1.5 flex items-center gap-1.5">
                   {hasResetRequest && (
                     <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-black text-amber-900 card-reset-badge animate-pulse" title="Requested password reset at counter">
-                      <span>⚡ Reset</span>
+                      <span>Reset</span>
                     </span>
                   )}
                   {u.active ? (
                     <span class="hidden card-status-badge"></span>
                   ) : (
-                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-[#9b2c1f] card-status-badge">
-                      <span class="size-1.5 rounded-full bg-[#9b2c1f]"></span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-danger card-status-badge">
+                      <span class="size-1.5 rounded-full bg-danger"></span>
                       Suspended
                     </span>
                   )}
@@ -420,7 +420,7 @@ const defaultSelectedUser = users[0] || null;
         <!-- Empty Results Message in Left Column -->
         <div id="no-cards-message" class="hidden p-6 text-center bg-stone-50 rounded-2xl border border-stone-200">
           <p class="font-bold text-stone-600 text-xs">No campus accounts found</p>
-          <p class="text-[11px] text-stone-400 mt-0.5">Try adjusting your college or degree filter.</p>
+          <p class="text-xs text-stone-400 mt-0.5">Try adjusting your college or degree filter.</p>
         </div>
       </div>
 
@@ -432,7 +432,7 @@ const defaultSelectedUser = users[0] || null;
             <div class="flex items-center gap-4 min-w-0 flex-1">
               <div
                 id="dossier-avatar"
-                class="size-14 sm:size-16 rounded-2xl flex items-center justify-center font-serif text-2xl font-black bg-[#d8ef8c] text-forest-900 shadow-2xs shrink-0 border border-lime-600/30"
+                class="size-14 sm:size-16 rounded-2xl flex items-center justify-center font-serif text-2xl font-black bg-lime text-forest-900 shadow-2xs shrink-0 border border-lime-600/30"
               >
                 {defaultSelectedUser ? initialsOf(defaultSelectedUser.full_name, defaultSelectedUser.email) : "DL"}
               </div>
@@ -450,19 +450,19 @@ const defaultSelectedUser = users[0] || null;
             <div class="flex flex-wrap items-center sm:flex-col sm:items-end gap-2 shrink-0">
               <div id="dossier-status-container">
                 {!defaultSelectedUser?.active && (
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-[#9b2c1f]/10 border border-[#9b2c1f]/20 px-3.5 py-1 text-xs font-bold text-[#9b2c1f] uppercase tracking-wider">
-                    <span class="size-2 rounded-full bg-[#9b2c1f]"></span>
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-danger/10 border border-danger/20 px-3.5 py-1 text-xs font-bold text-danger uppercase tracking-wider">
+                    <span class="size-2 rounded-full bg-danger"></span>
                     Suspended
                   </span>
                 )}
               </div>
               <div id="dossier-role-container">
                 {defaultSelectedUser?.role === "admin" ? (
-                  <span class="inline-flex items-center gap-1 rounded-full bg-[#164f38] text-[#d8ef8c] px-3.5 py-1 text-xs font-bold uppercase tracking-wider shadow-2xs">
+                  <span class="inline-flex items-center gap-1 rounded-full bg-forest-700 text-lime px-3.5 py-1 text-xs font-bold uppercase tracking-wider shadow-2xs">
                     DO Admin
                   </span>
                 ) : defaultSelectedUser?.isFaculty ? (
-                  <span class="inline-flex items-center gap-1 rounded-full bg-[#d8ef8c] text-forest-900 border border-lime-600/30 px-3.5 py-1 text-xs font-bold uppercase tracking-wider">
+                  <span class="inline-flex items-center gap-1 rounded-full bg-lime text-forest-900 border border-lime-600/30 px-3.5 py-1 text-xs font-bold uppercase tracking-wider">
                     Faculty
                   </span>
                 ) : (
@@ -475,7 +475,7 @@ const defaultSelectedUser = users[0] || null;
           </div>
 
           <!-- Department & Campus Affiliation Banner -->
-          <div class="rounded-2xl bg-[#f5f1e6]/70 border border-stone-200/90 p-4 space-y-1.5" id="dossier-affiliation-box">
+          <div class="rounded-2xl bg-canvas/70 border border-stone-200/90 p-4 space-y-1.5" id="dossier-affiliation-box">
             <div class="flex items-center gap-2 text-forest-900 font-bold text-xs uppercase tracking-wider">
               <svg class="size-4 shrink-0 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4"></path>
@@ -511,7 +511,7 @@ const defaultSelectedUser = users[0] || null;
           <!-- 4 Core Metric Cards Grid -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <!-- 1. Enrolled Program -->
-            <div class="rounded-2xl bg-[#f5f1e6]/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-[#f5f1e6]">
+            <div class="rounded-2xl bg-canvas/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-canvas">
               <p class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Enrolled program</p>
               <p id="dossier-program-code" class="mt-1.5 font-serif text-2xl sm:text-[1.65rem] font-black text-forest-900 leading-none">
                 {defaultSelectedUser?.programCode || "BSCS"}
@@ -522,7 +522,7 @@ const defaultSelectedUser = users[0] || null;
             </div>
 
             <!-- 2. Student ID & Units -->
-            <div class="rounded-2xl bg-[#f5f1e6]/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-[#f5f1e6]">
+            <div class="rounded-2xl bg-canvas/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-canvas">
               <p class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Student ID &amp; units</p>
               <p id="dossier-student-id" class="mt-1.5 font-mono text-xl sm:text-2xl font-black text-forest-900 leading-none tracking-tight">
                 {defaultSelectedUser?.studentId || "2024-10144"}
@@ -533,7 +533,7 @@ const defaultSelectedUser = users[0] || null;
             </div>
 
             <!-- 3. Designated Campus / Lab -->
-            <div class="rounded-2xl bg-[#f5f1e6]/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-[#f5f1e6]">
+            <div class="rounded-2xl bg-canvas/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-canvas">
               <p class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Campus location</p>
               <p id="dossier-campus" class="mt-1.5 font-bold text-sm sm:text-base text-forest-900 leading-snug">
                 {defaultSelectedUser?.campus || "Victoneta Park (Main)"}
@@ -544,7 +544,7 @@ const defaultSelectedUser = users[0] || null;
             </div>
 
             <!-- 4. Portal Access Level -->
-            <div class="rounded-2xl bg-[#f5f1e6]/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-[#f5f1e6]">
+            <div class="rounded-2xl bg-canvas/60 p-4 sm:p-5 border border-stone-200/80 transition-all hover:bg-canvas">
               <p class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Portal privileges</p>
               <p id="dossier-portal-level" class="mt-1.5 font-bold text-sm sm:text-base text-forest-900 leading-snug">
                 {defaultSelectedUser?.role === "admin"
@@ -562,12 +562,12 @@ const defaultSelectedUser = users[0] || null;
           </div>
 
           <!-- Account Activity Summary -->
-          <div class="flex items-center justify-between text-xs text-stone-600 bg-[#f5f1e6]/70 rounded-2xl px-4 py-3 border border-stone-200/80 flex-wrap gap-2">
+          <div class="flex items-center justify-between text-xs text-stone-600 bg-canvas/70 rounded-2xl px-4 py-3 border border-stone-200/80 flex-wrap gap-2">
             <span>Joined campus portal: <strong id="dossier-joined-date" class="text-forest-900 font-bold">{formatDate(defaultSelectedUser?.created_at)}</strong></span>
             <span>Campus feed access: <strong class="text-forest-700 font-bold">Verified @dlsau.edu.ph</strong></span>
           </div>
 
-          <!-- Footer Action Bar: Account ID + Actions (Make Admin, Suspend, Reset Link, Delete Account) -->
+          <!-- Footer Action Bar: Account ID + Actions (Make Admin, Suspend, Reset Link, Deactivate Account) -->
           <div class="flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-stone-200/70">
             <!-- Left: Account ID display -->
             <div class="font-mono text-xs font-bold text-forest-900 bg-[#ece5d6] px-4 py-2 rounded-full border border-stone-300/50 shrink-0" id="dossier-account-id-label">
@@ -580,7 +580,7 @@ const defaultSelectedUser = users[0] || null;
               <button
                 type="button"
                 id="dossier-toggle-role-btn"
-                class="rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95 cursor-pointer bg-[#164f38]/10 hover:bg-[#164f38] hover:text-[#d8ef8c] text-[#164f38]"
+                class="rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95 cursor-pointer bg-forest-700/10 hover:bg-forest-700 hover:text-lime text-forest-700"
                 data-user-id={defaultSelectedUser?.id}
                 data-user-email={defaultSelectedUser?.email}
                 data-user-name={defaultSelectedUser?.full_name}
@@ -596,7 +596,7 @@ const defaultSelectedUser = users[0] || null;
                 class={`rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95 cursor-pointer ${
                   defaultSelectedUser?.active
                     ? "bg-stone-100 hover:bg-stone-200 text-stone-700"
-                    : "bg-[#d8ef8c] hover:bg-[#c9e376] text-forest-900 border border-lime-600/40"
+                    : "bg-lime hover:bg-[#c9e376] text-forest-900 border border-lime-600/40"
                 }`}
                 data-user-id={defaultSelectedUser?.id}
                 data-user-email={defaultSelectedUser?.email}
@@ -618,20 +618,20 @@ const defaultSelectedUser = users[0] || null;
                 Reset password
               </button>
 
-              <!-- Delete Account Button (Recipe from SKILL.md: bg-[#9b2c1f]/10 text-[#9b2c1f] hover:bg-[#9b2c1f]/20) -->
+              <!-- Deactivate Account Button (Recipe from SKILL.md: bg-danger/10 text-danger hover:bg-danger/20) -->
               <button
                 type="button"
                 id="dossier-delete-user-btn"
-                class="rounded-full bg-[#9b2c1f]/10 hover:bg-[#9b2c1f] hover:text-white border border-[#9b2c1f]/20 px-4 py-2 text-xs font-bold text-[#9b2c1f] transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                class="rounded-full bg-danger/10 hover:bg-danger hover:text-white border border-danger/20 px-4 py-2 text-xs font-bold text-danger transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
                 data-user-id={defaultSelectedUser?.id}
                 data-user-email={defaultSelectedUser?.email}
                 data-user-name={defaultSelectedUser?.full_name}
-                title="Permanently remove account from campus records"
+                title="Deactivate account; records and claims are preserved"
               >
                 <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="11" x2="22" y2="16"></line><line x1="22" y1="11" x2="17" y2="16"></line>
                 </svg>
-                Delete account
+                Deactivate account
               </button>
             </div>
           </div>
@@ -640,7 +640,7 @@ const defaultSelectedUser = users[0] || null;
     </div>
   </section>
 
-  <!-- Delete Account Confirmation Modal -->
+  <!-- Deactivate Account Confirmation Modal -->
   <div
     id="user-delete-modal"
     class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
@@ -650,17 +650,17 @@ const defaultSelectedUser = users[0] || null;
     <div class="relative w-full max-w-md rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div class="flex items-center gap-3">
-          <div class="size-10 rounded-full bg-[#9b2c1f]/10 flex items-center justify-center text-[#9b2c1f]">
+          <div class="size-10 rounded-full bg-danger/10 flex items-center justify-center text-danger">
             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="11" x2="22" y2="16"></line><line x1="22" y1="11" x2="17" y2="16"></line>
             </svg>
           </div>
           <div>
-            <span class="rounded-full bg-[#9b2c1f]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#9b2c1f] uppercase tracking-wide">
-              Permanent action
+            <span class="rounded-full bg-danger/10 px-2.5 py-0.5 text-[10px] font-bold text-danger uppercase tracking-wide">
+              Account access
             </span>
             <h3 class="font-serif text-xl sm:text-2xl font-black text-forest-900 mt-1">
-              Delete campus account
+              Deactivate campus account
             </h3>
           </div>
         </div>
@@ -675,11 +675,11 @@ const defaultSelectedUser = users[0] || null;
 
       <div class="mt-4 text-sm text-stone-600 space-y-3">
         <p id="delete-modal-description">
-          Are you sure you want to permanently delete this account?
+          Are you sure you want to deactivate this account?
         </p>
-        <div class="rounded-xl border border-[#9b2c1f]/20 bg-[#9b2c1f]/5 p-3.5 text-xs text-[#9b2c1f] space-y-1">
-          <p class="font-bold">Caution: This cannot be undone.</p>
-          <p class="text-stone-600">This will permanently purge the user's authentication credentials from Supabase, cascade remove their student profile, and cancel pending claims.</p>
+        <div class="rounded-xl border border-danger/20 bg-danger/5 p-3.5 text-xs text-danger space-y-1">
+          <p class="font-bold">The account can be reactivated later.</p>
+          <p class="text-stone-600">Sign-in will be blocked immediately. The student profile, claims, reports, and audit history are kept for campus records.</p>
         </div>
       </div>
 
@@ -693,9 +693,9 @@ const defaultSelectedUser = users[0] || null;
         <button
           type="button"
           id="confirm-delete-user-btn"
-          class="rounded-full bg-[#9b2c1f] hover:bg-[#7e2419] active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+          class="rounded-full bg-danger hover:bg-danger/90 active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
         >
-          <span>Delete account</span>
+          <span>Deactivate account</span>
         </button>
       </div>
     </div>
@@ -731,7 +731,7 @@ const defaultSelectedUser = users[0] || null;
         <p id="role-modal-description">
           Are you sure you want to change this user's permissions?
         </p>
-        <div class="rounded-xl border border-lime-600/30 bg-[#d8ef8c]/25 p-3 text-xs text-forest-900">
+        <div class="rounded-xl border border-lime-600/30 bg-lime/25 p-3 text-xs text-forest-900">
           <strong>Security note:</strong> Administrators have full access to approve found items, verify custody releases, and moderate campus posts.
         </div>
       </div>
@@ -746,7 +746,7 @@ const defaultSelectedUser = users[0] || null;
         <button
           type="button"
           id="confirm-role-change-btn"
-          class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-xs cursor-pointer"
+          class="rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-lime transition-all shadow-xs cursor-pointer"
         >
           Confirm role change
         </button>
@@ -799,7 +799,7 @@ const defaultSelectedUser = users[0] || null;
         <button
           type="button"
           id="confirm-status-toggle-btn"
-          class="rounded-full bg-[#9b2c1f] hover:bg-[#7e2419] active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+          class="rounded-full bg-danger hover:bg-danger/90 active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
         >
           Confirm suspension
         </button>
@@ -839,7 +839,7 @@ const defaultSelectedUser = users[0] || null;
           <p id="pwd-modal-description">
             Issue a temporary password for this student. They must change it after signing in.
           </p>
-          <div class="rounded-xl border border-line bg-[#f5f1e6] p-3.5 text-xs text-forest-900 flex items-start gap-2.5">
+          <div class="rounded-xl border border-line bg-canvas p-3.5 text-xs text-forest-900 flex items-start gap-2.5">
             <svg class="size-4 text-forest-700 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="16" x2="12" y2="12" />
@@ -868,8 +868,8 @@ const defaultSelectedUser = users[0] || null;
 
       <!-- STEP 2: Password Reveal Step (Shown on success) -->
       <div id="pwd-modal-result-step" class="mt-4 hidden space-y-4">
-        <div class="rounded-2xl border-2 border-forest-700/20 bg-[#faf8f4] p-5 text-center">
-          <span class="text-[11px] font-bold uppercase tracking-widest text-stone-500">Official Temporary Credentials</span>
+        <div class="rounded-2xl border-2 border-forest-700/20 bg-stone-50 p-5 text-center">
+          <span class="text-xs font-bold uppercase tracking-widest text-stone-500">Official Temporary Credentials</span>
           <div class="mt-3 flex items-center justify-center gap-2 flex-wrap">
             <span
               id="pwd-generated-value"
@@ -903,18 +903,18 @@ const defaultSelectedUser = users[0] || null;
             </svg>
             <div>
               <p class="font-bold">Temporary password active</p>
-              <p class="text-[11px] text-stone-500 mt-0.5">The student will be prompted to choose a permanent password immediately upon logging in.</p>
+              <p class="text-xs text-stone-500 mt-0.5">The student will be prompted to choose a permanent password immediately upon logging in.</p>
             </div>
           </div>
 
-          <div class="flex items-start gap-2.5 rounded-xl bg-[#f5f1e6] p-3 text-forest-900 border border-line">
+          <div class="flex items-start gap-2.5 rounded-xl bg-canvas p-3 text-forest-900 border border-line">
             <svg class="size-4 text-forest-700 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             <div>
               <p class="font-bold">Notification delivered</p>
-              <p class="text-[11px] text-stone-500 mt-0.5">Credentials were dispatched to the student's in-app notification inbox.</p>
+              <p class="text-xs text-stone-500 mt-0.5">Credentials were dispatched to the student's in-app notification inbox.</p>
             </div>
           </div>
         </div>
@@ -940,11 +940,11 @@ const defaultSelectedUser = users[0] || null;
     background: transparent;
   }
   .custom-scroll::-webkit-scrollbar-thumb {
-    background: #d4ccb8;
+    background: var(--color-sage-400);
     border-radius: 9999px;
   }
   .custom-scroll::-webkit-scrollbar-thumb:hover {
-    background: #b5ac96;
+    background: var(--color-sage-600);
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -1101,8 +1101,8 @@ const defaultSelectedUser = users[0] || null;
           dossierStatusContainer.innerHTML = "";
         } else {
           dossierStatusContainer.innerHTML = `
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-[#9b2c1f]/10 border border-[#9b2c1f]/20 px-3.5 py-1 text-xs font-bold text-[#9b2c1f] uppercase tracking-wider">
-              <span class="size-2 rounded-full bg-[#9b2c1f]"></span>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-danger/10 border border-danger/20 px-3.5 py-1 text-xs font-bold text-danger uppercase tracking-wider">
+              <span class="size-2 rounded-full bg-danger"></span>
               Suspended
             </span>
           `;
@@ -1112,13 +1112,13 @@ const defaultSelectedUser = users[0] || null;
       if (dossierRoleContainer) {
         if (role === "admin") {
           dossierRoleContainer.innerHTML = `
-            <span class="inline-flex items-center gap-1 rounded-full bg-[#164f38] text-[#d8ef8c] px-3.5 py-1 text-xs font-bold uppercase tracking-wider shadow-2xs">
+            <span class="inline-flex items-center gap-1 rounded-full bg-forest-700 text-lime px-3.5 py-1 text-xs font-bold uppercase tracking-wider shadow-2xs">
               DO Admin
             </span>
           `;
         } else if (isFaculty) {
           dossierRoleContainer.innerHTML = `
-            <span class="inline-flex items-center gap-1 rounded-full bg-[#d8ef8c] text-forest-900 border border-lime-600/30 px-3.5 py-1 text-xs font-bold uppercase tracking-wider">
+            <span class="inline-flex items-center gap-1 rounded-full bg-lime text-forest-900 border border-lime-600/30 px-3.5 py-1 text-xs font-bold uppercase tracking-wider">
               Faculty
             </span>
           `;
@@ -1174,7 +1174,7 @@ const defaultSelectedUser = users[0] || null;
           } else {
             dossierToggleRoleBtn.textContent = "Make admin";
             dossierToggleRoleBtn.setAttribute("data-target-role", "admin");
-            dossierToggleRoleBtn.className = "rounded-full bg-[#164f38]/10 hover:bg-[#164f38] hover:text-[#d8ef8c] px-4 py-2 text-xs font-bold text-[#164f38] transition-all active:scale-95 cursor-pointer";
+            dossierToggleRoleBtn.className = "rounded-full bg-forest-700/10 hover:bg-forest-700 hover:text-lime px-4 py-2 text-xs font-bold text-forest-700 transition-all active:scale-95 cursor-pointer";
           }
         }
       }
@@ -1196,7 +1196,7 @@ const defaultSelectedUser = users[0] || null;
           } else {
             dossierToggleStatusBtn.textContent = "Reactivate account";
             dossierToggleStatusBtn.setAttribute("data-target-active", "true");
-            dossierToggleStatusBtn.className = "rounded-full bg-[#d8ef8c] hover:bg-[#c9e376] px-4 py-2 text-xs font-bold text-forest-900 border border-lime-600/40 transition-all active:scale-95 cursor-pointer";
+            dossierToggleStatusBtn.className = "rounded-full bg-lime hover:bg-[#c9e376] px-4 py-2 text-xs font-bold text-forest-900 border border-lime-600/40 transition-all active:scale-95 cursor-pointer";
           }
         }
       }
@@ -1215,7 +1215,7 @@ const defaultSelectedUser = users[0] || null;
         dossierResetPwdBtn.setAttribute("data-user-name", name);
         if (hasResetRequest) {
           dossierResetPwdBtn.className = "rounded-full bg-amber-500 hover:bg-amber-600 text-stone-950 px-4 py-2 text-xs font-black transition-all active:scale-95 cursor-pointer shadow-xs animate-pulse";
-          dossierResetPwdBtn.textContent = "Issue requested password ⚡";
+          dossierResetPwdBtn.textContent = "Issue requested password";
         } else {
           dossierResetPwdBtn.className = "rounded-full bg-[#ece5d6] hover:bg-stone-200 px-4 py-2 text-xs font-bold text-forest-900 transition-all active:scale-95 cursor-pointer";
           dossierResetPwdBtn.textContent = "Reset password";
@@ -1229,11 +1229,11 @@ const defaultSelectedUser = users[0] || null;
         if (isSelf) {
           dossierDeleteUserBtn.disabled = true;
           dossierDeleteUserBtn.className = "rounded-full bg-stone-100 px-4 py-2 text-xs font-bold text-stone-400 cursor-not-allowed flex items-center gap-1.5";
-          dossierDeleteUserBtn.title = "Administrators cannot delete their own active account.";
+          dossierDeleteUserBtn.title = "Administrators cannot deactivate their own active account.";
         } else {
           dossierDeleteUserBtn.disabled = false;
-          dossierDeleteUserBtn.className = "rounded-full bg-[#9b2c1f]/10 hover:bg-[#9b2c1f] hover:text-white border border-[#9b2c1f]/20 px-4 py-2 text-xs font-bold text-[#9b2c1f] transition-all active:scale-95 cursor-pointer flex items-center gap-1.5";
-          dossierDeleteUserBtn.title = "Permanently remove account from campus records";
+          dossierDeleteUserBtn.className = "rounded-full bg-danger/10 hover:bg-danger hover:text-white border border-danger/20 px-4 py-2 text-xs font-bold text-danger transition-all active:scale-95 cursor-pointer flex items-center gap-1.5";
+          dossierDeleteUserBtn.title = "Deactivate account; records and claims are preserved";
         }
       }
     }
@@ -1497,14 +1497,14 @@ const defaultSelectedUser = users[0] || null;
             statusModalTitle.textContent = `Reactivate ${userName}`;
             statusModalDesc.textContent = `Restore full access for ${userName} (${userEmail})? They will be able to report items and submit claims again.`;
             confirmStatusBtn.textContent = "Confirm reactivation";
-            confirmStatusBtn.className = "rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-[#d8ef8c] transition-all shadow-xs cursor-pointer";
+            confirmStatusBtn.className = "rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2.5 text-xs font-bold text-lime transition-all shadow-xs cursor-pointer";
           } else {
             statusModalBadge.textContent = "Account moderation";
             statusModalBadge.className = "rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800";
             statusModalTitle.textContent = `Suspend ${userName}`;
             statusModalDesc.textContent = `Are you sure you want to suspend ${userName} (${userEmail})? They will be temporarily blocked from submitting lost or found reports.`;
             confirmStatusBtn.textContent = "Confirm suspension";
-            confirmStatusBtn.className = "rounded-full bg-[#9b2c1f] hover:bg-[#7e2419] active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer";
+            confirmStatusBtn.className = "rounded-full bg-danger hover:bg-danger/90 active:scale-95 px-6 py-2.5 text-xs font-bold text-white transition-all shadow-xs cursor-pointer";
           }
         }
 
@@ -1550,8 +1550,8 @@ const defaultSelectedUser = users[0] || null;
                   badge.className = "hidden card-status-badge";
                   badge.innerHTML = "";
                 } else {
-                  badge.className = "inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-[#9b2c1f] card-status-badge";
-                  badge.innerHTML = '<span class="size-1.5 rounded-full bg-[#9b2c1f]"></span> Suspended';
+                  badge.className = "inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-bold text-danger card-status-badge";
+                  badge.innerHTML = '<span class="size-1.5 rounded-full bg-danger"></span> Suspended';
                 }
               }
               updateDossier(card);
@@ -1640,7 +1640,7 @@ const defaultSelectedUser = users[0] || null;
             document.execCommand("copy");
             document.body.removeChild(ta);
           }
-          if (copyPwdBtnLabel) copyPwdBtnLabel.textContent = "Copied! ✓";
+          if (copyPwdBtnLabel) copyPwdBtnLabel.textContent = "Copied";
           copyGeneratedPwdBtn.classList.remove("bg-forest-700");
           copyGeneratedPwdBtn.classList.add("bg-[#2d6e4f]");
           setTimeout(() => {
@@ -1728,7 +1728,7 @@ const defaultSelectedUser = users[0] || null;
     }
 
     // ==========================================
-    // ACTION 4: Delete Account Trigger
+    // ACTION 4: Deactivate Account Trigger
     // ==========================================
     if (dossierDeleteUserBtn) {
       dossierDeleteUserBtn.addEventListener("click", () => {
@@ -1739,7 +1739,7 @@ const defaultSelectedUser = users[0] || null;
         pendingTarget = { userId, userEmail, userName, card: currentSelectedCard };
 
         if (deleteModalDesc) {
-          deleteModalDesc.innerHTML = `Are you sure you want to permanently delete <strong>${userName}</strong> (<span class="font-mono text-xs">${userEmail}</span>)?`;
+          deleteModalDesc.textContent = `Are you sure you want to deactivate ${userName} (${userEmail})?`;
         }
 
         if (deleteModal) {
@@ -1756,10 +1756,10 @@ const defaultSelectedUser = users[0] || null;
     if (confirmDeleteBtn) {
       confirmDeleteBtn.addEventListener("click", async () => {
         if (!pendingTarget) return;
-        const { userId, userEmail, userName, card } = pendingTarget;
+        const { userId, userEmail, userName } = pendingTarget;
 
         confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = '<span>Deleting...</span>';
+        confirmDeleteBtn.innerHTML = '<span>Deactivating...</span>';
 
         try {
           const res = await fetch("/api/admin/actions", {
@@ -1774,42 +1774,18 @@ const defaultSelectedUser = users[0] || null;
           const data = await res.json().catch(() => ({}));
 
           if (data.ok) {
-            showToast(`Account for ${userName} (${userEmail}) has been deleted.`);
-
-            // Find next card to select before removing
-            let nextCard = null;
-            if (card) {
-              const allCards = Array.from(document.querySelectorAll(".student-select-card"));
-              const currentIndex = allCards.indexOf(card);
-              nextCard = allCards[currentIndex + 1] || allCards[currentIndex - 1] || null;
-
-              // Animate and remove card
-              card.style.transition = "all 0.25s ease-out";
-              card.style.opacity = "0";
-              card.style.transform = "scale(0.95)";
-              setTimeout(() => {
-                card.remove();
-                applyFilters();
-              }, 250);
-            }
-
-            // Update Metrics
-            const totalRemaining = document.querySelectorAll(".student-select-card").length - 1;
-            if (metricTotalUsers) metricTotalUsers.textContent = String(Math.max(0, totalRemaining));
-            if (totalCountLabel) totalCountLabel.textContent = String(Math.max(0, totalRemaining));
-
-            // Select next user in dossier
-            if (nextCard) {
-              setTimeout(() => updateDossier(nextCard), 260);
-            }
+            showToast(`Account for ${userName} (${userEmail}) has been deactivated.`);
+            // Reload so the card and dossier reflect the suspended state
+            // without pretending the record was erased.
+            setTimeout(() => window.location.reload(), 700);
           } else {
-            showToast(data.error || "Failed to delete account.");
+            showToast(data.error || "Failed to deactivate account.");
           }
         } catch {
-          showToast("Network error deleting account.");
+          showToast("Network error deactivating account.");
         } finally {
           confirmDeleteBtn.disabled = false;
-          confirmDeleteBtn.innerHTML = '<span>Delete account</span>';
+          confirmDeleteBtn.innerHTML = '<span>Deactivate account</span>';
           closeAllModals();
         }
       });

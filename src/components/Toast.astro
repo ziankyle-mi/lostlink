@@ -7,7 +7,8 @@
 <!-- Toast container injected once per page -->
 <div id="ll-toast-container" class="ll-toast-container" aria-live="polite" aria-atomic="false"></div>
 
-<script is:inline>
+<script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
   (function () {
     if (window.llToast) return; // Already initialised
 
@@ -29,7 +30,7 @@
 
       var icon = document.createElement("span");
       icon.className = "ll-toast-icon " + type;
-      icon.textContent = type === "success" ? "✓" : type === "error" ? "!" : "i";
+      icon.textContent = type === "success" ? "OK" : type === "error" ? "!" : "i";
 
       var text = document.createElement("span");
       text.textContent = message;

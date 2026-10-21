@@ -1,0 +1,12 @@
+# LostLink is a campus service for De La Salle Araneta University.
+# Only the public feed should be indexed. Never index admin, profile,
+# item detail (contains claim context), or API routes.
+User-agent: *
+Allow: /$
+Disallow: /admin
+Disallow: /profile
+Disallow: /item/
+Disallow: /api/
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /register

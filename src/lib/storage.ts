@@ -24,11 +24,116 @@ export function isAllowedMimeType(mimeType: string): boolean {
   return ALLOWED_MIME_TYPES.includes(norm as (typeof ALLOWED_MIME_TYPES)[number]) || norm === "image/jpg";
 }
 
+/** Verifies the file actually starts with JPEG/PNG/WebP magic bytes. */
+export function hasValidImageSignature(data: Uint8Array): boolean {
+  if (data.length < 12) return false;
+  // JPEG: FF D8 FF
+  if (data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return true;
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47 &&
+    data[4] === 0x0d &&
+    data[5] === 0x0a &&
+    data[6] === 0x1a &&
+    data[7] === 0x0a
+  ) {
+    return true;
+  }
+  // WebP: "RIFF" .... "WEBP"
+  if (
+    data[0] === 0x52 &&
+    data[1] === 0x49 &&
+    data[2] === 0x46 &&
+    data[3] === 0x46 &&
+    data[8] === 0x57 &&
+    data[9] === 0x45 &&
+    data[10] === 0x42 &&
+    data[11] === 0x50
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function getStorageClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("Supabase service role key is not configured.");
+  }
   return createClient(env.PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false },
   });
+}
+
+const PUBLIC_MARKER = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
+const SIGNED_MARKER = `/storage/v1/object/sign/${STORAGE_BUCKET}/`;
+
+/** Converts the legacy `photo_path` column into storage object paths. */
+export function photoPathsFromColumn(value: string | null | undefined): string[] {
+  if (!value) return [];
+  let entries: string[] = [];
+  if (value.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) entries = parsed.filter((v): v is string => typeof v === "string");
+    } catch {
+      entries = [value];
+    }
+  } else {
+    entries = [value];
+  }
+
+  return entries
+    .map((entry) => {
+      if (entry.startsWith("data:")) return "";
+      const publicIdx = entry.indexOf(PUBLIC_MARKER);
+      if (publicIdx >= 0) return decodeURIComponent(entry.slice(publicIdx + PUBLIC_MARKER.length));
+      const signedIdx = entry.indexOf(SIGNED_MARKER);
+      if (signedIdx >= 0) {
+        const rest = entry.slice(signedIdx + SIGNED_MARKER.length);
+        return decodeURIComponent(rest.split("?")[0]);
+      }
+      if (/^https?:\/\//i.test(entry)) return "";
+      return entry;
+    })
+    .filter((entry) => entry.length > 0);
+}
+
+/**
+ * Signs private-bucket object paths for rendering. Returns an empty string for
+ * any path that cannot be signed, so a missing object never breaks a page.
+ */
+export async function signPhotoPaths(
+  env: Env,
+  paths: string[],
+  expiresIn = 60 * 60,
+): Promise<string[]> {
+  if (paths.length === 0) return [];
+  try {
+    const supabase = getStorageClient(env);
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrls(paths, expiresIn);
+
+    if (error || !data) {
+      console.warn("[storage] Signing failed:", error?.message);
+      return [];
+    }
+
+    const base = env.PUBLIC_SUPABASE_URL.replace(/\/$/, "");
+    return data.map((entry) => {
+      if (!entry?.signedUrl) return "";
+      const url = entry.signedUrl;
+      if (/^https?:\/\//i.test(url)) return url;
+      return url.startsWith("/storage/") ? `${base}${url}` : `${base}/storage/v1${url.startsWith("/") ? "" : "/"}${url}`;
+    });
+  } catch (err) {
+    console.warn("[storage] Signing exception:", err);
+    return [];
+  }
 }
 
 /**
@@ -48,7 +153,11 @@ export async function uploadPhotoToStorage(
     return { ok: false, error: "File size exceeds the 5 MB limit." };
   }
 
-  if (!env.PUBLIC_SUPABASE_URL || (!env.SUPABASE_SERVICE_ROLE_KEY && !env.PUBLIC_SUPABASE_ANON_KEY)) {
+  if (!hasValidImageSignature(data)) {
+    return { ok: false, error: "The file is not a valid JPG, PNG, or WebP image." };
+  }
+
+  if (!env.PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
     return { ok: false, error: "Supabase storage is not configured." };
   }
 
@@ -69,13 +178,23 @@ export async function uploadPhotoToStorage(
       return { ok: false, error: uploadErr.message };
     }
 
-    const { data: publicData } = supabase.storage
+    const { data: signed } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .getPublicUrl(uploadResult.path);
+      .createSignedUrl(uploadResult.path, 60 * 60);
+
+    const rawSigned = signed?.signedUrl ?? "";
+    const base = env.PUBLIC_SUPABASE_URL.replace(/\/$/, "");
+    const signedUrl = rawSigned
+      ? /^https?:\/\//i.test(rawSigned)
+        ? rawSigned
+        : rawSigned.startsWith("/storage/")
+          ? `${base}${rawSigned}`
+          : `${base}/storage/v1${rawSigned.startsWith("/") ? "" : "/"}${rawSigned}`
+      : undefined;
 
     return {
       ok: true,
-      url: publicData.publicUrl,
+      url: signedUrl,
       path: uploadResult.path,
     };
   } catch (err) {

@@ -307,7 +307,8 @@ const devOpen = devBypassEnabled(Astro.locals.env);
   }
 
   <!-- Interactive script for Role pill selection, dynamic program labels, and student fields toggle -->
-  <script is:inline>
+  <script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
     (function () {
       const roleBtns = document.querySelectorAll(".role-btn");
       const roleInput = document.getElementById("role-input");

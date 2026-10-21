@@ -34,7 +34,7 @@ const { item, isAdmin = false } = Astro.props;
       class={`absolute left-4 top-4 z-20 rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
         item.type === "found"
           ? "bg-forest-700 text-white shadow-xs"
-          : "bg-[#d8ef8c] text-forest-900 border border-lime-600/30 shadow-xs"
+          : "bg-lime text-forest-900 border border-lime-600/30 shadow-xs"
       }`}
     >
       {item.type.toUpperCase()}
@@ -148,7 +148,7 @@ const { item, isAdmin = false } = Astro.props;
       class="mt-4 flex items-center justify-between border-t border-line/60 pt-4 text-sm font-bold text-forest-900 group-hover:text-forest-700"
     >
       <span>{item.actionLabel}</span>
-      <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true">→</span>
+      <span class="transition-transform group-hover:translate-x-1.5" aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
     </a>
   </div>
 </article>

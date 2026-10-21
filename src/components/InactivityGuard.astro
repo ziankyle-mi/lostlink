@@ -12,7 +12,9 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
 <div
   id="inactivity-backdrop"
   data-open="false"
-  class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-forest-950/70 backdrop-blur-xs transition-opacity duration-300"
+  data-timeout-seconds={timeoutSeconds}
+  data-warning-seconds={warningSeconds}
+  class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-forest-900/70 backdrop-blur-xs transition-opacity duration-300"
   role="alertdialog"
   aria-modal="true"
   aria-labelledby="inactivity-title"
@@ -65,7 +67,7 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
       <button
         type="button"
         id="inactivity-stay-btn"
-        class="inline-flex min-h-11 items-center justify-center rounded-full bg-forest-900 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-forest-800 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
+        class="inline-flex min-h-11 items-center justify-center rounded-full bg-forest-900 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-forest-900 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
       >
         Stay signed in
       </button>
@@ -73,7 +75,8 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
   </div>
 </div>
 
-<script is:inline define:vars={{ timeoutSeconds, warningSeconds }}>
+<script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
   (function () {
     const STORAGE_KEY = "lostlink_last_active";
     const LOGOUT_KEY = "lostlink_logged_out";
@@ -87,6 +90,9 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
     const logoutBtn = document.getElementById("inactivity-logout-btn");
 
     if (!backdrop || !countdownEl || !progressBar || !stayBtn || !logoutBtn) return;
+
+    const timeoutSeconds = Number(backdrop.dataset.timeoutSeconds ?? 900);
+    const warningSeconds = Number(backdrop.dataset.warningSeconds ?? 60);
 
     let isWarningOpen = false;
     let isLoggingOut = false;

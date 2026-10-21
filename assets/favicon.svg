@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="54" fill="#16503a" />
+  <!-- Cream L (Lost) -->
+  <path d="M 47,47 H 92 V 164 H 152 V 209 H 47 Z" fill="#f3efe4" />
+  <!-- Lime L (Link) -->
+  <path d="M 104,47 H 209 V 209 H 164 V 92 H 104 Z" fill="#daef8a" />
+  <!-- Center Link Dot -->
+  <circle cx="128" cy="128" r="16" fill="#daef8a" />
+</svg>

@@ -12,21 +12,21 @@ const intakeItems = [
     id: "intake-1",
     name: "Grey drawstring bag",
     meta: "Posted by Kevin L. \u00b7 20 min ago",
-    iconBg: "bg-[#e6eae2]",
+    iconBg: "bg-sage-200",
     iconType: "bag",
   },
   {
     id: "intake-2",
     name: "Black tumbler",
     meta: "Posted by Liza M. \u00b7 1 hr ago",
-    iconBg: "bg-[#e5eed6]",
+    iconBg: "bg-sage-200",
     iconType: "bottle",
   },
   {
     id: "intake-3",
     name: "Calculator, scientific",
     meta: "Posted by Ben T. \u00b7 3 hrs ago",
-    iconBg: "bg-[#dde6de]",
+    iconBg: "bg-sage-200",
     iconType: "calculator",
   },
 ];
@@ -46,7 +46,7 @@ const mappedLiveIntake = liveIntake && liveIntake.length > 0
       id: item.id,
       name: item.name,
       meta: `Posted by ${item.profiles?.full_name ?? "Student"} \u00b7 ${item.reference_code ?? "Ref LL-Item"}`,
-      iconBg: "bg-[#dde6de]",
+      iconBg: "bg-sage-200",
       iconType: item.category === "Water Bottles & Tumblers" ? "bottle" : (item.category === "Bags & Backpacks" ? "bag" : "calculator"),
     }))
   : [];
@@ -139,7 +139,7 @@ const queueItems = liveIntake !== undefined
                 type="button"
                 data-intake-id={item.id}
                 data-intake-name={item.name}
-                class="confirm-intake-btn rounded-full bg-[#d8ef8c] hover:bg-[#cde97b] active:scale-95 px-4 py-1.5 text-xs font-bold text-[#164f38] transition-all shadow-xs cursor-pointer"
+                class="confirm-intake-btn rounded-full bg-lime hover:bg-[#c9e376] active:scale-95 px-4 py-1.5 text-xs font-bold text-forest-700 transition-all shadow-xs cursor-pointer"
               >
                 Confirm received
               </button>
@@ -149,8 +149,8 @@ const queueItems = liveIntake !== undefined
       </div>
     ) : (
       <div class="mt-6 space-y-3.5">
-        <div class="flex items-start gap-3 rounded-2xl bg-[#f5f1e6]/80 p-3.5 border border-stone-200/50">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#164f38] text-xs font-black text-white">
+        <div class="flex items-start gap-3 rounded-2xl bg-canvas/80 p-3.5 border border-stone-200/50">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">
             1
           </span>
           <div class="text-xs sm:text-sm text-stone-700">
@@ -159,8 +159,8 @@ const queueItems = liveIntake !== undefined
           </div>
         </div>
 
-        <div class="flex items-start gap-3 rounded-2xl bg-[#f5f1e6]/80 p-3.5 border border-stone-200/50">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#164f38] text-xs font-black text-white">
+        <div class="flex items-start gap-3 rounded-2xl bg-canvas/80 p-3.5 border border-stone-200/50">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">
             2
           </span>
           <div class="text-xs sm:text-sm text-stone-700">
@@ -169,8 +169,8 @@ const queueItems = liveIntake !== undefined
           </div>
         </div>
 
-        <div class="flex items-start gap-3 rounded-2xl bg-[#f5f1e6]/80 p-3.5 border border-stone-200/50">
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#164f38] text-xs font-black text-white">
+        <div class="flex items-start gap-3 rounded-2xl bg-canvas/80 p-3.5 border border-stone-200/50">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">
             3
           </span>
           <div class="text-xs sm:text-sm text-stone-700">

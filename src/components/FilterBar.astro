@@ -20,7 +20,7 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
 ---
 
 <div class="relative z-30 w-full" aria-label="Campus feed filters">
-  <div class="relative z-30 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 rounded-2xl bg-[#eee9dc]/85 backdrop-blur-md p-1.5 sm:p-2 shadow-xs border border-stone-300/40">
+  <div class="relative z-30 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5 rounded-2xl bg-canvas/60/85 backdrop-blur-md p-1.5 sm:p-2 shadow-xs border border-stone-300/40">
     <!-- Left Filter Controls (Subtle, streamlined layout) -->
     <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
       <!-- Segmented Type Buttons -->
@@ -74,7 +74,7 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
         <div
           id="category-dropdown-menu"
           role="listbox"
-          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[240px] sm:min-w-[260px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-950/10 ring-1 ring-black/5"
+          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[240px] sm:min-w-[260px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-900/10 ring-1 ring-black/5"
         >
           <div class="max-h-52 sm:max-h-60 overflow-y-auto overscroll-contain custom-scrollbar space-y-0.5">
             {categoryOptions.map((cat) => (
@@ -82,10 +82,10 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
                 type="button"
                 role="option"
                 data-category={cat}
-                class="category-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer"
+                class="category-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-canvas/60 hover:text-forest-900 transition-colors cursor-pointer"
               >
                 <span class="truncate">{cat}</span>
-                <span class="category-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
+                <span class="category-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
               </button>
             ))}
           </div>
@@ -110,7 +110,7 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
         <div
           id="location-dropdown-menu"
           role="listbox"
-          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[260px] sm:min-w-[280px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-950/10 ring-1 ring-black/5"
+          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[260px] sm:min-w-[280px] max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-900/10 ring-1 ring-black/5"
         >
           <!-- Sticky subtle search input for rapid building discovery -->
           <div class="p-1 pb-1.5 border-b border-stone-100">
@@ -135,10 +135,10 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
                 type="button"
                 role="option"
                 data-location={loc}
-                class="location-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer"
+                class="location-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-canvas/60 hover:text-forest-900 transition-colors cursor-pointer"
               >
                 <span class="truncate">{loc}</span>
-                <span class="location-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
+                <span class="location-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
               </button>
             ))}
             <div id="location-no-results" class="hidden py-4 text-center text-xs text-stone-400 font-medium">
@@ -166,24 +166,24 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
         <div
           id="date-dropdown-menu"
           role="listbox"
-          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[170px] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-950/10 ring-1 ring-black/5"
+          class="absolute left-0 top-full mt-2 z-50 hidden min-w-[170px] rounded-2xl border border-stone-200/80 bg-white p-1.5 shadow-xl shadow-forest-900/10 ring-1 ring-black/5"
         >
           <div class="space-y-0.5">
-            <button type="button" data-date="all" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="all" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-canvas/60 hover:text-forest-900 transition-colors cursor-pointer">
               <span>All dates</span>
-              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
+              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
             </button>
-            <button type="button" data-date="today" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="today" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-canvas/60 hover:text-forest-900 transition-colors cursor-pointer">
               <span>Today</span>
-              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
+              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
             </button>
-            <button type="button" data-date="week" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="week" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-canvas/60 hover:text-forest-900 transition-colors cursor-pointer">
               <span>Past 7 days</span>
-              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
+              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
             </button>
-            <button type="button" data-date="month" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-[#f3ede2] hover:text-forest-950 transition-colors cursor-pointer">
+            <button type="button" data-date="month" class="date-option group flex w-full items-center justify-between rounded-xl px-3 py-1.5 sm:py-2 text-left text-xs sm:text-[0.875rem] font-medium text-forest-900/90 hover:bg-canvas/60 hover:text-forest-900 transition-colors cursor-pointer">
               <span>Past 30 days</span>
-              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs">✓</span>
+              <span class="date-check hidden text-forest-700 font-bold ml-2 shrink-0 text-xs"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
             </button>
           </div>
         </div>
@@ -243,7 +243,7 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
       <!-- Item Counter Pill -->
       <span
         id="item-counter-badge"
-        class="flex min-h-9 sm:min-h-10 items-center justify-center rounded-full bg-[#d8ef8c]/80 px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-bold text-forest-950 border border-lime-600/25 shadow-2xs"
+        class="flex min-h-9 sm:min-h-10 items-center justify-center rounded-full bg-lime/80 px-2.5 sm:px-3 py-1 text-xs sm:text-sm font-bold text-forest-900 border border-lime-600/25 shadow-2xs"
         title="Items currently matching filters"
       >
         {totalCount}
@@ -280,7 +280,8 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
   </div>
 </div>
 
-<script is:inline>
+<script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
   (function () {
     const input = document.getElementById("global-search-input");
     const slider = document.getElementById("global-search-slider");

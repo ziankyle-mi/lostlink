@@ -42,9 +42,9 @@ const faqs = [
   description="Help guidelines, FAQs, and campus map for De La Salle Araneta University LostLink system."
 >
   <!-- Primary Custody Office Callout Banner -->
-  <section class="mt-8 rounded-3xl p-6 sm:p-7 text-white shadow-md border border-white/10" style="background: linear-gradient(145deg, #164f38 0%, #0d3222 100%);">
+  <section class="mt-8 rounded-3xl p-6 sm:p-7 text-white shadow-card border border-white/10 bg-forest-700">
     <div class="flex items-center gap-2">
-      <span class="inline-block rounded-full bg-[#d8ef8c] px-3 py-1 text-[11px] font-black tracking-wider text-[#164f38] uppercase shadow-xs">
+      <span class="inline-block rounded-full bg-lime px-3 py-1 text-[11px] font-black tracking-wider text-forest-700 uppercase shadow-xs">
         OFFICIAL CLAIM &amp; CUSTODY OFFICE
       </span>
       <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -102,7 +102,7 @@ const faqs = [
     <button
       type="button"
       id="map-preview-btn"
-      class="group mt-6 block w-full overflow-hidden rounded-2xl border border-stone-200 bg-[#fbf9f4] focus:outline-none focus-visible:ring-4 focus-visible:ring-forest-700/20 cursor-zoom-in"
+      class="group mt-6 block w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-forest-700/20 cursor-zoom-in"
       aria-label="Expand campus map"
     >
       <div class="relative aspect-[16/10] w-full">
@@ -127,7 +127,7 @@ const faqs = [
       <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/60 px-4 py-3 transition-colors hover:bg-stone-100/70">
         <span class="flex items-center gap-2 text-sm font-bold text-forest-900">
           <span>Campus directory</span>
-          <span class="rounded-full bg-[#d8ef8c] px-2 py-0.5 text-[11px] font-black text-forest-900">
+          <span class="rounded-full bg-lime px-2 py-0.5 text-[11px] font-black text-forest-900">
             {CAMPUS_BUILDINGS.length}
           </span>
         </span>
@@ -141,13 +141,13 @@ const faqs = [
           <div
             class={`flex items-start gap-3 rounded-2xl p-3.5 border transition-all ${
               b.isClaimOffice
-                ? "bg-[#d8ef8c]/25 border-lime-600/40 shadow-xs"
+                ? "bg-lime/25 border-lime-600/40 shadow-xs"
                 : "bg-stone-50/70 hover:bg-stone-100/70 border-stone-200/60"
             }`}
           >
             <span
               class={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-black shadow-xs ${
-                b.isClaimOffice ? "bg-[#164f38] text-[#d8ef8c]" : "bg-amber-600 text-white"
+                b.isClaimOffice ? "bg-forest-700 text-lime" : "bg-amber-600 text-white"
               }`}
             >
               {b.id}
@@ -157,7 +157,7 @@ const faqs = [
                 {b.name}
               </p>
               {b.subtitle && (
-                <p class={`text-[11px] truncate mt-0.5 ${b.isClaimOffice ? "text-forest-800 font-bold" : "text-stone-500"}`}>
+                <p class={`text-xs truncate mt-0.5 ${b.isClaimOffice ? "text-forest-900 font-bold" : "text-stone-500"}`}>
                   {b.subtitle}
                 </p>
               )}
@@ -195,7 +195,8 @@ const faqs = [
     </div>
   </div>
 
-  <script is:inline>
+  <script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
     (function () {
       var lightbox = document.getElementById("map-lightbox");
       var previewBtn = document.getElementById("map-preview-btn");

@@ -17,6 +17,16 @@ interface ImportMetaEnv {
   readonly PROD: boolean;
 }
 
+interface Window {
+  llToast?: (message: string, type?: "success" | "error" | "info") => void;
+  reportUploadedPhotos?: unknown[];
+  resetReportPhotos?: () => void;
+  handleReportSubmit?: () => void | Promise<void>;
+  handleClaimSubmit?: () => void | Promise<void>;
+  openReport?: () => void;
+  activeModalCard?: HTMLElement | null;
+}
+
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }

@@ -1,6 +1,5 @@
 ---
 import { actions } from "astro:actions";
-import { roleForEmail } from "~/lib/session";
 
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
@@ -11,7 +10,7 @@ interface Props {
 }
 
 const { userEmail = "student@dlsau.edu.ph", userRole } = Astro.props;
-let isAdmin = userRole === "admin" || Astro.locals.user?.role === "admin" || roleForEmail(userEmail) === "admin";
+let isAdmin = userRole === "admin" || Astro.locals.user?.role === "admin";
 
 const env = Astro.locals.env || readEnv();
 interface LiveNotif {
@@ -89,33 +88,33 @@ const initials = getInitials(userEmail);
 
 <header class="w-full bg-canvas border-b border-line/80">
   <!-- Top Ticker Announcement Bar (generously sized and spaced) -->
-  <div class="relative w-full overflow-hidden bg-[#164f38] py-2 sm:py-2.5 text-white">
+  <div class="relative w-full overflow-hidden bg-forest-700 py-2 sm:py-2.5 text-white">
     <div class="animate-ticker flex items-center whitespace-nowrap text-xs sm:text-[0.8125rem] font-medium tracking-wide text-[#dcecd2]">
       <!-- Ticker Sequence 1 -->
       <span class="inline-flex items-center gap-4 sm:gap-5 px-6">
         <span>A little thing can mean a lot</span>
-        <span class="text-[9px] text-[#d8ef8c]" aria-hidden="true">▼</span>
+        <span class="text-[9px] text-lime" aria-hidden="true">▼</span>
         <span>Found something? Post it in under a minute</span>
-        <span class="text-[9px] text-[#d8ef8c]" aria-hidden="true">▼</span>
+        <span class="text-[9px] text-lime" aria-hidden="true">▼</span>
         <span>Lost something? Tell the community</span>
-        <span class="text-[9px] text-[#d8ef8c]" aria-hidden="true">▼</span>
+        <span class="text-[9px] text-lime" aria-hidden="true">▼</span>
         <span>Found something? Post it in under a minute</span>
-        <span class="text-[9px] text-[#d8ef8c]" aria-hidden="true">▼</span>
+        <span class="text-[9px] text-lime" aria-hidden="true">▼</span>
         <span>Lost something? Tell the community</span>
-        <span class="text-[9px] text-[#d8ef8c]" aria-hidden="true">▼</span>
+        <span class="text-[9px] text-lime" aria-hidden="true">▼</span>
       </span>
       <!-- Ticker Sequence 2 (for smooth infinite marquee) -->
       <span class="inline-flex items-center gap-4 sm:gap-5 px-6" aria-hidden="true">
         <span>A little thing can mean a lot</span>
-        <span class="text-[9px] text-[#d8ef8c]">▼</span>
+        <span class="text-[9px] text-lime">▼</span>
         <span>Found something? Post it in under a minute</span>
-        <span class="text-[9px] text-[#d8ef8c]">▼</span>
+        <span class="text-[9px] text-lime">▼</span>
         <span>Lost something? Tell the community</span>
-        <span class="text-[9px] text-[#d8ef8c]">▼</span>
+        <span class="text-[9px] text-lime">▼</span>
         <span>Found something? Post it in under a minute</span>
-        <span class="text-[9px] text-[#d8ef8c]">▼</span>
+        <span class="text-[9px] text-lime">▼</span>
         <span>Lost something? Tell the community</span>
-        <span class="text-[9px] text-[#d8ef8c]">▼</span>
+        <span class="text-[9px] text-lime">▼</span>
       </span>
     </div>
   </div>
@@ -203,7 +202,7 @@ const initials = getInitials(userEmail);
             </svg>
             <span
               id="notif-unread-dot"
-              class={`absolute top-2 right-2 size-2.5 rounded-full bg-[#9b2c1f] ${unreadNotifCount > 0 ? "" : "hidden"}`}
+              class={`absolute top-2 right-2 size-2.5 rounded-full bg-danger ${unreadNotifCount > 0 ? "" : "hidden"}`}
             ></span>
           </button>
 
@@ -222,7 +221,7 @@ const initials = getInitials(userEmail);
                   <button
                     type="button"
                     id="mark-all-notifs-read-btn"
-                    class="text-[11px] font-bold text-forest-700 hover:underline cursor-pointer"
+                    class="text-xs font-bold text-forest-700 hover:underline cursor-pointer"
                   >
                     Mark read
                   </button>
@@ -238,7 +237,7 @@ const initials = getInitials(userEmail);
                     data-notif-read={notif.read ? "true" : "false"}
                     class={`notif-card group relative block rounded-xl p-3 text-xs sm:text-sm border transition-all ${
                       !notif.read
-                        ? "bg-[#f5f1e6]/90 border-line/70 font-medium"
+                        ? "bg-canvas/90 border-line/70 font-medium"
                         : "bg-white border-transparent hover:bg-stone-50"
                     }`}
                   >
@@ -256,7 +255,7 @@ const initials = getInitials(userEmail);
                       </a>
                       <div class="flex items-center gap-1.5 shrink-0">
                         {!notif.read && (
-                          <span class="size-1.5 shrink-0 rounded-full bg-[#164f38]"></span>
+                          <span class="size-1.5 shrink-0 rounded-full bg-forest-700"></span>
                         )}
                         <button
                           type="button"
@@ -276,7 +275,7 @@ const initials = getInitials(userEmail);
                       <p class="text-stone-600 leading-relaxed text-xs">
                         {notif.message}
                       </p>
-                      <span class="mt-1.5 block text-[10px] text-stone-400">
+                      <span class="mt-1.5 block text-xs text-stone-400">
                         {formatNotifTime(notif.created_at)}
                       </span>
                     </a>
@@ -300,7 +299,7 @@ const initials = getInitials(userEmail);
             aria-label="User account menu"
             aria-haspopup="true"
             aria-expanded="false"
-            class="flex size-10 sm:size-11 items-center justify-center rounded-full border border-lime-600/30 bg-[#d8ef8c] text-sm sm:text-base font-black text-forest-900 shadow-2xs transition-all hover:opacity-90 active:scale-95 cursor-pointer shrink-0"
+            class="flex size-10 sm:size-11 items-center justify-center rounded-full border border-lime-600/30 bg-lime text-sm sm:text-base font-black text-forest-900 shadow-2xs transition-all hover:opacity-90 active:scale-95 cursor-pointer shrink-0"
           >
             {initials}
           </button>
@@ -324,7 +323,7 @@ const initials = getInitials(userEmail);
               {isAdmin && (
                 <a
                   href="/admin"
-                  class="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-[#f5f1e6] transition-colors"
+                  class="flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-canvas transition-colors"
                 >
                   <div class="flex items-center gap-2">
                     <svg class="size-4 text-forest-700/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -332,18 +331,18 @@ const initials = getInitials(userEmail);
                     </svg>
                     <span>Admin Console</span>
                   </div>
-                  <span class="rounded-full border border-forest-900/15 bg-forest-900/5 px-2 py-0.5 text-[10px] font-semibold text-forest-800">DO</span>
+                  <span class="rounded-full border border-forest-900/15 bg-forest-900/5 px-2 py-0.5 text-[10px] font-semibold text-forest-900">DO</span>
                 </a>
               )}
               <a
                 href="/#feed"
-                class="block rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-[#f5f1e6]"
+                class="block rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-canvas"
               >
                 Browse Campus Feed
               </a>
               <a
                 href="/profile"
-                class="block rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-[#f5f1e6]"
+                class="block rounded-xl px-3 py-2 text-sm font-medium text-forest-900 hover:bg-canvas"
               >
                 Profile &amp; Overview
               </a>
@@ -353,7 +352,7 @@ const initials = getInitials(userEmail);
               <form method="POST" action={actions.logout}>
                 <button
                   type="submit"
-                  class="w-full rounded-xl bg-[#9b2c1f]/10 px-3 py-2.5 text-left text-sm font-bold text-[#9b2c1f] transition-colors hover:bg-[#9b2c1f]/20 cursor-pointer"
+                  class="w-full rounded-xl bg-danger/10 px-3 py-2.5 text-left text-sm font-bold text-danger transition-colors hover:bg-danger/20 cursor-pointer"
                 >
                   Sign out
                 </button>
@@ -365,7 +364,8 @@ const initials = getInitials(userEmail);
     </div>
   </div>
 
-  <script is:inline>
+  <script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
     (function () {
       const avatarBtn = document.getElementById("user-avatar-btn");
       const userMenu = document.getElementById("user-menu-dropdown");

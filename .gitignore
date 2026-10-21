@@ -5,6 +5,13 @@ node_modules/
 dist/
 .astro/
 .wrangler/
+.wrangler-dry/
+out/
+
+# Generated/scratch media (never commit: trailer renders, voice tests, duplicates)
+public/assets/
+sample_*.mp3
+test_voice.mp3
 
 # Environment variables. Never commit real values.
 .env

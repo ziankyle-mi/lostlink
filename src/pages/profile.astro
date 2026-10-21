@@ -4,9 +4,9 @@ import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
 import DashboardFooter from "~/components/DashboardFooter.astro";
 import Icon from "~/components/Icon.astro";
-import { roleForEmail } from "~/lib/session";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
+import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 import { DEGREE_PROGRAMS } from "~/data/campusPrograms";
 
 const logoutResult = Astro.getActionResult(actions.logout);
@@ -21,7 +21,7 @@ if (!user) {
 }
 
 const userEmail = user.email || "student@dlsau.edu.ph";
-let isUserAdmin = user.role === "admin" || roleForEmail(userEmail) === "admin";
+let isUserAdmin = user.role === "admin";
 
 function initialsOf(emailStr: string): string {
   const segments = emailStr.split("@")[0].split(/[._-]/).filter(Boolean);
@@ -45,11 +45,11 @@ let userProgramCode: string | undefined = undefined;
 let userStudentId: string | undefined = undefined;
 let userYearLevel: string | undefined = undefined;
 
-if (env.PUBLIC_SUPABASE_URL && (env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY)) {
+if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
     const supabase = createClient(
       env.PUBLIC_SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY,
+      env.SUPABASE_SERVICE_ROLE_KEY,
       { auth: { persistSession: false } }
     );
 
@@ -112,14 +112,17 @@ const activeReports = myReports.filter((r) => r.status === "pending" || r.status
 const totalClaims = myClaims.length;
 const userProgramInfo = userProgramCode ? DEGREE_PROGRAMS[userProgramCode] : undefined;
 
+// Sign every report photo once, then resolve them synchronously in the template.
+const profilePhotoPaths = Array.from(
+  new Set(myReports.flatMap((item) => photoPathsFromColumn(item.photo_path))),
+);
+const profileSignedPhotos = await signPhotoPaths(env, profilePhotoPaths);
+const photoUrlByPath = new Map(profilePhotoPaths.map((path, i) => [path, profileSignedPhotos[i]]));
+
 function parsePhotos(photoPath?: string | null): string[] {
-  if (!photoPath) return [];
-  try {
-    if (photoPath.startsWith("[")) return JSON.parse(photoPath);
-    return [photoPath];
-  } catch {
-    return [photoPath];
-  }
+  return photoPathsFromColumn(photoPath)
+    .map((path) => photoUrlByPath.get(path) ?? "")
+    .filter((url) => url.length > 0);
 }
 ---
 
@@ -127,7 +130,7 @@ function parsePhotos(photoPath?: string | null): string[] {
   title="Student Profile & Activity | LostLink"
   description="Track your reported lost & found items and active claims at De La Salle Araneta University."
 >
-  <div class="min-h-screen bg-[#f5f1e6] text-[#082e1a] flex flex-col justify-between selection:bg-[#d8ef8c]">
+  <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between selection:bg-lime">
     <div>
       <!-- Top Navbar -->
       <StudentNavbar userEmail={userEmail} userRole={isUserAdmin ? "admin" : user.role} />
@@ -151,7 +154,7 @@ function parsePhotos(photoPath?: string | null): string[] {
         <section class="rounded-3xl bg-white border border-stone-200/60 shadow-xs p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div class="flex items-center gap-4 sm:gap-5">
             <!-- Lime Avatar matching navbar token -->
-            <span class="flex size-14 sm:size-16 shrink-0 items-center justify-center rounded-full bg-[#d8ef8c] border border-lime-600/30 text-xl sm:text-2xl font-black text-forest-900 shadow-xs">
+            <span class="flex size-14 sm:size-16 shrink-0 items-center justify-center rounded-full bg-lime border border-lime-600/30 text-xl sm:text-2xl font-black text-forest-900 shadow-xs">
               {initialsOf(userEmail)}
             </span>
             <div>
@@ -163,7 +166,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                   {isUserAdmin ? "Security Office Staff" : "DLSAU Student / Faculty"}
                 </span>
                 {userProgramInfo && (
-                  <span class="rounded-full bg-[#d8ef8c]/60 border border-lime-700/30 px-3 py-1 text-xs font-bold text-forest-900 shadow-2xs">
+                  <span class="rounded-full bg-lime/60 border border-lime-600/40 px-3 py-1 text-xs font-bold text-forest-900 shadow-2xs">
                     {userProgramInfo.code} &middot; {userProgramInfo.collegeCode}
                   </span>
                 )}
@@ -181,7 +184,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                   </span>
                 )}
                 {userProgramInfo && (
-                  <span class="text-forest-800 font-semibold">&middot; {userProgramInfo.name}</span>
+                  <span class="text-forest-900 font-semibold">&middot; {userProgramInfo.name}</span>
                 )}
               </p>
             </div>
@@ -247,41 +250,30 @@ function parsePhotos(photoPath?: string | null): string[] {
 
           <!-- Card 3: Claims Submitted (Lime Accent Card per recipe line 228) -->
           <div
-            class="rounded-3xl p-6 sm:p-7 border border-lime-600/30 shadow-xs flex flex-col justify-between text-forest-900"
-            style="background: linear-gradient(155deg, #daf191 0%, #d1ec84 100%);"
+            class="rounded-3xl p-6 sm:p-7 border border-lime-600/30 shadow-xs flex flex-col justify-between text-forest-900 bg-lime"
           >
             <p class="text-sm font-bold text-forest-900">Claims submitted</p>
             <div class="mt-4">
               <p class="font-serif text-4xl sm:text-5xl font-black text-forest-900 tracking-tight leading-none">
                 {totalClaims}
               </p>
-              <p class="mt-3 text-xs text-forest-800 font-semibold">
+              <p class="mt-3 text-xs text-forest-900 font-semibold">
                 Ownership verifications filed
               </p>
             </div>
           </div>
         </div>
 
-        <!-- Campus Handover Protocol Callout Card (Subtle forest glow card) -->
+        <!-- Campus Handover Protocol Callout Card -->
         <div
-          class="relative overflow-hidden rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-md border border-white/10"
-          style="background: radial-gradient(130% 120% at 85% 20%, #226746 0%, #164f38 45%, #0d3222 100%);"
+          class="relative overflow-hidden rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-card border border-white/10 bg-forest-700"
         >
-          <!-- Really subtle ambient glow -->
-          <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
-            <div
-              class="absolute -top-12 -right-12 size-64 rounded-full opacity-30 blur-3xl"
-              style="background: radial-gradient(circle, rgba(216, 239, 140, 0.25) 0%, rgba(38, 106, 72, 0.3) 50%, transparent 75%);"
-            >
-            </div>
-          </div>
-
           <div class="relative space-y-2 max-w-2xl">
             <div class="flex items-center gap-2">
-              <span class="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#d8ef8c] border border-white/10">
+              <span class="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-lime border border-white/10">
                 CAMPUS HANDOVER PROTOCOL
               </span>
-              <Icon name="shield" class="size-4 text-[#d8ef8c] opacity-80" />
+              <Icon name="shield" class="size-4 text-lime opacity-80" />
             </div>
             <h3 class="font-serif text-xl sm:text-2xl font-black text-white leading-tight">
               Have an item to drop off or retrieve?
@@ -292,7 +284,7 @@ function parsePhotos(photoPath?: string | null): string[] {
           </div>
           <a
             href="/help"
-            class="relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-[#d8ef8c] px-6 py-2.5 font-bold text-forest-900 hover:bg-[#c9e376] active:scale-95 shadow-xs transition-all cursor-pointer text-sm"
+            class="relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-lime px-6 py-2.5 font-bold text-forest-900 hover:bg-[#c9e376] active:scale-95 shadow-xs transition-all cursor-pointer text-sm"
           >
             <span>Turn-in guide</span>
             <span aria-hidden="true">&rarr;</span>
@@ -320,8 +312,8 @@ function parsePhotos(photoPath?: string | null): string[] {
           </div>
 
           {myReports.length === 0 ? (
-            <div class="rounded-3xl border border-dashed border-stone-300 bg-[#fbf9f4] p-10 text-center">
-              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#f5f1e6] text-forest-700">
+            <div class="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-10 text-center">
+              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-canvas text-forest-700">
                 <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
@@ -348,19 +340,19 @@ function parsePhotos(photoPath?: string | null): string[] {
                     <div>
                       <div class="flex items-center justify-between gap-2 mb-3">
                         <span class={`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
-                          item.type === "found" ? "bg-forest-700 text-white shadow-2xs" : "bg-[#d8ef8c] text-forest-900 border border-lime-600/30 shadow-2xs"
+                          item.type === "found" ? "bg-forest-700 text-white shadow-2xs" : "bg-lime text-forest-900 border border-lime-600/30 shadow-2xs"
                         }`}>
                           {item.type}
                         </span>
 
                         <span class={`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
                           item.status === "approved"
-                            ? "bg-[#164f38] text-[#d8ef8c]"
+                            ? "bg-forest-700 text-lime"
                             : item.status === "pending"
                               ? "bg-[#ece5d6] text-forest-900"
                               : item.status === "claimed" || item.status === "resolved"
-                                ? "bg-[#d8ef8c] text-forest-900"
-                                : "bg-[#9b2c1f]/10 text-[#9b2c1f]"
+                                ? "bg-lime text-forest-900"
+                                : "bg-danger/10 text-danger"
                         }`}>
                           {item.status === "approved" ? "LIVE ON FEED" : item.status === "pending" ? "UNDER REVIEW" : item.status.toUpperCase()}
                         </span>
@@ -380,7 +372,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                       </p>
 
                       {item.reference_code && (
-                        <div class="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-[#f5f1e6] px-2.5 py-1 text-xs font-mono font-bold text-forest-800">
+                        <div class="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-canvas px-2.5 py-1 text-xs font-mono font-bold text-forest-900">
                           <span>Tag: {item.reference_code}</span>
                           <button
                             type="button"
@@ -448,8 +440,8 @@ function parsePhotos(photoPath?: string | null): string[] {
           </div>
 
           {myClaims.length === 0 ? (
-            <div class="rounded-3xl border border-dashed border-stone-300 bg-[#fbf9f4] p-10 text-center">
-              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[#eef2e3] text-forest-700">
+            <div class="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-10 text-center">
+              <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-sage-200 text-forest-700">
                 <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -471,9 +463,9 @@ function parsePhotos(photoPath?: string | null): string[] {
               {myClaims.map((claim) => {
                 const targetItem = claim.items;
                 return (
-                  <div class="flex items-center gap-4 rounded-2xl border border-stone-200/80 bg-[#fdfcf9] p-4 sm:p-5 hover:bg-white transition-all shadow-2xs flex-col sm:flex-row sm:items-center justify-between">
+                  <div class="flex items-center gap-4 rounded-2xl border border-stone-200/80 bg-stone-50 p-4 sm:p-5 hover:bg-white transition-all shadow-2xs flex-col sm:flex-row sm:items-center justify-between">
                     <div class="flex items-start sm:items-center gap-4 min-w-0 flex-1 w-full sm:w-auto">
-                      <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eef2e3] text-forest-900">
+                      <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-sage-200 text-forest-900">
                         <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                         </svg>
@@ -484,7 +476,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                             {targetItem?.name || "Item Claim"}
                           </h4>
                           {targetItem?.reference_code && (
-                            <span class="inline-flex items-center gap-1 rounded bg-[#f5f1e6] px-2 py-0.5 text-xs font-mono font-bold text-forest-800">
+                            <span class="inline-flex items-center gap-1 rounded bg-canvas px-2 py-0.5 text-xs font-mono font-bold text-forest-900">
                               <span>{targetItem.reference_code}</span>
                               <button
                                 type="button"
@@ -502,10 +494,10 @@ function parsePhotos(photoPath?: string | null): string[] {
                           )}
                           <span class={`rounded-full px-3 py-1 text-xs font-bold ${
                             claim.status === "verified"
-                              ? "bg-[#d8ef8c] text-forest-900"
+                              ? "bg-lime text-forest-900"
                               : claim.status === "pending"
                                 ? "bg-[#ece5d6] text-forest-900"
-                                : "bg-[#9b2c1f]/10 text-[#9b2c1f]"
+                                : "bg-danger/10 text-danger"
                           }`}>
                             {claim.status === "verified"
                               ? "VERIFIED • VISIT DO"
@@ -517,7 +509,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                         <p class="text-xs text-stone-600 line-clamp-1 italic">
                           &ldquo;{claim.proof_description}&rdquo;
                         </p>
-                        <p class="text-[11px] text-stone-400 font-medium">
+                        <p class="text-xs text-stone-400 font-medium">
                           Submitted {new Date(claim.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </p>
                       </div>

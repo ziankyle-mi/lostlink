@@ -1,31 +1,52 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
-import { roleForEmail } from "~/lib/session";
 
 function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("Supabase service role key is not configured.");
+  }
   return createClient(env.PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false },
   });
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function resolveProfileId(
+  supabase: ReturnType<typeof getAdminClient>,
+  userId: string,
+  email: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email.toLowerCase().trim())
+    .maybeSingle();
+  if (data?.id) return data.id;
+  return UUID_RE.test(userId) ? userId : null;
+}
+
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
-  if (!user) {
-    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  const supabase = getAdminClient(locals.env);
-  const isAdmin = user.role === "admin" || roleForEmail(user.email) === "admin";
+  if (!user) return json({ ok: false, error: "Authentication required." }, 401);
 
   try {
+    const supabase = getAdminClient(locals.env);
+    const isAdmin = user.role === "admin";
+
     let query = supabase
       .from("claims")
-      .select(`
+      .select(
+        `
         id,
         item_id,
         claimant_id,
@@ -34,98 +55,126 @@ export const GET: APIRoute = async ({ locals }) => {
         created_at,
         items ( id, name, category, location, reference_code, status ),
         profiles ( id, full_name, email )
-      `)
+      `,
+      )
       .order("created_at", { ascending: false });
 
-    // Students only view their own claims
     if (!isAdmin) {
-      let profileId = user.id;
-      const { data: p } = await supabase.from("profiles").select("id").eq("email", user.email.toLowerCase()).maybeSingle();
-      if (p?.id) profileId = p.id;
+      const profileId = await resolveProfileId(supabase, user.id, user.email);
+      if (!profileId) return json({ ok: true, claims: [] });
       query = query.eq("claimant_id", profileId);
     }
 
     const { data: claims, error } = await query;
     if (error) {
-      return new Response(JSON.stringify({ ok: false, error: error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      console.error("[api/claims] Query error:", error.message);
+      return json({ ok: false, error: "Could not load claims." }, 500);
     }
 
-    return new Response(JSON.stringify({ ok: true, claims: claims ?? [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return json({ ok: true, claims: claims ?? [] });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error querying claims";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("[api/claims] Exception:", err);
+    return json({ ok: false, error: "Could not load claims." }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
-  if (!user) {
-    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  if (!user) return json({ ok: false, error: "Authentication required." }, 401);
 
   const supabase = getAdminClient(locals.env);
   const userEmail = user.email.toLowerCase().trim();
-  const isAdmin = user.role === "admin" || roleForEmail(userEmail) === "admin";
+  const isAdmin = user.role === "admin";
 
   try {
     const body = await request.json();
     const { action, claimId, itemId, proofDescription } = body;
 
-    // ACTION: Admin verification or denial
-    if (action === "verify" || action === "deny") {
-      if (!isAdmin) {
-        return new Response(JSON.stringify({ ok: false, error: "Admin authorization required." }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        });
+    // ACTION: Student withdraws their own pending claim
+    if (action === "withdraw") {
+      if (!claimId || !UUID_RE.test(claimId)) {
+        return json({ ok: false, error: "Claim ID required." }, 400);
       }
+      const claimantId = await resolveProfileId(supabase, user.id, userEmail);
+      if (!claimantId) return json({ ok: false, error: "Claim not found." }, 404);
 
-      if (!claimId) {
-        return new Response(JSON.stringify({ ok: false, error: "Claim ID required." }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      // Fetch the target claim
-      const { data: targetClaim } = await supabase
+      const { data: claim } = await supabase
         .from("claims")
-        .select("id, item_id, claimant_id, status, items ( id, name, reference_code )")
+        .select("id, claimant_id, status")
         .eq("id", claimId)
         .maybeSingle();
 
-      if (!targetClaim) {
-        return new Response(JSON.stringify({ ok: false, error: "Claim not found." }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+      if (!claim || claim.claimant_id !== claimantId) {
+        return json({ ok: false, error: "Claim not found." }, 404);
+      }
+      if (claim.status !== "pending") {
+        return json({ ok: false, error: "Only a pending claim can be withdrawn." }, 400);
+      }
+
+      const { error } = await supabase
+        .from("claims")
+        .update({ status: "withdrawn" })
+        .eq("id", claimId)
+        .eq("status", "pending");
+
+      if (error) {
+        console.error("[api/claims] Withdraw error:", error.message);
+        return json({ ok: false, error: "Could not withdraw the claim." }, 500);
+      }
+      return json({ ok: true, status: "withdrawn" });
+    }
+
+    // ACTION: Admin verification or denial
+    if (action === "verify" || action === "deny") {
+      if (!isAdmin) {
+        return json({ ok: false, error: "Admin authorization required." }, 403);
+      }
+      if (!claimId || !UUID_RE.test(claimId)) {
+        return json({ ok: false, error: "Claim ID required." }, 400);
+      }
+
+      const { data: targetClaim } = await supabase
+        .from("claims")
+        .select("id, item_id, claimant_id, status, items ( id, name, reference_code, status )")
+        .eq("id", claimId)
+        .maybeSingle();
+
+      if (!targetClaim) return json({ ok: false, error: "Claim not found." }, 404);
+      if (targetClaim.status !== "pending") {
+        return json({ ok: false, error: "This claim was already decided." }, 409);
+      }
+
+      const item = targetClaim.items as unknown as {
+        id: string;
+        name: string;
+        reference_code?: string;
+        status?: string;
+      } | null;
+
+      if (action === "verify" && item?.status !== "approved") {
+        return json({ ok: false, error: "This item is no longer available to claim." }, 409);
       }
 
       const newStatus = action === "verify" ? "verified" : "denied";
 
-      // Update target claim status
-      await supabase.from("claims").update({ status: newStatus }).eq("id", claimId);
+      const { error: claimErr } = await supabase
+        .from("claims")
+        .update({ status: newStatus })
+        .eq("id", claimId)
+        .eq("status", "pending");
 
-      // If verified: mark item claimed, auto-deny other pending claims on this item
+      if (claimErr) {
+        console.error("[api/claims] Decision error:", claimErr.message);
+        return json({ ok: false, error: "Could not update the claim." }, 500);
+      }
+
       if (action === "verify") {
         await supabase
           .from("items")
           .update({ status: "claimed" })
-          .eq("id", targetClaim.item_id);
+          .eq("id", targetClaim.item_id)
+          .eq("status", "approved");
 
-        // Auto-deny other pending claims on that item
         const { data: competingClaims } = await supabase
           .from("claims")
           .select("id, claimant_id")
@@ -141,7 +190,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             .eq("status", "pending")
             .neq("id", claimId);
 
-          // Notify competing claimants
           for (const c of competingClaims) {
             await supabase.from("notifications").insert({
               user_id: c.claimant_id,
@@ -151,15 +199,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        // Notify verified claimant
-        const refCode = (targetClaim.items as unknown as { reference_code?: string })?.reference_code || "LL-Item";
+        const refCode = item?.reference_code || "LL-Item";
         await supabase.from("notifications").insert({
           user_id: targetClaim.claimant_id,
-          message: `Your claim was verified. Visit the security office with code ${refCode}.`,
+          message: `Your claim was verified. Visit the Security Office with code ${refCode}.`,
           link: "/profile",
         });
       } else {
-        // Denied notification
         await supabase.from("notifications").insert({
           user_id: targetClaim.claimant_id,
           message: "Your claim was not verified.",
@@ -167,110 +213,103 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Record in admin_log
-      let adminProfileId = user.id;
-      const { data: adminProf } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
-      if (adminProf?.id) adminProfileId = adminProf.id;
-
-      await supabase.from("admin_log").insert({
-        admin_id: adminProfileId,
-        action: action === "verify" ? "claim_verified" : "claim_denied",
-        item_id: targetClaim.item_id,
-        claim_id: claimId,
-      });
-
-      return new Response(JSON.stringify({ ok: true, status: newStatus, itemId: targetClaim.item_id }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // ACTION: Student Submitting a Claim
-    if (!itemId) {
-      return new Response(JSON.stringify({ ok: false, error: "Item ID is required." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!proofDescription || typeof proofDescription !== "string" || proofDescription.trim().length < 20) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "Proof description must be at least 20 characters." }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // Resolve claimant profile
-    let claimantId: string | null = null;
-    const { data: profile } = await supabase.from("profiles").select("id").eq("email", userEmail).maybeSingle();
-    if (profile?.id) claimantId = profile.id;
-    else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
-      claimantId = user.id;
-    }
-
-    if (!claimantId) {
-      const { data: anyProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
-      claimantId = anyProf?.id || null;
-    }
-
-    if (!claimantId) {
-      return new Response(JSON.stringify({ ok: false, error: "Claimant profile not found." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Check if target item exists in Supabase
-    let targetItemId = itemId;
-    const isItemUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId);
-
-    if (!isItemUuid) {
-      // If it's a demo item (e.g. "item-1"), find or pick an existing item or create dummy
-      const { data: existing } = await supabase.from("items").select("id, name").limit(1).maybeSingle();
-      if (existing?.id) {
-        targetItemId = existing.id;
+      const adminProfileId =
+        (await resolveProfileId(supabase, user.id, userEmail)) ??
+        (UUID_RE.test(user.id) ? user.id : null);
+      if (adminProfileId) {
+        await supabase.from("admin_log").insert({
+          admin_id: adminProfileId,
+          action: action === "verify" ? "claim_verified" : "claim_denied",
+          item_id: targetClaim.item_id,
+          claim_id: claimId,
+        });
       }
+
+      return json({ ok: true, status: newStatus, itemId: targetClaim.item_id });
+    }
+
+    // ACTION: Student submitting a claim
+    if (!itemId || typeof itemId !== "string" || !UUID_RE.test(itemId)) {
+      return json({ ok: false, error: "A valid item ID is required." }, 400);
+    }
+    if (!proofDescription || typeof proofDescription !== "string" || proofDescription.trim().length < 20) {
+      return json({ ok: false, error: "Proof description must be at least 20 characters." }, 400);
+    }
+    if (isAdmin) {
+      return json({ ok: false, error: "Administrators cannot submit claims." }, 403);
+    }
+
+    const claimantId = await resolveProfileId(supabase, user.id, userEmail);
+    if (!claimantId) {
+      return json({ ok: false, error: "Your account profile is missing. Contact the Security Office." }, 400);
+    }
+
+    // The claim rules live on the server, not only in the UI copy.
+    const { data: item } = await supabase
+      .from("items")
+      .select("id, type, status, reporter_id, name")
+      .eq("id", itemId)
+      .maybeSingle();
+
+    if (!item || item.type !== "found") {
+      return json({ ok: false, error: "That item cannot be claimed." }, 400);
+    }
+    if (item.status !== "approved") {
+      return json({ ok: false, error: "That item is not available to claim." }, 400);
+    }
+    if (item.reporter_id === claimantId) {
+      return json({ ok: false, error: "You cannot claim an item you reported." }, 400);
+    }
+
+    const { data: existingClaim } = await supabase
+      .from("claims")
+      .select("id")
+      .eq("item_id", itemId)
+      .eq("claimant_id", claimantId)
+      .in("status", ["pending", "verified"])
+      .maybeSingle();
+
+    if (existingClaim) {
+      return json({ ok: false, error: "You already have an open claim for this item." }, 409);
     }
 
     const { data: insertedClaim, error: claimErr } = await supabase
       .from("claims")
       .insert({
-        item_id: targetItemId,
+        item_id: itemId,
         claimant_id: claimantId,
         proof_description: proofDescription.trim(),
         status: "pending",
       })
-      .select()
+      .select("id, item_id, status, created_at")
       .single();
 
     if (claimErr) {
-      return new Response(JSON.stringify({ ok: false, error: claimErr.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      console.error("[api/claims] Insert error:", claimErr.message);
+      return json({ ok: false, error: "Could not submit the claim. Try again." }, 500);
     }
 
-    // Insert notification for Admins
-    const { data: adminProfiles } = await supabase.from("profiles").select("id").eq("role", "admin").limit(3);
+    // Notify every active admin, not an arbitrary subset.
+    const { data: adminProfiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "admin")
+      .eq("active", true);
+
     if (adminProfiles && adminProfiles.length > 0) {
-      for (const a of adminProfiles) {
-        await supabase.from("notifications").insert({
+      await supabase.from("notifications").insert(
+        adminProfiles.map((a) => ({
           user_id: a.id,
-          message: "New claim submitted for review.",
-          link: "/admin#claims",
-        });
-      }
+          message: `New claim submitted for "${item.name}".`,
+          link: "/admin?tab=claims",
+          read: false,
+        })),
+      );
     }
 
-    return new Response(JSON.stringify({ ok: true, claim: insertedClaim }), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    });
+    return json({ ok: true, claim: insertedClaim }, 201);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Error processing claim";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("[api/claims] Exception:", err);
+    return json({ ok: false, error: "Could not process the claim." }, 500);
   }
 };

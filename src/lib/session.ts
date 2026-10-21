@@ -59,41 +59,62 @@ export function clearSessionCookies(cookies: AstroCookies): void {
   cookies.delete(LAST_ACTIVE_COOKIE, options);
 }
 
-export const ADMIN_EMAILS = new Set([
-  "dlsau.lostlink@dlsau.edu.ph",
-  "test.lostlink@dlsau.edu.ph",
-  "zian.piangco@dlsau.edu.ph",
-  "andrew.cruz@dlsau.edu.ph",
-]);
-
-export function roleForEmail(email: string): "admin" | "user" {
-  const norm = email.toLowerCase().trim();
-  if (ADMIN_EMAILS.has(norm)) {
-    return "admin";
-  }
-  return "user";
+interface ProfileState {
+  role: "admin" | "user";
+  active: boolean;
 }
 
-async function resolveRole(env: Env, userId: string, email: string): Promise<"admin" | "user"> {
-  const norm = email.toLowerCase().trim();
-  if (ADMIN_EMAILS.has(norm)) return "admin";
-
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
-  if (!env.PUBLIC_SUPABASE_URL || !key) return "user";
+/**
+ * Role and account state come from the database, never from the email string.
+ * Returns null when there is no profile row or the account is suspended, which
+ * makes the caller unauthenticated (fail closed).
+ */
+async function resolveProfileState(
+  env: Env,
+  userId: string,
+  email: string,
+): Promise<ProfileState | null> {
+  if (!env.PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("[session] Supabase service credentials are not configured.");
+    return null;
+  }
 
   try {
-    const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, { auth: { persistSession: false } });
-    const { data } = await supabase
+    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+
+    let { data } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, active")
       .eq("id", userId)
       .maybeSingle();
 
-    if (data?.role === "admin") return "admin";
+    // Legacy rows may have been created before ids were aligned with auth.users.
+    if (!data) {
+      const fallback = await supabase
+        .from("profiles")
+        .select("role, active")
+        .eq("email", email.toLowerCase().trim())
+        .maybeSingle();
+      data = fallback.data;
+    }
+
+    if (!data) {
+      console.warn("[session] no profile row for authenticated user");
+      return null;
+    }
+
+    if (data.active === false) return null;
+
+    return {
+      role: data.role === "admin" ? "admin" : "user",
+      active: true,
+    };
   } catch (err) {
-    console.warn("[session] profile role resolution failed:", err);
+    console.warn("[session] profile state resolution failed:", err);
+    return null;
   }
-  return "user";
 }
 
 /**
@@ -123,9 +144,10 @@ export async function resolveUser(
 
   if (accessToken) {
     const user = await fetchUser(env, accessToken);
-    if (user?.email && isAllowedEmail(user.email, policy)) {
-      const role = await resolveRole(env, user.id, user.email);
-      return { id: user.id, email: user.email, role };
+    if (user?.email && isAllowedEmail(user.email, policy) && user.email_confirmed_at) {
+      const profile = await resolveProfileState(env, user.id, user.email);
+      if (!profile) return null;
+      return { id: user.id, email: user.email, role: profile.role };
     }
     return null;
   }
@@ -133,11 +155,17 @@ export async function resolveUser(
   if (refreshToken) {
     const refreshed = await refreshSession(env, refreshToken);
     if (refreshed) {
-      setAccessCookie(cookies, refreshed.access_token);
+      // Supabase rotates refresh tokens; persist the new pair immediately or the
+      // next request will present an already-consumed token.
+      setSessionCookies(cookies, {
+        access_token: refreshed.access_token,
+        refresh_token: refreshed.refresh_token || refreshToken,
+      });
       const user = await fetchUser(env, refreshed.access_token);
-      if (user?.email && isAllowedEmail(user.email, policy)) {
-        const role = await resolveRole(env, user.id, user.email);
-        return { id: user.id, email: user.email, role };
+      if (user?.email && isAllowedEmail(user.email, policy) && user.email_confirmed_at) {
+        const profile = await resolveProfileState(env, user.id, user.email);
+        if (!profile) return null;
+        return { id: user.id, email: user.email, role: profile.role };
       }
     }
   }

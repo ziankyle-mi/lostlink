@@ -31,14 +31,14 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
   <div class="grid grid-cols-1 gap-5 sm:gap-8 md:grid-cols-2">
     <!-- Left Card: Found an item? -->
     <div
-      class="relative overflow-hidden rounded-3xl bg-[#164f38] p-6 sm:p-10 lg:p-12 text-white shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
+      class="relative overflow-hidden rounded-3xl bg-forest-700 p-6 sm:p-10 lg:p-12 text-white shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
     >
       <!-- Watermark Graphic -->
       <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-[#1e5c41] opacity-60" />
 
       <!-- Subtle animated wave background -->
       <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-40 overflow-hidden select-none opacity-20">
-        <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-32 text-[#d8ef8c]" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
+        <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-32 text-lime" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
           <path d="M0,40 C150,95 350,10 500,60 C650,110 900,20 1200,50 L1200,120 L0,120 Z"></path>
         </svg>
         <svg class="animate-wave-reverse absolute -bottom-1 left-0 w-[200%] h-28 text-white opacity-35" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
@@ -53,7 +53,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         </span>
         <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight">
           Found an item?<br />
-          <span class="text-[#d8ef8c]">Post it here.</span>
+          <span class="text-lime">Post it here.</span>
         </h2>
         <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-[1.0625rem] text-white/80 leading-relaxed">
           Add a photo, note where you found it and where it's being kept.
@@ -65,10 +65,10 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         <button
           type="button"
           data-open-report="found"
-          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-[#d8ef8c] px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-forest-900 shadow-2xs transition-all hover:bg-[#c9e376] hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
+          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-lime px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-forest-900 shadow-2xs transition-all hover:bg-[#c9e376] hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
         >
           <span>Post a found item</span>
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
         </button>
         <p class="text-xs sm:text-sm md:text-base text-white/90">
           <strong class="font-bold text-white">{foundCount}</strong> items waiting to be claimed
@@ -78,7 +78,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
 
     <!-- Right Card: Lost something? -->
     <div
-      class="relative overflow-hidden rounded-3xl bg-[#d8ef8c] p-6 sm:p-10 lg:p-12 text-forest-900 shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
+      class="relative overflow-hidden rounded-3xl bg-lime p-6 sm:p-10 lg:p-12 text-forest-900 shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
     >
       <!-- Watermark Graphic -->
       <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-[#c2dc6d] opacity-55" />
@@ -88,7 +88,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-32 text-forest-900" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
           <path d="M0,40 C150,95 350,10 500,60 C650,110 900,20 1200,50 L1200,120 L0,120 Z"></path>
         </svg>
-        <svg class="animate-wave-reverse absolute -bottom-1 left-0 w-[200%] h-28 text-[#164f38] opacity-30" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
+        <svg class="animate-wave-reverse absolute -bottom-1 left-0 w-[200%] h-28 text-forest-700 opacity-30" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
           <path d="M0,20 C200,80 400,-10 600,45 C800,100 1000,15 1200,35 L1200,120 L0,120 Z"></path>
         </svg>
       </div>
@@ -115,7 +115,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
           class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-forest-700 px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-forest-900 hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
         >
           <span>Post a lost item</span>
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
         </button>
         <p class="text-xs sm:text-sm md:text-base text-forest-900/90">
           <strong class="font-bold text-forest-900">{lostCount}</strong> active lost reports

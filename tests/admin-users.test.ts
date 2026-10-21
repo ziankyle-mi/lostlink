@@ -230,7 +230,7 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     }
   });
 
-  it("prevents administrators from deleting their own active account", async () => {
+  it("prevents administrators from deactivating their own active account", async () => {
     const adminUser = {
       id: "admin-uuid-1",
       email: "dlsau.lostlink@dlsau.edu.ph",
@@ -255,10 +255,13 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.ok).toBe(false);
-    expect(data.error).toContain("Administrators cannot delete their own active account");
+    expect(data.error).toContain("Administrators cannot deactivate their own active account");
   });
 
-  it("handles delete_user action for student account successfully", async () => {
+  it.skip("deactivates a student account without deleting claims or audit history (live)", async () => {
+    // Destructive live test: it must run against an isolated staging project,
+    // never production. The route now deactivates (`active=false` + auth ban)
+    // instead of hard-deleting the profile and cascading claims away.
     const adminUser = {
       id: "admin-uuid-1",
       email: "dlsau.lostlink@dlsau.edu.ph",
@@ -283,7 +286,7 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
-    expect(data.message).toContain("successfully removed");
+    expect(data.message).toContain("deactivated");
   });
 
   it("validates 4 official DLSAU colleges and degree programs mapping", () => {
@@ -353,7 +356,11 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(studentUser.portalLevel).toBe("Student");
   });
 
-  it("issues temporary password for campus user (arona.levela@dlsau.edu.ph) with proper format", async () => {
+  // Live mutation: skipped unless explicitly enabled. Running this against the
+  // production project resets a real account's password.
+  const runLive = process.env.RUN_LIVE_TESTS === "true";
+
+  it.skipIf(!runLive)("issues temporary password for campus user (arona.levela@dlsau.edu.ph) with proper format", async () => {
     const adminUser = {
       id: "admin-uuid-1",
       email: "dlsau.lostlink@dlsau.edu.ph",
@@ -379,7 +386,7 @@ describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
     expect(data.ok).toBe(true);
     expect(data.email).toBe("arona.levela@dlsau.edu.ph");
     expect(data.tempPassword).toBeDefined();
-    expect(data.tempPassword).toMatch(/^Reset-[A-Z0-9]+-\d+$/);
+    expect(data.tempPassword).toMatch(/^Lk-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/);
     expect(data.message).toContain("arona.levela@dlsau.edu.ph");
   });
 });

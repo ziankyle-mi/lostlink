@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { env as cloudflareEnv } from "cloudflare:workers";
 import { readEnv } from "~/lib/env";
 import {
   clearSessionCookies,
@@ -19,8 +20,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-  "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+  // CSP is emitted by Astro's build (`security.csp`) with per-page script
+  // hashes. A second, weaker header policy here would only confuse reviews.
 };
 
 const PUBLIC_PATHS = new Set([
@@ -61,7 +62,7 @@ function isPublic(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const env = readEnv(context.locals.runtime?.env as Record<string, unknown> | undefined);
+  const env = readEnv(cloudflareEnv as unknown as Record<string, unknown>);
   context.locals.env = env;
 
   const pathname = context.url.pathname;

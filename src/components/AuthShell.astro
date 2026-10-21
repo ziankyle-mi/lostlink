@@ -42,22 +42,11 @@ const stories = [
 
     <main class="grid flex-1 gap-5 py-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
       <aside
-        class="relative hidden flex-col justify-between overflow-hidden rounded-[2.25rem] p-9 text-white lg:flex xl:p-10 border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),0_20px_45px_-15px_rgba(8,46,26,0.35)]"
-        style="background: radial-gradient(130% 120% at 85% 25%, #246a48 0%, #164f38 42%, #0d3222 100%);"
+        class="relative hidden flex-col justify-between overflow-hidden rounded-[2.25rem] p-9 text-white lg:flex xl:p-10 border border-white/10 shadow-card bg-forest-700"
       >
         <!-- Subtle organic ambient glow (really soft and diffused) -->
         <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
-          <div
-            class="absolute -right-16 -top-16 size-[28rem] rounded-full opacity-35 blur-3xl"
-            style="background: radial-gradient(circle, rgba(216, 239, 140, 0.3) 0%, rgba(38, 106, 72, 0.4) 45%, transparent 70%);"
-          >
-          </div>
-          <div
-            class="absolute -right-10 top-1/2 size-[22rem] -translate-y-1/2 rounded-full opacity-20 blur-2xl"
-            style="background: radial-gradient(circle, rgba(163, 219, 142, 0.25) 0%, transparent 70%);"
-          >
-          </div>
-          <!-- Dotted trail: same lime as the glows, arcs from above the badge into the light behind the headline -->
+          <!-- Dotted trail: same lime as the accent, arcs from above the badge into the light behind the headline -->
           <svg class="absolute inset-0 h-full w-full" viewBox="0 0 1000 800" preserveAspectRatio="none" fill="none">
             <path
               d="M 400 -40 C 520 120 760 90 860 240 C 900 300 880 350 800 380"
@@ -73,7 +62,7 @@ const stories = [
           <!-- Terminal marker where the trail lands in the glow -->
           <span class="absolute left-[80%] top-[47.5%] -translate-x-1/2 -translate-y-1/2">
             <span
-              class="block size-2 rounded-full bg-[#d8ef8c] shadow-[0_0_14px_4px_rgba(216,239,140,0.35)]"
+              class="block size-2 rounded-full bg-lime shadow-xs"
             >
             </span>
           </span>
@@ -81,7 +70,7 @@ const stories = [
 
         <!-- Subtle animated organic wave layers -->
         <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-44 overflow-hidden select-none opacity-20">
-          <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-36 text-[#d8ef8c]" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
+          <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-36 text-lime" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
             <path d="M0,40 C150,95 350,10 500,60 C650,110 900,20 1200,50 L1200,120 L0,120 Z"></path>
           </svg>
           <svg class="animate-wave-reverse absolute -bottom-1 left-0 w-[200%] h-32 text-white opacity-40" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
@@ -99,13 +88,13 @@ const stories = [
           class="relative font-serif text-[clamp(2.5rem,4.2vw,4rem)] leading-[1.12] font-normal tracking-tight text-white"
         >
           Find what<br />
-          <span class="font-bold text-[#d8ef8c]">you Lost.</span><br />
+          <span class="font-bold text-lime">you Lost.</span><br />
           Return what<br />
-          <span class="font-bold text-[#d8ef8c]">you Found.</span>
+          <span class="font-bold text-lime">you Found.</span>
         </p>
 
         <div
-          class="relative overflow-hidden rounded-2xl bg-[#d8ef8c] px-7 py-6 sm:px-8 sm:py-7 border border-lime-500/20 shadow-xs"
+          class="relative overflow-hidden rounded-2xl bg-lime px-7 py-6 sm:px-8 sm:py-7 border border-lime-600/20 shadow-xs"
           data-story-carousel
         >
           <!-- Subtle animated wave inside callout card -->
@@ -168,7 +157,8 @@ const stories = [
     <SiteFooter />
   </div>
 
-  <script is:inline>
+  <script>
+    // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
     (function () {
       var root = document.querySelector("[data-story-carousel]");
       if (!root) return;

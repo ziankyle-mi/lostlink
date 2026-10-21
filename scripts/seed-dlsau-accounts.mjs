@@ -8,6 +8,19 @@ if (!supabaseUrl || !serviceKey) {
   process.exit(1);
 }
 
+const seedPassword = process.env.SEED_PASSWORD;
+if (!seedPassword || seedPassword.length < 12) {
+  console.error(
+    "SEED_PASSWORD is required (min 12 characters). This script refuses to use a hardcoded password.",
+  );
+  process.exit(1);
+}
+if (/^dlsau(pass|password)/i.test(seedPassword)) {
+  console.error("Refusing the old universal demo password. Choose a new one.");
+  process.exit(1);
+}
+const confirmEmails = process.env.SEED_CONFIRM_EMAILS === "true";
+
 const supabase = createClient(supabaseUrl, serviceKey, {
   auth: { persistSession: false },
 });
@@ -287,8 +300,10 @@ async function seed() {
         // Create new user in auth.users (triggers profile creation)
         const { data: authUser, error: createErr } = await supabase.auth.admin.createUser({
           email: emailLower,
-          password: "DlsauPassword2026!",
-          email_confirm: true,
+          password: seedPassword,
+          // Only auto-confirm when explicitly opted in. Production should invite
+          // users and verify their DLSAU mailbox instead.
+          email_confirm: confirmEmails,
           user_metadata: {
             full_name: u.name,
             program: group.program,
@@ -304,7 +319,7 @@ async function seed() {
           // Ensure profile has proper full_name
           await supabase
             .from("profiles")
-            .update({ full_name: u.name, role: "user", active: true })
+            .update({ full_name: u.name, role: "user", active: true, must_change_password: true })
             .eq("id", authUser.user.id);
 
           existingEmailMap.set(emailLower, authUser.user.id);

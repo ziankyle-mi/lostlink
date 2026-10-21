@@ -116,6 +116,9 @@ export interface SupabaseSession {
 export interface SupabaseUser {
   id: string;
   email: string | null;
+  /** Null/undefined until the DLSAU address is verified. */
+  email_confirmed_at?: string | null;
+  confirmed_at?: string | null;
 }
 
 export function randomBytes(length: number): Uint8Array {
