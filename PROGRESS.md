@@ -51,6 +51,19 @@ Done: claim decisions cannot leave an item and claim in contradictory states, an
 - Removed raw database error text from report, upload, notification, and admin responses. Details stay in server logs.
 - Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success.
 
+## Phase 4 — Operations and release checklist (2026-10-22)
+
+Done: the repo now documents and automates the release path instead of relying on memory.
+
+- Kept the existing GitHub Actions CI workflow (check, unit tests, production build, dependency audit) and verified the same commands locally.
+- Added `docs/deployment-checklist.md`: credential rotation, git-history purge, database migration verification, Cloudflare secrets, Turnstile setup, build/deploy commands, a real-account smoke test, and explicit residual risks.
+- `README.md` now reflects Astro 7/Cloudflare and links the checklist.
+- The demo email allowlist (`DEMO_ALLOWED_EMAILS`) is now honored only in development builds. A copied production secret can no longer admit a non-DLSAU Gmail account.
+- Added a status banner to `docs/production-readiness-audit.md` pointing to the phases and the remaining owner actions.
+- Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success; `wrangler deploy --dry-run` succeeds.
+
+**Owner actions still required:** rotate the leaked Supabase service-role key and old account passwords, purge git history, set Turnstile keys, and apply `docs/migrations-production.sql` to the production project.
+
 ## Steps
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)

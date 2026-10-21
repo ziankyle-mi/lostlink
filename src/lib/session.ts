@@ -14,7 +14,12 @@ import {
 import { fetchUser, refreshSession } from "./supabase";
 
 export function policyFromEnv(env: Env): DomainPolicy {
-  return { allowedDomain: env.ALLOWED_EMAIL_DOMAIN, demoEmails: env.DEMO_ALLOWED_EMAILS };
+  return {
+    allowedDomain: env.ALLOWED_EMAIL_DOMAIN,
+    // The demo allowlist is a local-development convenience. Never honor it in
+    // a production build, even if the variable is copied to the host.
+    demoEmails: import.meta.env.DEV ? env.DEMO_ALLOWED_EMAILS : "",
+  };
 }
 
 /** The mock login screen only exists in local dev, never in a deploy. */

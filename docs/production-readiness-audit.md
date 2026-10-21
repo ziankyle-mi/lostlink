@@ -1,5 +1,12 @@
 # LostLink — Production Readiness Audit
 
+> **Status update (2026-10-22):** Phases 1–4 in `PROGRESS.md` fixed the review
+> lifecycle, fake-success paths, bot checks, throttles, upload bounds, claim
+> consistency, and raw error leaks. Credential rotation, git-history purge, and
+> applying the production migration remain **owner actions**. See
+> [`deployment-checklist.md`](deployment-checklist.md). The original findings
+> below are kept as the audit record.
+
 **System:** LostLink — DLSAU Lost & Found
 **Audited commit:** `ff2809b`
 **Date:** 2026-10-21
