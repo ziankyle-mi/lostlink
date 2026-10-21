@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_DATA_URL_LENGTH,
   MAX_FILE_SIZE_BYTES,
   isAllowedMimeType,
   parseBase64DataUrl,
@@ -36,5 +37,10 @@ describe("Storage configuration & validators", () => {
   it("returns null on malformed base64 strings", () => {
     expect(parseBase64DataUrl("not-a-data-url")).toBeNull();
     expect(parseBase64DataUrl("data:image/png;base64,")).toBeNull();
+  });
+
+  it("rejects oversized payloads before decoding them", () => {
+    const oversized = `data:image/png;base64,${"A".repeat(MAX_DATA_URL_LENGTH)}`;
+    expect(parseBase64DataUrl(oversized)).toBeNull();
   });
 });

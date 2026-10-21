@@ -60,7 +60,7 @@ Done: the repo now documents and automates the release path instead of relying o
 - `README.md` now reflects Astro 7/Cloudflare and links the checklist.
 - The demo email allowlist (`DEMO_ALLOWED_EMAILS`) is now honored only in development builds. A copied production secret can no longer admit a non-DLSAU Gmail account.
 - Added a status banner to `docs/production-readiness-audit.md` pointing to the phases and the remaining owner actions.
-- Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success; `wrangler deploy --dry-run` succeeds.
+- Verified: `astro check` 0 errors; `npm test` 93 passed, 2 skipped; `npm run build` success; `wrangler deploy --dry-run` succeeds.
 
 **Owner actions still required:** rotate the leaked Supabase service-role key and old account passwords, purge git history, set Turnstile keys, and apply `docs/migrations-production.sql` to the production project.
 

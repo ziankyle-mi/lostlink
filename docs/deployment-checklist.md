@@ -80,7 +80,7 @@ them.
 ```bash
 npm ci
 npm run check     # 0 errors expected
-npm test          # 92 passed, 2 skipped expected
+npm test          # 93 passed, 2 skipped expected
 npm run build
 npx wrangler deploy
 ```
