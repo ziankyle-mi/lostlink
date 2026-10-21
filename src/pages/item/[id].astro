@@ -285,7 +285,31 @@ if (!item) {
                   </div>
                 )}
 
-                {item.type === "lost" && (
+                {item.type === "lost" && item.status === "resolved" && (
+                  <div class="rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 text-xs">
+                    <p class="font-bold">This report is resolved</p>
+                    <p class="mt-0.5 text-stone-600">The reporter marked this item as recovered. It is no longer listed as active.</p>
+                  </div>
+                )}
+
+                {item.type === "lost" && item.status === "approved" && isReporter && (
+                  <div class="rounded-2xl bg-lime/20 p-4 border border-lime-600/30 text-forest-900 text-xs space-y-3">
+                    <div>
+                      <p class="font-bold">Did you get this item back?</p>
+                      <p class="mt-0.5 text-stone-600">Mark this report as resolved to remove it from the active lost list.</p>
+                    </div>
+                    <button
+                      type="button"
+                      id="resolve-lost-btn"
+                      data-item-id={item.id}
+                      class="inline-flex min-h-11 items-center justify-center rounded-full bg-forest-700 px-5 py-2.5 text-xs font-bold text-white hover:bg-forest-900 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                    >
+                      Mark as resolved
+                    </button>
+                  </div>
+                )}
+
+                {item.type === "lost" && item.status !== "resolved" && !(item.status === "approved" && isReporter) && (
                   <div class="rounded-2xl bg-lime/20 p-4 border border-lime-600/30 text-forest-900 text-xs">
                     <p class="font-bold">Have you found this lost item?</p>
                     <p class="mt-0.5 text-stone-600">
@@ -403,6 +427,46 @@ if (!item) {
           if (submitBtn) {
             submitBtn.removeAttribute("disabled");
             submitBtn.textContent = "Submit Claim to Security Office";
+          }
+        }
+      });
+    }
+
+    const resolveLostBtn = document.getElementById("resolve-lost-btn") as HTMLButtonElement | null;
+    if (resolveLostBtn) {
+      resolveLostBtn.addEventListener("click", async () => {
+        if (!confirm("Mark this lost item as resolved? This removes it from the active lost list.")) {
+          return;
+        }
+
+        const itemId = resolveLostBtn.dataset.itemId;
+        const idleLabel = resolveLostBtn.textContent;
+        resolveLostBtn.disabled = true;
+        resolveLostBtn.textContent = "Resolving...";
+
+        try {
+          const resp = await fetch("/api/items", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ itemId, action: "resolve" }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.ok) {
+            throw new Error(data.error || "Could not resolve the report.");
+          }
+          resolveLostBtn.textContent = "Resolved \u2713";
+          if ((window as any).llToast) {
+            (window as any).llToast("Report marked as resolved.", "success");
+          }
+          setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+          resolveLostBtn.disabled = false;
+          resolveLostBtn.textContent = idleLabel;
+          const msg = err instanceof Error ? err.message : "Could not resolve the report.";
+          if ((window as any).llToast) {
+            (window as any).llToast(msg, "error");
+          } else {
+            alert(msg);
           }
         }
       });

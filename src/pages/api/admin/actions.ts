@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { action, itemId, claimId, userId, newRole, active, email } = body;
+    const { action, itemId, claimId, userId, newRole, active, email, reason } = body;
 
     // ACTION: Confirm Intake (Move found item from pending to approved in DO custody)
     if (action === "confirm_intake") {
@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const { data: item } = await supabase.from("items").select("id, name, reporter_id, reference_code, status").eq("id", itemId).maybeSingle();
+      const { data: item } = await supabase.from("items").select("id, type, name, reporter_id, reference_code, status").eq("id", itemId).maybeSingle();
 
       if (!item) {
         return new Response(JSON.stringify({ ok: false, error: "Item not found in database." }), {
@@ -86,11 +86,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (item.status !== "pending") {
-        return new Response(JSON.stringify({ ok: false, error: "This report is not waiting for intake." }), {
+        return new Response(JSON.stringify({ ok: false, error: "This report is not waiting for review." }), {
           status: 409,
           headers: { "Content-Type": "application/json" },
         });
       }
+
+      const isLostReport = item.type === "lost";
 
       const { error: intakeErr } = await supabase
         .from("items")
@@ -100,7 +102,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (intakeErr) {
         console.error("[admin/actions] Intake error:", intakeErr.message);
-        return new Response(JSON.stringify({ ok: false, error: "Could not confirm intake." }), {
+        return new Response(JSON.stringify({ ok: false, error: "Could not approve the report." }), {
           status: 500,
           headers: { "Content-Type": "application/json" },
         });
@@ -109,7 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (adminProfileId) {
         await supabase.from("admin_log").insert({
           admin_id: adminProfileId,
-          action: "intake_confirmed",
+          action: isLostReport ? "lost_report_approved" : "intake_confirmed",
           item_id: itemId,
         });
       }
@@ -117,12 +119,97 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (item.reporter_id) {
         await supabase.from("notifications").insert({
           user_id: item.reporter_id,
-          message: `Your found item report for "${item.name}" was confirmed in custody and is now public.`,
+          message: isLostReport
+            ? `Your lost item report for "${item.name}" was approved and is now visible on the campus feed.`
+            : `Your found item report for "${item.name}" was confirmed in custody and is now public.`,
           link: "/",
         });
       }
 
-      return new Response(JSON.stringify({ ok: true, message: "Item intake confirmed into custody." }), {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          itemType: item.type,
+          message: isLostReport
+            ? "Lost report approved and published to the campus feed."
+            : "Item intake confirmed into custody.",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // ACTION: Reject a pending report with a reason the reporter can read.
+    if (action === "reject_report") {
+      const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+
+      if (!itemId || !UUID_RE.test(String(itemId))) {
+        return new Response(JSON.stringify({ ok: false, error: "A valid item ID is required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (reason.length < 5 || reason.length > 500) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "A rejection reason of 5 to 500 characters is required." }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      const { data: item } = await supabase
+        .from("items")
+        .select("id, type, name, reporter_id, status")
+        .eq("id", itemId)
+        .maybeSingle();
+
+      if (!item) {
+        return new Response(JSON.stringify({ ok: false, error: "Item not found in database." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (item.status !== "pending") {
+        return new Response(JSON.stringify({ ok: false, error: "Only a report awaiting review can be rejected." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: rejectErr } = await supabase
+        .from("items")
+        .update({ status: "rejected", reject_reason: reason })
+        .eq("id", itemId)
+        .eq("status", "pending");
+
+      if (rejectErr) {
+        console.error("[admin/actions] Reject report error:", rejectErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not reject the report." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (adminProfileId) {
+        await supabase.from("admin_log").insert({
+          admin_id: adminProfileId,
+          action: `report_rejected: ${item.name}`,
+          item_id: itemId,
+        });
+      }
+
+      if (item.reporter_id) {
+        await supabase.from("notifications").insert({
+          user_id: item.reporter_id,
+          message: `Your ${item.type} item report for "${item.name}" was not approved. Reason: ${reason}`,
+          link: "/profile",
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, status: "rejected", message: "Report rejected." }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -311,7 +398,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const { data: item } = await supabase
         .from("items")
-        .select("id, name, reporter_id, reference_code")
+        .select("id, name, reporter_id, reference_code, status")
         .eq("id", itemId)
         .maybeSingle();
 
@@ -320,6 +407,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
+      }
+
+      if (item.status === "claimed" || item.status === "resolved") {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Completed items are kept as records and cannot be removed." }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       // Soft removal: keep claims and the audit trail intact.

@@ -98,6 +98,7 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
           )
         `)
         .eq("claimant_id", profileId)
+        .neq("status", "withdrawn")
         .order("created_at", { ascending: false });
 
       if (claims) myClaims = claims;
@@ -514,14 +515,26 @@ function parsePhotos(photoPath?: string | null): string[] {
                         </p>
                       </div>
                     </div>
-                    {targetItem?.id && (
-                      <a
-                        href={`/item/${targetItem.id}`}
-                        class="shrink-0 text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700 mt-2 sm:mt-0"
-                      >
-                        View Item &rarr;
-                      </a>
-                    )}
+                    <div class="shrink-0 flex items-center gap-3 mt-2 sm:mt-0">
+                      {claim.status === "pending" && (
+                        <button
+                          type="button"
+                          data-withdraw-claim={claim.id}
+                          data-withdraw-label={targetItem?.name || "this item"}
+                          class="withdraw-claim-btn rounded-full border border-rose-200/90 bg-rose-50 hover:bg-rose-100 active:scale-95 px-4 py-2 text-xs font-bold text-rose-700 transition-all shadow-2xs cursor-pointer"
+                        >
+                          Withdraw
+                        </button>
+                      )}
+                      {targetItem?.id && (
+                        <a
+                          href={`/item/${targetItem.id}`}
+                          class="text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
+                        >
+                          View Item &rarr;
+                        </a>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -554,6 +567,54 @@ function parsePhotos(photoPath?: string | null): string[] {
         }, 2000);
       } catch (err) {
         console.warn("Clipboard copy failed:", err);
+      }
+    });
+
+    document.addEventListener("click", async (e) => {
+      const btn = (e.target as HTMLElement).closest(".withdraw-claim-btn") as HTMLButtonElement | null;
+      if (!btn) return;
+
+      const claimId = btn.getAttribute("data-withdraw-claim");
+      const label = btn.getAttribute("data-withdraw-label") || "this item";
+      if (!claimId) return;
+      if (!confirm(`Withdraw your claim for "${label}"? The security office will no longer review it.`)) {
+        return;
+      }
+
+      btn.disabled = true;
+      const idleLabel = btn.textContent;
+      btn.textContent = "Withdrawing...";
+
+      try {
+        const resp = await fetch("/api/claims", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "withdraw", claimId }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) {
+          throw new Error(data.error || "Could not withdraw the claim.");
+        }
+
+        const row = btn.closest(".rounded-2xl.border") as HTMLElement | null;
+        if (row) {
+          row.style.transition = "all 0.3s ease-out";
+          row.style.opacity = "0";
+          row.style.transform = "scale(0.98)";
+          setTimeout(() => row.remove(), 300);
+        }
+        if ((window as any).llToast) {
+          (window as any).llToast("Claim withdrawn.", "success");
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = idleLabel;
+        const msg = err instanceof Error ? err.message : "Could not withdraw the claim.";
+        if ((window as any).llToast) {
+          (window as any).llToast(msg, "error");
+        } else {
+          alert(msg);
+        }
       }
     });
   </script>

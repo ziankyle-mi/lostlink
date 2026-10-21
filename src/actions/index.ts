@@ -53,7 +53,13 @@ function requireSupabase(locals: { env: import("~/lib/env").Env }): void {
  * after an explicit admin check.
  */
 function serviceClient(env: import("~/lib/env").Env) {
-  return createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY, {
+  if (!env.PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new ActionError({
+      code: "PRECONDITION_FAILED",
+      message: "Server database access is not configured.",
+    });
+  }
+  return createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
 }
@@ -252,13 +258,10 @@ export const server = {
           );
         }
 
-        // Record recovery request in admin_log
-        let logAdminId = admins?.[0]?.id;
-        if (!logAdminId) {
-          const { data: anyProf } = await supabase.from("profiles").select("id").limit(1).maybeSingle();
-          logAdminId = anyProf?.id ?? null;
-        }
-
+        // Record recovery request in admin_log under a real admin account.
+        // Never attribute it to an arbitrary profile: that poisons the audit
+        // trail. If no admin exists yet, there is no one to review the queue.
+        const logAdminId = admins?.[0]?.id;
         if (logAdminId) {
           await supabase.from("admin_log").insert({
             admin_id: logAdminId,

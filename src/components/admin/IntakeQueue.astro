@@ -10,6 +10,7 @@ const isAdmin = role === "admin";
 const intakeItems = [
   {
     id: "intake-1",
+    type: "found",
     name: "Grey drawstring bag",
     meta: "Posted by Kevin L. \u00b7 20 min ago",
     iconBg: "bg-sage-200",
@@ -17,6 +18,7 @@ const intakeItems = [
   },
   {
     id: "intake-2",
+    type: "found",
     name: "Black tumbler",
     meta: "Posted by Liza M. \u00b7 1 hr ago",
     iconBg: "bg-sage-200",
@@ -24,6 +26,7 @@ const intakeItems = [
   },
   {
     id: "intake-3",
+    type: "found",
     name: "Calculator, scientific",
     meta: "Posted by Ben T. \u00b7 3 hrs ago",
     iconBg: "bg-sage-200",
@@ -33,6 +36,7 @@ const intakeItems = [
 
 interface RawIntake {
   id: string;
+  type?: string;
   name: string;
   category?: string;
   location?: string;
@@ -42,13 +46,19 @@ interface RawIntake {
 }
 
 const mappedLiveIntake = liveIntake && liveIntake.length > 0
-  ? liveIntake.map((item: RawIntake) => ({
-      id: item.id,
-      name: item.name,
-      meta: `Posted by ${item.profiles?.full_name ?? "Student"} \u00b7 ${item.reference_code ?? "Ref LL-Item"}`,
-      iconBg: "bg-sage-200",
-      iconType: item.category === "Water Bottles & Tumblers" ? "bottle" : (item.category === "Bags & Backpacks" ? "bag" : "calculator"),
-    }))
+  ? liveIntake.map((item: RawIntake) => {
+      const type = item.type === "lost" ? "lost" : "found";
+      const kind = type === "lost" ? "Lost report" : "Found item";
+      const ref = item.reference_code ?? (type === "lost" ? "No tag yet" : "Ref pending");
+      return {
+        id: item.id,
+        type,
+        name: item.name,
+        meta: `${kind} \u00b7 ${item.profiles?.full_name ?? "Student"} \u00b7 ${ref}`,
+        iconBg: "bg-sage-200",
+        iconType: item.category === "Water Bottles & Tumblers" ? "bottle" : (item.category === "Bags & Backpacks" ? "bag" : "calculator"),
+      };
+    })
   : [];
 
 const queueItems = liveIntake !== undefined
@@ -64,11 +74,11 @@ const queueItems = liveIntake !== undefined
     <!-- Header -->
     <div>
       <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
-        {isAdmin ? "Waiting for intake" : "Campus Claiming Checklist"}
+        {isAdmin ? "Waiting for review" : "Campus Claiming Checklist"}
       </h2>
       <p class="mt-1 text-sm text-stone-500">
         {isAdmin
-          ? "Posted online. Confirm once the item reaches the office."
+          ? "Pending lost and found reports. Confirm found items once they reach the office; approve lost reports to publish them."
           : "Essential steps before heading to the Disciplinary Office."}
       </p>
     </div>
@@ -83,12 +93,12 @@ const queueItems = liveIntake !== undefined
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p class="mt-3 text-sm font-bold text-forest-900">Intake queue is clear</p>
-            <p class="mt-1 text-xs text-stone-400">All submitted found items have been confirmed into custody.</p>
+            <p class="mt-3 text-sm font-bold text-forest-900">Review queue is clear</p>
+            <p class="mt-1 text-xs text-stone-400">No reports are waiting for Security Office review.</p>
           </div>
         ) : (
           queueItems.map((item) => (
-          <div class="flex items-center justify-between gap-3 py-4 first:pt-2 last:pb-0">
+          <div data-intake-row class="flex items-center justify-between gap-3 py-4 first:pt-2 last:pb-0">
             <div class="flex items-center gap-3.5 min-w-0">
               <div class={`size-11 shrink-0 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
                 {item.iconType === "bag" && (
@@ -130,18 +140,20 @@ const queueItems = liveIntake !== undefined
                 type="button"
                 data-intake-id={item.id}
                 data-intake-name={item.name}
+                data-intake-type={item.type}
                 class="remove-intake-btn rounded-full border border-rose-200/90 bg-rose-50 hover:bg-rose-100 active:scale-95 px-3 py-1.5 text-xs font-bold text-rose-700 transition-all shadow-2xs cursor-pointer"
-                title="Remove post"
+                title="Reject report"
               >
-                Remove
+                Reject
               </button>
               <button
                 type="button"
                 data-intake-id={item.id}
                 data-intake-name={item.name}
+                data-intake-type={item.type}
                 class="confirm-intake-btn rounded-full bg-lime hover:bg-[#c9e376] active:scale-95 px-4 py-1.5 text-xs font-bold text-forest-700 transition-all shadow-xs cursor-pointer"
               >
-                Confirm received
+                {item.type === "lost" ? "Approve report" : "Confirm received"}
               </button>
             </div>
           </div>

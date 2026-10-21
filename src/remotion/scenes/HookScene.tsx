@@ -31,6 +31,17 @@ export const HookScene: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
+  // Floating campus item pills micro-animations
+  const float1 = Math.sin(frame / 20) * 12;
+  const float2 = Math.cos(frame / 22) * 14;
+  const float3 = Math.sin(frame / 24 + 1) * 10;
+  const float4 = Math.cos(frame / 18 + 2) * 12;
+
+  const itemSpring1 = spring({ frame: frame - 30, fps, config: { damping: 14, mass: 0.7 } });
+  const itemSpring2 = spring({ frame: frame - 42, fps, config: { damping: 14, mass: 0.7 } });
+  const itemSpring3 = spring({ frame: frame - 54, fps, config: { damping: 14, mass: 0.7 } });
+  const itemSpring4 = spring({ frame: frame - 66, fps, config: { damping: 14, mass: 0.7 } });
+
   return (
     <div
       style={{
@@ -47,6 +58,107 @@ export const HookScene: React.FC = () => {
     >
       <Background glowIntensity={1.0} />
 
+      {/* Floating Campus Item Context Badges */}
+      <div
+        style={{
+          position: "absolute",
+          top: 180 + float1,
+          left: 180,
+          opacity: itemSpring1 * 0.75,
+          transform: `scale(${itemSpring1})`,
+          backgroundColor: "rgba(10, 38, 24, 0.7)",
+          border: "1px solid rgba(216, 239, 140, 0.25)",
+          borderRadius: 24,
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          color: "rgba(245, 241, 230, 0.9)",
+          fontFamily: TRAILER_CONFIG.fonts.sans,
+          fontSize: 16,
+          fontWeight: 600,
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
+        }}
+      >
+        <span>🎧</span>
+        <span>AirPods Pro • St. Benilde</span>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: 220 + float2,
+          right: 200,
+          opacity: itemSpring2 * 0.75,
+          transform: `scale(${itemSpring2})`,
+          backgroundColor: "rgba(10, 38, 24, 0.7)",
+          border: "1px solid rgba(216, 239, 140, 0.25)",
+          borderRadius: 24,
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          color: "rgba(245, 241, 230, 0.9)",
+          fontFamily: TRAILER_CONFIG.fonts.sans,
+          fontSize: 16,
+          fontWeight: 600,
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
+        }}
+      >
+        <span>🧴</span>
+        <span>Hydro Flask 32oz • Gym Bldg</span>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: 200 + float3,
+          left: 220,
+          opacity: itemSpring3 * 0.75,
+          transform: `scale(${itemSpring3})`,
+          backgroundColor: "rgba(10, 38, 24, 0.7)",
+          border: "1px solid rgba(216, 239, 140, 0.25)",
+          borderRadius: 24,
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          color: "rgba(245, 241, 230, 0.9)",
+          fontFamily: TRAILER_CONFIG.fonts.sans,
+          fontSize: 16,
+          fontWeight: 600,
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
+        }}
+      >
+        <span>💳</span>
+        <span>DLSAU Student ID • Admin Hall</span>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          top: 200 + float4,
+          right: 220,
+          opacity: itemSpring4 * 0.75,
+          transform: `scale(${itemSpring4})`,
+          backgroundColor: "rgba(10, 38, 24, 0.7)",
+          border: "1px solid rgba(216, 239, 140, 0.25)",
+          borderRadius: 24,
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          color: "rgba(245, 241, 230, 0.9)",
+          fontFamily: TRAILER_CONFIG.fonts.sans,
+          fontSize: 16,
+          fontWeight: 600,
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
+        }}
+      >
+        <span>📟</span>
+        <span>TI-84 Calculator • Library</span>
+      </div>
+
       <div
         style={{
           position: "relative",
@@ -59,14 +171,14 @@ export const HookScene: React.FC = () => {
           alignItems: "center",
         }}
       >
-        {/* Large, authoritative headline — no AI slop pills, no single colored words */}
+        {/* Large, authoritative headline */}
         <h1
           style={{
             opacity: titleSpring,
             transform: `translateY(${(1 - titleSpring) * 32}px)`,
             color: "#ffffff",
             fontFamily: TRAILER_CONFIG.fonts.serif,
-            fontSize: 104,
+            fontSize: 108,
             fontWeight: 700,
             lineHeight: 1.12,
             letterSpacing: "-0.02em",

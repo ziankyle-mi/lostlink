@@ -25,14 +25,14 @@ export const FeatureFeedScene: React.FC = () => {
     config: { damping: 14, mass: 0.7 },
   });
 
-  // Cinematic zoom directly into the live FilterBar and Cards (BIGGER display)
-  const scale = interpolate(frame, [0, 40, 160, 265], [1.20, 1.35, 1.38, 1.40], {
+  // Smooth camera zoom directly into the live FilterBar and Cards (BIGGER display)
+  const scale = interpolate(frame, [0, 40, 160, 265], [1.15, 1.25, 1.25, 1.27], {
     extrapolateRight: "clamp",
   });
   const contentPanY = interpolate(
     frame,
-    [0, 45, 140, 265],
-    [-120, -560, -580, -600],
+    [0, 35, 140, 265],
+    [-200, -560, -570, -580],
     { extrapolateRight: "clamp" },
   );
 
@@ -42,12 +42,9 @@ export const FeatureFeedScene: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  // --- 100% HUMAN MOUSE INTERACTION TRAJECTORY ---
-  // Step 1 (Frames 20-80): Mouse glides naturally to Category pill on FilterBar (x: 620, y: 275)
-  // Step 2 (Frame 86): Human clicks Category Filter pill ("Electronics")
-  // Step 3 (Frames 105-165): Mouse moves down across cards to inspect "Claim this item"
-  // Step 4 (Frame 185): Human clicks "Claim this item"
-  // Step 5 (Frames 188-250): Claim dossier popup appears with DLSAU verification badge
+  // --- 100% HUMAN MOUSE INTERACTION TRAJECTORY (Viewport coordinates) ---
+  // - Category Filter Pill: x: 570, y: 360
+  // - Item 1 "Claim this item" button: x: 280, y: 645
 
   let cursorX = 1400;
   let cursorY = 160;
@@ -55,36 +52,35 @@ export const FeatureFeedScene: React.FC = () => {
   let cursorOpacity = 0;
   let clickFrame: number | undefined = undefined;
 
-  if (frame >= 20 && frame < 86) {
-    cursorOpacity = interpolate(frame, [20, 30], [0, 1], { extrapolateRight: "clamp" });
-    const t = interpolate(frame, [28, 80], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  if (frame >= 15 && frame < 86) {
+    cursorOpacity = interpolate(frame, [15, 25], [0, 1], { extrapolateRight: "clamp" });
+    const t = interpolate(frame, [22, 78], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    cursorX = 1400 + (620 - 1400) * ease;
-    cursorY = 160 + (275 - 160) * ease;
-    if (frame >= 72) cursorType = "pointer";
-  } else if (frame >= 86 && frame < 110) {
+    cursorX = 1400 + (570 - 1400) * ease;
+    cursorY = 160 + (360 - 160) * ease;
+    if (frame >= 70) cursorType = "pointer";
+  } else if (frame >= 86 && frame < 115) {
     cursorOpacity = 1;
-    cursorX = 620;
-    cursorY = 275;
+    cursorX = 570;
+    cursorY = 360;
     cursorType = "pointer";
     clickFrame = 86;
-  } else if (frame >= 110 && frame < 185) {
+  } else if (frame >= 115 && frame < 185) {
     cursorOpacity = 1;
-    const t = interpolate(frame, [110, 175], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+    const t = interpolate(frame, [115, 175], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    // Glides down to the action button on the featured item card
-    cursorX = 620 + (580 - 620) * ease;
-    cursorY = 275 + (680 - 275) * ease;
+    cursorX = 570 + (280 - 570) * ease;
+    cursorY = 360 + (645 - 360) * ease;
     if (frame >= 165) cursorType = "pointer";
   } else if (frame >= 185) {
     cursorOpacity = interpolate(frame, [240, 255], [1, 0], { extrapolateRight: "clamp" });
-    cursorX = 580;
-    cursorY = 680;
+    cursorX = 280;
+    cursorY = 645;
     cursorType = "pointer";
     clickFrame = 185;
   }
 
-  // Interactive Filter Pill Active state (triggers at frame 86 on human click)
+  // Interactive Filter Pill Active state
   const isFilterActive = frame >= 86;
   const filterPillSpring = spring({
     frame: frame - 86,
@@ -93,10 +89,10 @@ export const FeatureFeedScene: React.FC = () => {
   });
 
   // Interactive Card Hover & Claim confirmation
-  const isCardHovered = frame >= 160;
-  const isClaimSubmitted = frame >= 186;
+  const isCardHovered = frame >= 165;
+  const isClaimSubmitted = frame >= 185;
   const claimModalSpring = spring({
-    frame: frame - 186,
+    frame: frame - 185,
     fps,
     config: { damping: 14, mass: 0.7 },
   });
@@ -113,7 +109,7 @@ export const FeatureFeedScene: React.FC = () => {
     >
       <Background glowIntensity={1.0} />
 
-      {/* Sleek Top Scene Header (Compact, elegant, leaving full room for the BIG window) */}
+      {/* Sleek Top Scene Header */}
       <div
         style={{
           position: "absolute",
@@ -156,7 +152,7 @@ export const FeatureFeedScene: React.FC = () => {
         </p>
       </div>
 
-      {/* Much Bigger Browser Window (1840px x 940px) */}
+      {/* Big Browser Window (1840px x 940px) */}
       <div
         style={{
           position: "absolute",
@@ -174,164 +170,390 @@ export const FeatureFeedScene: React.FC = () => {
           height={940}
           scale={scale}
           contentPanY={contentPanY}
-        >
-          {/* INTERACTIVE LAYER 1: Dynamic FilterBar Pill Activation */}
-          {isFilterActive && (
-            <div
-              style={{
-                position: "absolute",
-                top: 290,
-                left: 420,
-                backgroundColor: "#164f38",
-                color: "#ffffff",
-                border: "1.5px solid #d8ef8c",
-                borderRadius: 20,
-                padding: "6px 18px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 14,
-                fontWeight: 600,
-                fontFamily: TRAILER_CONFIG.fonts.sans,
-                boxShadow: "0 4px 16px rgba(22, 79, 56, 0.4)",
-                transform: `scale(${filterPillSpring})`,
-                pointerEvents: "none",
-                zIndex: 30,
-              }}
-            >
-              <span>⚡ Category: Electronics</span>
-              <span
-                style={{
-                  backgroundColor: "#d8ef8c",
-                  color: "#082e1a",
-                  borderRadius: "50%",
-                  width: 16,
-                  height: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 10,
-                  fontWeight: 800,
-                }}
-              >
-                ✓
-              </span>
-            </div>
-          )}
-
-          {/* INTERACTIVE LAYER 2: Live Filter Tag Floating Chip */}
-          {isFilterActive && frame < 180 && (
-            <div
-              style={{
-                position: "absolute",
-                top: 292,
-                left: 640,
-                backgroundColor: "rgba(8, 46, 26, 0.92)",
-                color: "#d8ef8c",
-                border: "1px solid rgba(216, 239, 140, 0.3)",
-                borderRadius: 14,
-                padding: "4px 12px",
-                fontSize: 12,
-                fontFamily: TRAILER_CONFIG.fonts.sans,
-                fontWeight: 600,
-                opacity: filterPillSpring,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-              }}
-            >
-              Filtering 4 verified campus items in real-time
-            </div>
-          )}
-
-          {/* INTERACTIVE LAYER 3: Hover Ring on Card */}
-          {isCardHovered && !isClaimSubmitted && (
-            <div
-              style={{
-                position: "absolute",
-                top: 450,
-                left: 380,
-                width: 320,
-                height: 240,
-                border: "2px solid #164f38",
-                borderRadius: 16,
-                boxShadow: "0 12px 30px rgba(22, 79, 56, 0.22)",
-                pointerEvents: "none",
-                transition: "all 0.2s ease",
-              }}
-            />
-          )}
-
-          {/* INTERACTIVE LAYER 4: Claim Confirmation Overlay Toast */}
-          {isClaimSubmitted && (
-            <div
-              style={{
-                position: "absolute",
-                top: 470,
-                left: 360,
-                backgroundColor: "#ffffff",
-                border: "1.5px solid #164f38",
-                borderRadius: 18,
-                padding: "16px 22px",
-                boxShadow: "0 20px 50px rgba(0, 0, 0, 0.25)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                transform: `scale(${claimModalSpring})`,
-                zIndex: 40,
-                maxWidth: 360,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span
+          overlay={
+            <>
+              {/* INTERACTIVE LAYER 1: Category Filter Pill Pop-in right over FilterBar */}
+              {isFilterActive && (
+                <div
                   style={{
+                    position: "absolute",
+                    top: 338,
+                    left: 500,
                     backgroundColor: "#164f38",
-                    color: "#d8ef8c",
-                    width: 26,
-                    height: 26,
-                    borderRadius: "50%",
+                    color: "#ffffff",
+                    border: "2px solid #d8ef8c",
+                    borderRadius: 24,
+                    padding: "7px 18px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
+                    gap: 10,
                     fontSize: 14,
-                    fontWeight: 800,
-                  }}
-                >
-                  ✓
-                </span>
-                <span
-                  style={{
-                    color: "#082e1a",
                     fontWeight: 700,
-                    fontSize: 16,
                     fontFamily: TRAILER_CONFIG.fonts.sans,
+                    boxShadow: "0 8px 25px rgba(22, 79, 56, 0.4)",
+                    transform: `scale(${filterPillSpring})`,
+                    zIndex: 35,
                   }}
                 >
-                  Claim Verification Dossier
-                </span>
-              </div>
-              <p
+                  <span>⚡ Category: Electronics</span>
+                  <span
+                    style={{
+                      backgroundColor: "#d8ef8c",
+                      color: "#082e1a",
+                      borderRadius: "50%",
+                      width: 18,
+                      height: 18,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 900,
+                    }}
+                  >
+                    ✓
+                  </span>
+                </div>
+              )}
+
+              {/* INTERACTIVE LAYER 2: Live Verified Item Cards Grid filling the window */}
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: "#413e39",
-                  fontFamily: TRAILER_CONFIG.fonts.sans,
-                  lineHeight: 1.4,
+                  position: "absolute",
+                  top: 415,
+                  left: 120,
+                  right: 120,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 28,
+                  zIndex: 30,
                 }}
               >
-                Forwarded to Disciplinary Office. Status visible under student profile.
-              </p>
-            </div>
-          )}
+                {/* Card 1: Apple AirPods Pro */}
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 18,
+                    border: isCardHovered ? "2px solid #164f38" : "1.5px solid rgba(0,0,0,0.08)",
+                    boxShadow: isCardHovered
+                      ? "0 20px 40px rgba(22, 79, 56, 0.22)"
+                      : "0 10px 25px rgba(0, 0, 0, 0.08)",
+                    padding: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                    transform: isCardHovered ? "translateY(-6px) scale(1.02)" : "none",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span
+                      style={{
+                        backgroundColor: "#e8f2ec",
+                        color: "#164f38",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        borderRadius: 12,
+                        padding: "4px 12px",
+                        fontFamily: TRAILER_CONFIG.fonts.sans,
+                      }}
+                    >
+                      FOUND ITEM
+                    </span>
+                    <span style={{ fontSize: 13, color: "#818181", fontFamily: TRAILER_CONFIG.fonts.sans }}>
+                      Oct 9 • St. Benilde Hall
+                    </span>
+                  </div>
 
-          {/* Real Human Cursor with natural movement & click ripple */}
-          <HumanCursor
-            x={cursorX}
-            y={cursorY}
-            type={cursorType}
-            clickFrame={clickFrame}
-            opacity={cursorOpacity}
-            scale={1.15}
-          />
-        </WindowFrame>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: 14,
+                        backgroundColor: "#eef4ec",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 28,
+                      }}
+                    >
+                      🎧
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: TRAILER_CONFIG.fonts.sans,
+                          fontWeight: 700,
+                          fontSize: 18,
+                          color: "#082e1a",
+                        }}
+                      >
+                        Apple AirPods Pro (2nd Gen)
+                      </div>
+                      <div style={{ fontSize: 13, color: "#413e39", fontFamily: TRAILER_CONFIG.fonts.sans, marginTop: 2 }}>
+                        White MagSafe case with lanyard loop
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      backgroundColor: isCardHovered ? "#164f38" : "#f2f7f0",
+                      color: isCardHovered ? "#ffffff" : "#164f38",
+                      borderRadius: 12,
+                      padding: "12px",
+                      textAlign: "center",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      fontFamily: TRAILER_CONFIG.fonts.sans,
+                      boxShadow: isCardHovered ? "0 4px 14px rgba(22, 79, 56, 0.3)" : "none",
+                      transform: frame >= 185 && frame <= 195 ? "scale(0.96)" : "scale(1)",
+                      transition: "all 0.1s ease",
+                    }}
+                  >
+                    Claim this item →
+                  </div>
+                </div>
+
+                {/* Card 2: Hydro Flask */}
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 18,
+                    border: "1.5px solid rgba(0,0,0,0.08)",
+                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
+                    padding: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                    opacity: isFilterActive ? 0.45 : 1,
+                    transition: "opacity 0.3s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span
+                      style={{
+                        backgroundColor: "#e8f2ec",
+                        color: "#164f38",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        borderRadius: 12,
+                        padding: "4px 12px",
+                        fontFamily: TRAILER_CONFIG.fonts.sans,
+                      }}
+                    >
+                      FOUND ITEM
+                    </span>
+                    <span style={{ fontSize: 13, color: "#818181", fontFamily: TRAILER_CONFIG.fonts.sans }}>
+                      Oct 8 • Agro-Forestry
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: 14,
+                        backgroundColor: "#f4f1e6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 28,
+                      }}
+                    >
+                      🧴
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: TRAILER_CONFIG.fonts.sans,
+                          fontWeight: 700,
+                          fontSize: 18,
+                          color: "#082e1a",
+                        }}
+                      >
+                        Hydro Flask 32oz Cobalt Blue
+                      </div>
+                      <div style={{ fontSize: 13, color: "#413e39", fontFamily: TRAILER_CONFIG.fonts.sans, marginTop: 2 }}>
+                        Stainless tumbler with flex straw cap
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      backgroundColor: "#f2f7f0",
+                      color: "#164f38",
+                      borderRadius: 12,
+                      padding: "12px",
+                      textAlign: "center",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      fontFamily: TRAILER_CONFIG.fonts.sans,
+                    }}
+                  >
+                    Claim this item →
+                  </div>
+                </div>
+
+                {/* Card 3: Calculator */}
+                <div
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: 18,
+                    border: "1.5px solid rgba(0,0,0,0.08)",
+                    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
+                    padding: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                    transform: isFilterActive ? "scale(1.02)" : "none",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span
+                      style={{
+                        backgroundColor: "#fef3c7",
+                        color: "#92400e",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        borderRadius: 12,
+                        padding: "4px 12px",
+                        fontFamily: TRAILER_CONFIG.fonts.sans,
+                      }}
+                    >
+                      LOST ITEM
+                    </span>
+                    <span style={{ fontSize: 13, color: "#818181", fontFamily: TRAILER_CONFIG.fonts.sans }}>
+                      Oct 7 • Library 3F
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: 14,
+                        backgroundColor: "#eef4ec",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 28,
+                      }}
+                    >
+                      📟
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontFamily: TRAILER_CONFIG.fonts.sans,
+                          fontWeight: 700,
+                          fontSize: 18,
+                          color: "#082e1a",
+                        }}
+                      >
+                        TI-84 Plus CE Calculator
+                      </div>
+                      <div style={{ fontSize: 13, color: "#413e39", fontFamily: TRAILER_CONFIG.fonts.sans, marginTop: 2 }}>
+                        Black color with protective slide cover
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      backgroundColor: "#f2f7f0",
+                      color: "#164f38",
+                      borderRadius: 12,
+                      padding: "12px",
+                      textAlign: "center",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      fontFamily: TRAILER_CONFIG.fonts.sans,
+                    }}
+                  >
+                    I found this →
+                  </div>
+                </div>
+              </div>
+
+              {/* INTERACTIVE LAYER 3: Claim Confirmation Toast */}
+              {isClaimSubmitted && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 480,
+                    left: 140,
+                    width: 440,
+                    backgroundColor: "#164f38",
+                    color: "#ffffff",
+                    border: "2px solid #d8ef8c",
+                    borderRadius: 20,
+                    padding: "20px 24px",
+                    boxShadow: "0 30px 70px rgba(0, 0, 0, 0.45)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    transform: `scale(${claimModalSpring})`,
+                    zIndex: 50,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span
+                      style={{
+                        backgroundColor: "#d8ef8c",
+                        color: "#082e1a",
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 16,
+                        fontWeight: 900,
+                      }}
+                    >
+                      ✓
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: TRAILER_CONFIG.fonts.sans,
+                        fontWeight: 700,
+                        fontSize: 17,
+                        color: "#ffffff",
+                      }}
+                    >
+                      Claim Verification Dossier #4821
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      color: "rgba(245, 241, 230, 0.9)",
+                      fontFamily: TRAILER_CONFIG.fonts.sans,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Submitted with student credentials. Disciplinary Office notified for physical custody verification.
+                  </p>
+                </div>
+              )}
+
+              {/* Human Cursor */}
+              <HumanCursor
+                x={cursorX}
+                y={cursorY}
+                type={cursorType}
+                clickFrame={clickFrame}
+                opacity={cursorOpacity}
+                scale={1.15}
+              />
+            </>
+          }
+        />
       </div>
     </div>
   );

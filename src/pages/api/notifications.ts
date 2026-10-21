@@ -3,7 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
 
 function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) {
+    throw new Error("Server database access is not configured.");
+  }
   return createClient(env.PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false },
   });
@@ -18,10 +21,10 @@ export const GET: APIRoute = async ({ locals }) => {
     });
   }
 
-  const supabase = getAdminClient(locals.env);
-  const userEmail = user.email.toLowerCase().trim();
-
   try {
+    const supabase = getAdminClient(locals.env);
+    const userEmail = user.email.toLowerCase().trim();
+
     // Resolve user's profile ID
     let profileId: string | null = null;
     const { data: profile } = await supabase
@@ -86,10 +89,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const supabase = getAdminClient(locals.env);
-  const userEmail = user.email.toLowerCase().trim();
-
   try {
+    const supabase = getAdminClient(locals.env);
+    const userEmail = user.email.toLowerCase().trim();
     const body = await request.json().catch(() => ({}));
     const { notificationId, markAllRead } = body;
 
@@ -160,10 +162,9 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const supabase = getAdminClient(locals.env);
-  const userEmail = user.email.toLowerCase().trim();
-
   try {
+    const supabase = getAdminClient(locals.env);
+    const userEmail = user.email.toLowerCase().trim();
     const url = new URL(request.url);
     const body = await request.json().catch(() => ({}));
     const notificationId = url.searchParams.get("id") || body.notificationId;

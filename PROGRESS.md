@@ -18,6 +18,19 @@ Done: P0/P1 security pass, deploy scaffolding, and dependency upgrade. No commit
 - **Verified:** `astro check` 0 errors / 0 warnings; `npm test` 93 passed, 1 live test skipped; `npm run build` success.
 - **Conflict to resolve:** `AGENTS.md` says Astro 5 and demo scope. The critical Astro advisory required Astro 7. Confirm the upgrade and update `AGENTS.md`, or revert.
 
+## Phase 1 — Review lifecycle and honest failures (2026-10-22)
+
+Done: lost reports can be approved or rejected, completed records are protected, and failures are no longer reported as success.
+
+- The admin review queue now includes **pending lost and found reports**; approve/confirm labels are type-aware. Approving a lost report publishes it; confirming a found item moves it into custody.
+- Added `reject_report` (5–500 character reason required). The reason is stored in `reject_reason`, notifications include it, and the decision is written to `admin_log`.
+- Rejections use a reason modal. `remove_post` refuses `claimed`/`resolved` items so completed records survive moderation.
+- Removed the fake-success branches in claim release/deny, intake confirm, and feed removal. Network and server errors now surface to staff.
+- Reporters can mark their own approved lost report resolved (`PATCH /api/items`); students can withdraw a pending claim from `/profile`.
+- Service-role clients fail closed (`actions`, notifications API, navbar). `ensureProfileRow` is insert-only so re-registration cannot reset `role`/`active`. Forgot-password audit rows no longer use an arbitrary profile as the actor.
+- Removed the demo feed fallback when the database is unavailable (`index.astro` returns an empty state instead).
+- Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success.
+
 ## Steps
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)

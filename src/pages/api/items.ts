@@ -259,6 +259,111 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
+export const PATCH: APIRoute = async ({ request, locals }) => {
+  const user = locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { itemId, action } = body;
+
+    if (action !== "resolve") {
+      return new Response(JSON.stringify({ ok: false, error: "Unknown item action." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!itemId || typeof itemId !== "string" || !UUID_RE.test(itemId)) {
+      return new Response(JSON.stringify({ ok: false, error: "A valid item ID is required." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = getAdminClient(locals.env);
+    const userEmail = user.email.toLowerCase().trim();
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", userEmail)
+      .maybeSingle();
+
+    const profileId = profile?.id ?? (UUID_RE.test(user.id) ? user.id : null);
+    if (!profileId) {
+      return new Response(JSON.stringify({ ok: false, error: "Your account profile is missing." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: item } = await supabase
+      .from("items")
+      .select("id, type, status, reporter_id")
+      .eq("id", itemId)
+      .maybeSingle();
+
+    if (!item) {
+      return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (item.reporter_id !== profileId) {
+      return new Response(JSON.stringify({ ok: false, error: "Only the reporter can resolve this report." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (item.type !== "lost") {
+      return new Response(JSON.stringify({ ok: false, error: "Only lost reports can be resolved." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (item.status !== "approved") {
+      return new Response(JSON.stringify({ ok: false, error: "Only an active lost report can be resolved." }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { error: resolveErr } = await supabase
+      .from("items")
+      .update({ status: "resolved" })
+      .eq("id", itemId)
+      .eq("status", "approved");
+
+    if (resolveErr) {
+      console.error("[api/items] Resolve error:", resolveErr.message);
+      return new Response(JSON.stringify({ ok: false, error: "Could not resolve the report." }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, status: "resolved" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("[api/items] PATCH exception:", err);
+    return new Response(JSON.stringify({ ok: false, error: "Could not update the report." }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};
+
 export const DELETE: APIRoute = async ({ request, url, locals }) => {
   const user = locals.user;
   if (!user) {

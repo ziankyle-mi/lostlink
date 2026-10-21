@@ -10,7 +10,7 @@ import ItemClaimModal from "~/components/ItemClaimModal.astro";
 import ReportModal from "~/components/ReportModal.astro";
 import AdminRemoveModal from "~/components/admin/AdminRemoveModal.astro";
 import { createClient } from "@supabase/supabase-js";
-import { ALL_ITEMS, type DashboardItem } from "~/data/mockItems";
+import type { DashboardItem } from "~/data/mockItems";
 import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 
 // The middleware redirects unauthenticated visitors to /login.
@@ -99,8 +99,9 @@ if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   }
 }
 
-const isDbConfigured = Boolean(env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
-const allFeedItems: DashboardItem[] = isDbConfigured ? liveItems : ALL_ITEMS;
+// Never fall back to demo data: an empty feed is the honest state when the
+// database is unavailable or has no approved items.
+const allFeedItems: DashboardItem[] = liveItems;
 const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
 const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 ---
@@ -925,8 +926,8 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
                 itemId: targetId,
               }),
             });
-            const data = await resp.json();
-            if (!resp.ok && !data.ok) {
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.ok) {
               showToast(data.error || "Failed to remove post.", "error");
               removeConfirmBtn.disabled = false;
               removeConfirmBtn.innerHTML = originalBtnHtml;
@@ -934,6 +935,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             }
           } catch (err) {
             console.warn("[admin] Remove post request note:", err);
+            showToast("Network error. The post was not removed.", "error");
+            removeConfirmBtn.disabled = false;
+            removeConfirmBtn.innerHTML = originalBtnHtml;
+            return;
           }
 
           // Remember removed item in sessionStorage so it persists during demo

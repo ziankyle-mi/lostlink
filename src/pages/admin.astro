@@ -145,6 +145,7 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
         .from("items")
         .select(`
           id,
+          type,
           name,
           category,
           location,
@@ -152,10 +153,10 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
           created_at,
           profiles ( full_name, email )
         `)
-        .eq("type", "found")
+        .in("type", ["found", "lost"])
         .eq("status", "pending")
         .order("created_at", { ascending: false })
-        .limit(10),
+        .limit(20),
       supabase
         .from("admin_log")
         .select(`
@@ -484,7 +485,13 @@ function parseAuditEvent(
   }
 
   // 7. Intake / Vault
-  if (action.includes("intake") || action.includes("custody") || action.includes("vault")) {
+  if (
+    action.includes("intake") ||
+    action.includes("custody") ||
+    action.includes("vault") ||
+    action.includes("lost_report") ||
+    action.includes("report_rejected")
+  ) {
     const item = itemName || "Campus item";
     return {
       title: "Item Received in Vault Custody",
@@ -917,6 +924,75 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     </div>
   </div>
 
+  <!-- Modal 1b: Reject Report Reason Modal -->
+  <div
+    id="reject-report-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="reject-report-title"
+  >
+    <div class="relative w-full max-w-lg rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
+        <div>
+          <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+            Report review
+          </span>
+          <h3 id="reject-report-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
+            Reject report
+          </h3>
+          <p class="mt-1 text-sm text-stone-500">The reporter will see this reason on their profile.</p>
+        </div>
+        <button
+          type="button"
+          id="reject-report-close-btn"
+          class="size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div class="mt-5 space-y-4">
+        <div class="rounded-2xl bg-stone-50 border border-stone-200/80 p-4">
+          <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Report</p>
+          <p id="reject-report-name" class="mt-1 font-bold text-forest-900">Item</p>
+        </div>
+        <div>
+          <label for="reject-report-reason" class="block text-xs font-bold text-forest-900">
+            Reason for rejection
+          </label>
+          <textarea
+            id="reject-report-reason"
+            rows="4"
+            minlength="5"
+            maxlength="500"
+            placeholder="Example: The photo does not show the item clearly. Please repost with a clearer photo."
+            class="mt-1.5 w-full rounded-xl border border-line bg-white p-3 text-xs sm:text-sm text-forest-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-forest-700/30"
+          ></textarea>
+          <p id="reject-report-error" class="hidden mt-1.5 text-xs font-semibold text-rose-700"></p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <button
+          type="button"
+          id="reject-report-cancel-btn"
+          class="rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="reject-report-confirm-btn"
+          class="rounded-full bg-rose-600 hover:bg-rose-700 px-6 py-2.5 text-xs font-black text-white transition-all shadow-xs cursor-pointer"
+        >
+          Reject report
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal 2: Full Audit Log Modal -->
   <!-- Modal 2: Full Audit Log Modal -->
   <div
@@ -1323,6 +1399,14 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       const intakeModal = document.getElementById("intake-guidelines-modal");
       const auditModal = document.getElementById("audit-log-modal");
       const unclaimedModal = document.getElementById("unclaimed-items-modal");
+      const rejectReportModal = document.getElementById("reject-report-modal");
+      const rejectReportName = document.getElementById("reject-report-name");
+      const rejectReportReason = document.getElementById("reject-report-reason");
+      const rejectReportError = document.getElementById("reject-report-error");
+      const rejectReportConfirm = document.getElementById("reject-report-confirm-btn");
+      const rejectReportCancel = document.getElementById("reject-report-cancel-btn");
+      const rejectReportClose = document.getElementById("reject-report-close-btn");
+      let pendingRejectItem = null;
 
       const openIntakeBtn = document.getElementById("open-intake-guidelines-btn");
       const openAuditBtn = document.getElementById("open-audit-log-btn");
@@ -1345,12 +1429,28 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       }
 
       function closeAllModals() {
-        [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
+        [modal, intakeModal, auditModal, unclaimedModal, rejectReportModal].forEach((m) => {
           if (m) {
             m.classList.add("hidden");
             m.classList.remove("flex");
           }
         });
+      }
+
+      function openRejectReportModal(itemId, itemName, button) {
+        pendingRejectItem = { id: itemId, name: itemName, button };
+        if (rejectReportName) rejectReportName.textContent = itemName || "Report";
+        if (rejectReportReason) rejectReportReason.value = "";
+        if (rejectReportError) {
+          rejectReportError.textContent = "";
+          rejectReportError.classList.add("hidden");
+        }
+        if (rejectReportModal) {
+          closeAllModals();
+          rejectReportModal.classList.remove("hidden");
+          rejectReportModal.classList.add("flex");
+          rejectReportReason?.focus();
+        }
       }
 
       // Feature 1: Open & Close Intake Guidelines Modal
@@ -1461,7 +1561,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       // Unclaimed Items Review: Extend and Mark for donation are real forms
       // posting to actions.custodyDecision, so nothing is faked in the browser.
       // Backdrop click dismissal & Escape key for all modals
-      [modal, intakeModal, auditModal, unclaimedModal].forEach((m) => {
+      [modal, intakeModal, auditModal, unclaimedModal, rejectReportModal].forEach((m) => {
         if (m) {
           m.addEventListener("click", (e) => {
             if (e.target === m) closeAllModals();
@@ -1543,7 +1643,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
               showToast(data.error || "Could not process claim verification.");
             }
           } catch (err) {
-            showToast("Item approved and logged as released to owner.");
+            showToast("Network error. The claim was not verified.");
           } finally {
             releaseBtn.disabled = false;
             releaseBtn.textContent = "Approve & Release Item";
@@ -1585,7 +1685,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
               showToast(data.error || "Could not deny claim.");
             }
           } catch (err) {
-            showToast("Claim flagged for secondary identity check.");
+            showToast("Network error. The claim was not denied.");
           } finally {
             rejectBtn.disabled = false;
             rejectBtn.textContent = "Flag / Request Details";
@@ -1597,13 +1697,15 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         });
       }
 
-      // Confirm intake buttons
+      // Approve / confirm intake. Lost reports publish; found items enter custody.
       document.querySelectorAll(".confirm-intake-btn").forEach((btn) => {
         btn.addEventListener("click", async () => {
           const name = btn.getAttribute("data-intake-name") || "Item";
           const itemId = btn.getAttribute("data-intake-id");
+          const itemType = btn.getAttribute("data-intake-type") || "found";
+          const idleLabel = itemType === "lost" ? "Approve report" : "Confirm received";
           btn.disabled = true;
-          btn.textContent = "Confirming...";
+          btn.textContent = "Saving...";
 
           try {
             const res = await fetch("/api/admin/actions", {
@@ -1612,65 +1714,94 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
               body: JSON.stringify({ action: "confirm_intake", itemId }),
             });
             const data = await res.json().catch(() => ({}));
-            if (data.ok) {
-              btn.textContent = "Received \u2713";
-              btn.classList.remove("bg-lime");
-              btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
-              showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
-            } else {
-              btn.textContent = "Received \u2713";
-              btn.classList.remove("bg-lime");
-              btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
-              showToast(data.error || `Confirmed receipt for "${name}".`);
+            if (!res.ok || !data.ok) {
+              btn.disabled = false;
+              btn.textContent = idleLabel;
+              showToast(data.error || "Could not approve the report.");
+              return;
             }
-          } catch (err) {
-            btn.textContent = "Received \u2713";
+            btn.textContent = itemType === "lost" ? "Approved \u2713" : "Received \u2713";
             btn.classList.remove("bg-lime");
             btn.classList.add("bg-stone-200", "text-stone-600", "cursor-default");
-            showToast(`Confirmed receipt for "${name}". Moved to custody inventory.`);
+            showToast(data.message || `Approved "${name}".`);
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = idleLabel;
+            showToast("Network error. The report was not approved.");
           }
         });
       });
 
-      // Remove intake post buttons (Admin only)
+      // Reject intake report buttons: open the reason modal, never fake success.
       document.querySelectorAll(".remove-intake-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+        btn.addEventListener("click", () => {
           const name = btn.getAttribute("data-intake-name") || "Item";
           const itemId = btn.getAttribute("data-intake-id");
-          if (!confirm(`Are you sure you want to remove the post for "${name}"?`)) {
+          if (!itemId) {
+            showToast("This report cannot be rejected.");
             return;
           }
-          btn.disabled = true;
-          btn.textContent = "Removing...";
+          openRejectReportModal(itemId, name, btn);
+        });
+      });
+
+      [rejectReportCancel, rejectReportClose].forEach((btn) => {
+        if (btn) btn.addEventListener("click", closeAllModals);
+      });
+
+      if (rejectReportConfirm) {
+        rejectReportConfirm.addEventListener("click", async () => {
+          if (!pendingRejectItem) return;
+          const reason = (rejectReportReason?.value || "").trim();
+          if (reason.length < 5) {
+            if (rejectReportError) {
+              rejectReportError.textContent = "Please provide a reason of at least 5 characters.";
+              rejectReportError.classList.remove("hidden");
+            }
+            return;
+          }
+
+          if (rejectReportError) rejectReportError.classList.add("hidden");
+          rejectReportConfirm.disabled = true;
+          const originalLabel = rejectReportConfirm.textContent;
+          rejectReportConfirm.textContent = "Rejecting...";
 
           try {
             const res = await fetch("/api/admin/actions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "remove_post", itemId }),
+              body: JSON.stringify({ action: "reject_report", itemId: pendingRejectItem.id, reason }),
             });
             const data = await res.json().catch(() => ({}));
-            if (data.ok) {
-              const row = btn.closest(".flex.items-center.justify-between");
-              if (row) {
-                row.style.transition = "all 0.3s ease-out";
-                row.style.opacity = "0";
-                row.style.transform = "scale(0.9)";
-                setTimeout(() => row.remove(), 300);
+            if (!res.ok || !data.ok) {
+              if (rejectReportError) {
+                rejectReportError.textContent = data.error || "Could not reject the report.";
+                rejectReportError.classList.remove("hidden");
               }
-              showToast(`Post "${name}" was removed.`);
-            } else {
-              btn.disabled = false;
-              btn.textContent = "Remove";
-              showToast(data.error || "Failed to remove post.");
+              return;
             }
+
+            const row = pendingRejectItem.button?.closest("[data-intake-row]");
+            if (row) {
+              row.style.transition = "all 0.3s ease-out";
+              row.style.opacity = "0";
+              row.style.transform = "scale(0.9)";
+              setTimeout(() => row.remove(), 300);
+            }
+            showToast(`Report "${pendingRejectItem.name}" rejected. The reporter can see the reason.`);
+            pendingRejectItem = null;
+            closeAllModals();
           } catch (err) {
-            btn.disabled = false;
-            btn.textContent = "Remove";
-            showToast("Failed to remove post.");
+            if (rejectReportError) {
+              rejectReportError.textContent = "Network error. The report was not rejected.";
+              rejectReportError.classList.remove("hidden");
+            }
+          } finally {
+            rejectReportConfirm.disabled = false;
+            rejectReportConfirm.textContent = originalLabel;
           }
         });
-      });
+      }
 
       // Quick search filter
       const searchInput = document.getElementById("overview-search-input");

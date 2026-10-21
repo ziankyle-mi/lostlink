@@ -201,7 +201,9 @@ export async function ensureProfileRow(
   studentId?: string,
   yearLevel?: string,
 ): Promise<boolean> {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  // Profiles are written with the service role only. Falling back to the anon
+  // key would silently fail under RLS or, worse, write a partial row.
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!env.PUBLIC_SUPABASE_URL || !key) return false;
 
   const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
@@ -218,7 +220,11 @@ export async function ensureProfileRow(
   if (studentId) row.student_id = studentId;
   if (yearLevel) row.year_level = yearLevel;
 
-  const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
+  // Insert-only. A returning user must never be able to reset their own
+  // role/active flags by registering again.
+  const { error } = await supabase
+    .from("profiles")
+    .upsert(row, { onConflict: "id", ignoreDuplicates: true });
 
   if (error) {
     // If the database does not have newly added columns yet, retry without them
@@ -229,7 +235,9 @@ export async function ensureProfileRow(
       delete row.program;
       delete row.student_id;
       delete row.year_level;
-      const { error: retryError } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
+      const { error: retryError } = await supabase
+        .from("profiles")
+        .upsert(row, { onConflict: "id", ignoreDuplicates: true });
       if (retryError) {
         console.warn("[register] profiles fallback upsert failed:", retryError.message);
         return false;
@@ -251,7 +259,12 @@ export { randomToken };
 export async function mustChangePassword(env: Env, accessToken: string): Promise<boolean> {
   const user = await fetchUser(env, accessToken);
   if (!user?.id) return false;
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) {
+    // Fail closed: without the service key we cannot prove the account is
+    // clear, so treat it as needing a reset rather than letting it through.
+    return true;
+  }
   const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, { auth: { persistSession: false } });
   const { data } = await supabase
     .from("profiles")

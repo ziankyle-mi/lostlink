@@ -13,6 +13,7 @@ interface WindowFrameProps {
   contentPanX?: number;
   windowScale?: number;
   objectFit?: "contain" | "cover" | "fill";
+  overlay?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -27,6 +28,7 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
   contentPanX = 0,
   windowScale = 1,
   objectFit = "cover",
+  overlay,
   children,
 }) => {
   return (
@@ -170,6 +172,9 @@ export const WindowFrame: React.FC<WindowFrameProps> = ({
 
           {children}
         </div>
+
+        {/* Viewport fixed overlay for human cursor and interactive modals */}
+        {overlay}
       </div>
     </div>
   );
