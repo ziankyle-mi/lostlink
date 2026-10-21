@@ -259,11 +259,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const { error: verifyErr } = await supabase
+      const { data: verifiedClaims, error: verifyErr } = await supabase
         .from("claims")
         .update({ status: "verified" })
         .eq("id", claimId)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
 
       if (verifyErr) {
         console.error("[admin/actions] Verify error:", verifyErr.message);
@@ -273,11 +274,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await supabase
+      if (!verifiedClaims || verifiedClaims.length === 0) {
+        return new Response(JSON.stringify({ ok: false, error: "This claim was already decided." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Guard the item transition and compensate the claim if another admin
+      // verified a competing claim first. This keeps the two rows consistent
+      // even without a database transaction.
+      const { data: claimedItems, error: itemClaimErr } = await supabase
         .from("items")
         .update({ status: "claimed" })
         .eq("id", claim.item_id)
-        .eq("status", "approved");
+        .eq("status", "approved")
+        .select("id");
+
+      if (itemClaimErr || !claimedItems || claimedItems.length === 0) {
+        console.error("[admin/actions] Item claim error:", itemClaimErr?.message ?? "no matching approved item");
+        await supabase
+          .from("claims")
+          .update({ status: "pending" })
+          .eq("id", claimId)
+          .eq("status", "verified");
+        return new Response(
+          JSON.stringify({ ok: false, error: "This item is no longer available to claim." }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        );
+      }
 
       // Auto-deny other pending claims on this item
       const { data: competing } = await supabase
@@ -357,7 +382,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await supabase.from("claims").update({ status: "denied" }).eq("id", claimId).eq("status", "pending");
+      const { data: deniedClaims, error: denyErr } = await supabase
+        .from("claims")
+        .update({ status: "denied" })
+        .eq("id", claimId)
+        .eq("status", "pending")
+        .select("id");
+
+      if (denyErr) {
+        console.error("[admin/actions] Deny error:", denyErr.message);
+        return new Response(JSON.stringify({ ok: false, error: "Could not deny the claim." }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (!deniedClaims || deniedClaims.length === 0) {
+        return new Response(JSON.stringify({ ok: false, error: "This claim was already decided." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
       await supabase.from("notifications").insert({
         user_id: claim.claimant_id,
@@ -491,7 +536,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (isUuid) {
         const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
         if (updateErr) {
-          return new Response(JSON.stringify({ ok: false, error: updateErr.message }), {
+          console.error("[admin/actions] Role update error:", updateErr.message);
+          return new Response(JSON.stringify({ ok: false, error: "Could not update the user role." }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
           });
@@ -499,7 +545,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } else if (targetEmail) {
         const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("email", targetEmail);
         if (updateErr) {
-          console.warn("[admin/actions] Profile role update by email note:", updateErr.message);
+          console.error("[admin/actions] Profile role update by email error:", updateErr.message);
+          return new Response(JSON.stringify({ ok: false, error: "Could not update the user role." }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
       }
 
@@ -553,7 +603,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (isUuid) {
         const { error: statusErr } = await supabase.from("profiles").update({ active }).eq("id", userId);
         if (statusErr) {
-          return new Response(JSON.stringify({ ok: false, error: statusErr.message }), {
+          console.error("[admin/actions] Status update error:", statusErr.message);
+          return new Response(JSON.stringify({ ok: false, error: "Could not update the account status." }), {
             status: 500,
             headers: { "Content-Type": "application/json" },
           });

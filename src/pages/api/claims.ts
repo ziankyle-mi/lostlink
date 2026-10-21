@@ -158,23 +158,41 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const newStatus = action === "verify" ? "verified" : "denied";
 
-      const { error: claimErr } = await supabase
+      const { data: decidedClaims, error: claimErr } = await supabase
         .from("claims")
         .update({ status: newStatus })
         .eq("id", claimId)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
 
       if (claimErr) {
         console.error("[api/claims] Decision error:", claimErr.message);
         return json({ ok: false, error: "Could not update the claim." }, 500);
       }
 
+      if (!decidedClaims || decidedClaims.length === 0) {
+        return json({ ok: false, error: "This claim was already decided." }, 409);
+      }
+
       if (action === "verify") {
-        await supabase
+        // If another admin verified a competing claim first, put this claim
+        // back so no one is told to collect an item that is already gone.
+        const { data: claimedItems, error: itemClaimErr } = await supabase
           .from("items")
           .update({ status: "claimed" })
           .eq("id", targetClaim.item_id)
-          .eq("status", "approved");
+          .eq("status", "approved")
+          .select("id");
+
+        if (itemClaimErr || !claimedItems || claimedItems.length === 0) {
+          console.error("[api/claims] Item claim error:", itemClaimErr?.message ?? "no matching approved item");
+          await supabase
+            .from("claims")
+            .update({ status: "pending" })
+            .eq("id", claimId)
+            .eq("status", "verified");
+          return json({ ok: false, error: "This item is no longer available to claim." }, 409);
+        }
 
         const { data: competingClaims } = await supabase
           .from("claims")

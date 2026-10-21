@@ -38,6 +38,7 @@ const currentTab = Astro.url.searchParams.get("tab") || "overview";
 
 // Date formatting matching "SATURDAY, OCTOBER 10" from Figma
 const today = new Date();
+const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 const dateEyebrow = today.toLocaleDateString("en-US", {
   weekday: "long",
   month: "long",
@@ -126,9 +127,10 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
         .select("id", { count: "exact", head: true })
         .eq("status", "pending"),
       supabase
-        .from("items")
+        .from("admin_log")
         .select("id", { count: "exact", head: true })
-        .eq("status", "claimed"),
+        .eq("action", "claim_verified")
+        .gte("created_at", monthStart.toISOString()),
       supabase
         .from("claims")
         .select(`

@@ -41,6 +41,16 @@ Done: bot checks and per-account throttles now protect registration, login, repo
 - Base64 photo payloads are rejected by encoded length before decoding; upload API returns generic errors instead of raw Supabase messages.
 - Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success.
 
+## Phase 3 — Data integrity and accurate records (2026-10-22)
+
+Done: claim decisions cannot leave an item and claim in contradictory states, and admin numbers match reality.
+
+- Claim verification now confirms the claim row and the item row actually changed. If another admin wins the race, the losing claim is reverted to `pending` instead of telling a student to collect an item that is gone. Denials also verify the state change.
+- "Returned this month" now counts `claim_verified` audit entries since the first of the month instead of every claimed item ever.
+- Role and account-status updates no longer report success when the database write failed; update-by-email failures are surfaced instead of swallowed.
+- Removed raw database error text from report, upload, notification, and admin responses. Details stay in server logs.
+- Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success.
+
 ## Steps
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)

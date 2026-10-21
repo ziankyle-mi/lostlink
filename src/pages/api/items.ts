@@ -284,7 +284,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unexpected error saving report";
     console.error("[api/items] Exception:", msg);
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    return new Response(JSON.stringify({ ok: false, error: "Could not save the report. Try again." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -507,7 +507,8 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error deleting item";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[api/items] Delete exception:", msg);
+    return new Response(JSON.stringify({ ok: false, error: "Could not remove the item. Try again." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

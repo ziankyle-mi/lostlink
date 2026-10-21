@@ -55,7 +55,8 @@ export const GET: APIRoute = async ({ locals }) => {
       .limit(10);
 
     if (error) {
-      return new Response(JSON.stringify({ ok: false, error: error.message }), {
+      console.error("[api/notifications] Query error:", error.message);
+      return new Response(JSON.stringify({ ok: false, error: "Could not load notifications." }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -73,7 +74,8 @@ export const GET: APIRoute = async ({ locals }) => {
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error querying notifications";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[api/notifications] GET exception:", msg);
+    return new Response(JSON.stringify({ ok: false, error: "Could not load notifications." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -146,7 +148,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error updating notification";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[api/notifications] POST exception:", msg);
+    return new Response(JSON.stringify({ ok: false, error: "Could not update notifications." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -202,7 +205,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       .eq("user_id", profileId);
 
     if (error) {
-      return new Response(JSON.stringify({ ok: false, error: error.message }), {
+      console.error("[api/notifications] Delete error:", error.message);
+      return new Response(JSON.stringify({ ok: false, error: "Could not delete the notification." }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -214,7 +218,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error deleting notification";
-    return new Response(JSON.stringify({ ok: false, error: msg }), {
+    console.error("[api/notifications] DELETE exception:", msg);
+    return new Response(JSON.stringify({ ok: false, error: "Could not delete the notification." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
