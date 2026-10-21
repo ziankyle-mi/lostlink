@@ -2,6 +2,16 @@
 
 The agent updates this file after every step. Keep it short.
 
+## Security & Authorization hardening (2026-10-22)
+
+Done: Fixed Security & Authorization flaws in Section 1.
+- **Client separation & RLS:** Added `getUserClient` (user JWT with Postgres RLS enforced) and `getServiceClient` (explicit justification required) in `src/lib/supabase.ts`. Replaced raw service-role queries in `GET /api/items`, `GET /api/claims`, and `GET /api/notifications` with user-scoped clients.
+- **Logout token revocation:** Updated `actions.logout` and `POST /api/auth/logout` to revoke active sessions and refresh tokens on Supabase GoTrue via `revokeUserSession`, clearing cookies and invalidating tokens on the server.
+- **EXIF & GPS sanitization:** Added `stripImageMetadata` for JPEG (APP1/APP13/COM), PNG (`eXIf`/text chunks), and WebP (`EXIF`/`XMP`) in `src/lib/storage.ts`. Uploaded photos are sanitized before saving to private storage.
+- **Turnstile enforcement:** Hardened `verifyTurnstile` in `src/lib/turnstile.ts` to fail closed in production if site key is active but secret key is missing.
+- **Verified:** `npm test` 95 passed (0 failed); `astro check` 0 errors / 0 warnings; `npm run build` success.
+
+
 ## Production-readiness hardening (2026-10-21)
 
 Done: P0/P1 security pass, deploy scaffolding, and dependency upgrade. No commit or push.

@@ -1,17 +1,8 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
-import type { Env } from "~/lib/env";
-import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error("Supabase service role key is not configured.");
-  }
-  return createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
-}
+import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
+import { getServiceClient, getUserClient } from "~/lib/supabase";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,7 +14,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 async function resolveProfileId(
-  supabase: ReturnType<typeof getAdminClient>,
+  supabase: SupabaseClient,
   userId: string,
   email: string,
 ): Promise<string | null> {
@@ -36,13 +27,18 @@ async function resolveProfileId(
   return UUID_RE.test(userId) ? userId : null;
 }
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ locals, cookies }) => {
   const user = locals.user;
   if (!user) return json({ ok: false, error: "Authentication required." }, 401);
 
   try {
-    const supabase = getAdminClient(locals.env);
     const isAdmin = user.role === "admin";
+    const accessToken = cookies?.get("ll_access_token")?.value;
+    // Non-admins query via user client to enforce Postgres RLS (claims_read policy).
+    const supabase = (!isAdmin && accessToken)
+      ? getUserClient(locals.env, accessToken)
+      : getServiceClient(locals.env, isAdmin ? "Admin view claims" : "Fallback claims query");
+
 
     let query = supabase
       .from("claims")
@@ -83,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
   if (!user) return json({ ok: false, error: "Authentication required." }, 401);
 
-  const supabase = getAdminClient(locals.env);
+  const supabase = getServiceClient(locals.env, "Claim mutations (withdraw, verify, submit)");
   const userEmail = user.email.toLowerCase().trim();
   const isAdmin = user.role === "admin";
 
@@ -328,7 +324,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (adminProfiles && adminProfiles.length > 0) {
       await supabase.from("notifications").insert(
-        adminProfiles.map((a) => ({
+        adminProfiles.map((a: { id: string }) => ({
           user_id: a.id,
           message: `New claim submitted for "${item.name}".`,
           link: "/admin?tab=claims",

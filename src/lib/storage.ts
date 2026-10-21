@@ -61,6 +61,149 @@ export function hasValidImageSignature(data: Uint8Array): boolean {
   return false;
 }
 
+/** Strips APP1 (Exif/GPS/XMP), APP13 (IPTC), and COM markers from JPEG image data. */
+export function stripJpegMetadata(data: Uint8Array): Uint8Array {
+  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) return data;
+  const chunks: Uint8Array[] = [new Uint8Array([0xff, 0xd8])];
+  let offset = 2;
+  while (offset < data.length) {
+    if (data[offset] !== 0xff) break;
+    while (offset < data.length && data[offset] === 0xff) offset++;
+    if (offset >= data.length) break;
+    const marker = data[offset++];
+    if (marker === 0xd9) {
+      chunks.push(new Uint8Array([0xff, 0xd9]));
+      break;
+    }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      chunks.push(new Uint8Array([0xff, marker]));
+      continue;
+    }
+    if (offset + 2 > data.length) break;
+    const length = (data[offset] << 8) | data[offset + 1];
+    if (offset + length > data.length || length < 2) break;
+
+    // Filter out APP1 (0xE1 - Exif/GPS), APP13 (0xED - IPTC), and COM (0xFE)
+    const isMetadata = marker === 0xe1 || marker === 0xed || marker === 0xfe;
+    if (!isMetadata) {
+      chunks.push(data.subarray(offset - 2, offset + length));
+    }
+    offset += length;
+    if (marker === 0xda) {
+      chunks.push(data.subarray(offset));
+      break;
+    }
+  }
+
+  const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+  if (totalLength <= 4) return data;
+  const result = new Uint8Array(totalLength);
+  let pos = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return result;
+}
+
+/** Strips eXIf, tEXt, zTXt, and iTXt metadata chunks from PNG images. */
+export function stripPngMetadata(data: Uint8Array): Uint8Array {
+  if (data.length < 8) return data;
+  if (
+    data[0] !== 0x89 || data[1] !== 0x50 || data[2] !== 0x4e || data[3] !== 0x47 ||
+    data[4] !== 0x0d || data[5] !== 0x0a || data[6] !== 0x1a || data[7] !== 0x0a
+  ) {
+    return data;
+  }
+  const chunks: Uint8Array[] = [data.subarray(0, 8)];
+  let offset = 8;
+  const decoder = new TextDecoder("ascii");
+  while (offset + 12 <= data.length) {
+    const length =
+      (data[offset] << 24) |
+      (data[offset + 1] << 16) |
+      (data[offset + 2] << 8) |
+      data[offset + 3];
+    if (length < 0 || offset + 12 + length > data.length) break;
+    const type = decoder.decode(data.subarray(offset + 4, offset + 8));
+    const isMetadata = type === "eXIf" || type === "tEXt" || type === "zTXt" || type === "iTXt";
+    if (!isMetadata) {
+      chunks.push(data.subarray(offset, offset + 12 + length));
+    }
+    offset += 12 + length;
+    if (type === "IEND") break;
+  }
+
+  const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+  if (totalLength <= 8) return data;
+  const result = new Uint8Array(totalLength);
+  let pos = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return result;
+}
+
+/** Strips EXIF and XMP metadata chunks from WebP RIFF images. */
+export function stripWebpMetadata(data: Uint8Array): Uint8Array {
+  if (data.length < 12) return data;
+  if (
+    data[0] !== 0x52 || data[1] !== 0x49 || data[2] !== 0x46 || data[3] !== 0x46 ||
+    data[8] !== 0x57 || data[9] !== 0x45 || data[10] !== 0x42 || data[11] !== 0x50
+  ) {
+    return data;
+  }
+  const chunks: Uint8Array[] = [];
+  let offset = 12;
+  const decoder = new TextDecoder("ascii");
+  while (offset + 8 <= data.length) {
+    const fourCC = decoder.decode(data.subarray(offset, offset + 4));
+    const length =
+      data[offset + 4] |
+      (data[offset + 5] << 8) |
+      (data[offset + 6] << 16) |
+      (data[offset + 7] << 24);
+    const paddedLength = length + (length % 2);
+    if (offset + 8 + paddedLength > data.length) break;
+    const isMetadata = fourCC === "EXIF" || fourCC === "XMP ";
+    if (!isMetadata) {
+      chunks.push(data.subarray(offset, offset + 8 + paddedLength));
+    }
+    offset += 8 + paddedLength;
+  }
+
+  const chunksLength = chunks.reduce((acc, c) => acc + c.length, 0);
+  if (chunksLength === 0) return data;
+  const newFileSize = 4 + chunksLength;
+  const header = new Uint8Array(12);
+  header.set(data.subarray(0, 4), 0);
+  header[4] = newFileSize & 0xff;
+  header[5] = (newFileSize >> 8) & 0xff;
+  header[6] = (newFileSize >> 16) & 0xff;
+  header[7] = (newFileSize >> 24) & 0xff;
+  header.set(data.subarray(8, 12), 8);
+
+  const result = new Uint8Array(12 + chunksLength);
+  result.set(header, 0);
+  let pos = 12;
+  for (const chunk of chunks) {
+    result.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return result;
+}
+
+/** Strips EXIF, GPS, camera metadata, and comments before storing photos. */
+export function stripImageMetadata(data: Uint8Array, mimeType: string): Uint8Array {
+  const norm = mimeType.toLowerCase();
+  if (norm.includes("jpeg") || norm.includes("jpg")) return stripJpegMetadata(data);
+  if (norm.includes("png")) return stripPngMetadata(data);
+  if (norm.includes("webp")) return stripWebpMetadata(data);
+  return data;
+}
+
+
 export function getStorageClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) {
@@ -169,12 +312,16 @@ export async function uploadPhotoToStorage(
     const ext = getExtension(mimeType);
     const filename = `${crypto.randomUUID()}.${ext}`;
 
+    const rawBytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+    const sanitizedBytes = stripImageMetadata(rawBytes, mimeType);
+
     const { data: uploadResult, error: uploadErr } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(filename, data, {
+      .upload(filename, sanitizedBytes, {
         contentType: mimeType,
         upsert: false,
       });
+
 
     if (uploadErr) {
       console.error("[storage] Upload error:", uploadErr.message);

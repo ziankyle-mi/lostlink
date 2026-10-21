@@ -1,18 +1,8 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
-import type { Env } from "~/lib/env";
+import { getServiceClient, getUserClient } from "~/lib/supabase";
 
-function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!env.PUBLIC_SUPABASE_URL || !key) {
-    throw new Error("Server database access is not configured.");
-  }
-  return createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
-}
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -22,7 +12,11 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 
   try {
-    const supabase = getAdminClient(locals.env);
+    const accessToken = cookies?.get("ll_access_token")?.value;
+    // Scoped client with user's access token enforces notifications_read policy
+    const supabase = accessToken
+      ? getUserClient(locals.env, accessToken)
+      : getServiceClient(locals.env, "Fallback notifications query");
     const userEmail = user.email.toLowerCase().trim();
 
     // Resolve user's profile ID
@@ -92,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const supabase = getAdminClient(locals.env);
+    const supabase = getServiceClient(locals.env, "Mark notification as read");
     const userEmail = user.email.toLowerCase().trim();
     const body = await request.json().catch(() => ({}));
     const { notificationId, markAllRead } = body;
@@ -166,7 +160,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const supabase = getAdminClient(locals.env);
+    const supabase = getServiceClient(locals.env, "Delete notification");
     const userEmail = user.email.toLowerCase().trim();
     const url = new URL(request.url);
     const body = await request.json().catch(() => ({}));

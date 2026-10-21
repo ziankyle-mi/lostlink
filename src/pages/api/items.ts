@@ -1,19 +1,9 @@
 import type { APIRoute } from "astro";
-import { createClient } from "@supabase/supabase-js";
-import type { Env } from "~/lib/env";
 import { photoPathsFromColumn } from "~/lib/storage";
+
 import { verifyTurnstile } from "~/lib/turnstile";
 import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
-
-function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error("Supabase service role key is not configured.");
-  }
-  return createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
-}
+import { getServiceClient, getUserClient } from "~/lib/supabase";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PUBLIC_STATUSES = new Set(["approved", "claimed", "resolved"]);
@@ -24,7 +14,7 @@ function referenceCode(): string {
   return `LL-${hex.toUpperCase()}`;
 }
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ url, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -33,10 +23,16 @@ export const GET: APIRoute = async ({ url, locals }) => {
     });
   }
 
-  const supabase = getAdminClient(locals.env);
+  const isAdmin = user.role === "admin";
+  const accessToken = cookies?.get("ll_access_token")?.value;
+  // Non-admins query via user client with their access token to enforce Postgres RLS (items_read policy).
+  // Admins or dev fallbacks query via service client.
+  const supabase = (!isAdmin && accessToken)
+    ? getUserClient(locals.env, accessToken)
+    : getServiceClient(locals.env, isAdmin ? "Admin items inventory view" : "Fallback items query");
   const typeFilter = url.searchParams.get("type"); // "lost" | "found" | null
   const statusFilter = url.searchParams.get("status");
-  const isAdmin = user.role === "admin";
+
 
   try {
     // Never let the browser choose arbitrary columns or arbitrary statuses.
@@ -203,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const supabase = getAdminClient(locals.env);
+    const supabase = getServiceClient(locals.env, "Report item creation and reference code assignment");
 
     // Resolve the reporter profile. Never fall back to another person's row.
     let reporterId: string | null = null;
@@ -318,7 +314,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const supabase = getAdminClient(locals.env);
+    const supabase = getServiceClient(locals.env, "Item report resolution by reporter");
     const userEmail = user.email.toLowerCase().trim();
 
     const { data: profile } = await supabase
@@ -431,7 +427,7 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
       });
     }
 
-    const supabase = getAdminClient(locals.env);
+    const supabase = getServiceClient(locals.env, "Admin item deletion and audit recording");
 
     if (!UUID_RE.test(itemId)) {
       return new Response(JSON.stringify({ ok: false, error: "Item ID is invalid." }), {

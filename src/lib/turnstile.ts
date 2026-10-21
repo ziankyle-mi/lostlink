@@ -19,12 +19,23 @@ export async function verifyTurnstile(
   remoteIp?: string,
 ): Promise<TurnstileResult> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
+  const siteKey = env.TURNSTILE_SITE_KEY?.trim();
   if (!secret) {
+    if (!import.meta.env.DEV && siteKey) {
+      console.error(
+        "[turnstile] CRITICAL: TURNSTILE_SITE_KEY is configured in production but TURNSTILE_SECRET_KEY is missing. Failing closed.",
+      );
+      return {
+        ok: false,
+        error: "Bot verification is misconfigured on the server. Please contact the Security Office.",
+      };
+    }
     console.warn(
       "[turnstile] TURNSTILE_SECRET_KEY is not set; bot verification is disabled.",
     );
     return { ok: true, skipped: true };
   }
+
 
   if (!token || typeof token !== "string" || token.length < 10) {
     return { ok: false, error: "Please complete the bot check and try again." };

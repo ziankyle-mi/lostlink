@@ -2,6 +2,7 @@ import { ActionError, defineAction } from "astro:actions";
 import { createClient } from "@supabase/supabase-js";
 import { CUSTODY_EXTENSION_DAYS, extensionDeadline } from "~/lib/custody";
 import {
+  ACCESS_COOKIE,
   DEV_SESSION_COOKIE,
   isAllowedEmail,
   safeNextPath,
@@ -21,6 +22,7 @@ import {
   ensureProfileRow,
   fetchUser,
   mustChangePassword,
+  revokeUserSession,
   signInWithPassword,
   signUpWithPassword,
   updateUserPassword,
@@ -28,6 +30,7 @@ import {
 import {
   clearSessionCookies,
   devBypassEnabled,
+
   policyFromEnv,
   sessionCookieOptions,
   setSessionCookies,
@@ -412,10 +415,15 @@ export const server = {
     accept: "form",
     input: emptySchema,
     handler: async (_input, context) => {
+      const accessToken = context.cookies.get(ACCESS_COOKIE)?.value;
+      if (accessToken && context.locals.env) {
+        await revokeUserSession(context.locals.env, accessToken);
+      }
       clearSessionCookies(context.cookies);
       return { redirect: "/login" };
     },
   }),
+
 
   /**
    * Disciplinary Office decision on an item that has been unclaimed past the

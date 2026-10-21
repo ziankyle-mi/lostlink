@@ -253,6 +253,66 @@ export async function ensureProfileRow(
 export { randomToken };
 
 /**
+ * Creates a Supabase client scoped to the authenticated user's JWT.
+ * Queries executed with this client enforce PostgreSQL Row Level Security (RLS)
+ * under the caller's auth.uid().
+ */
+export function getUserClient(env: Env, accessToken?: string) {
+  const anonKey = env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !anonKey) {
+    throw new Error("Supabase public credentials are not configured.");
+  }
+  const globalHeaders: Record<string, string> = {};
+  if (accessToken) {
+    globalHeaders.Authorization = `Bearer ${accessToken}`;
+  }
+  return createClient(env.PUBLIC_SUPABASE_URL, anonKey, {
+    auth: { persistSession: false },
+    global: { headers: globalHeaders },
+  });
+}
+
+/**
+ * Creates an unrestricted Supabase client using the service-role key that bypasses RLS.
+ * Restricted to administrative endpoints and system operations; requires an explicit justification string.
+ */
+export function getServiceClient(env: Env, justification: string) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) {
+    throw new Error(`Supabase service role key is not configured (required for: ${justification}).`);
+  }
+  return createClient(env.PUBLIC_SUPABASE_URL, key, {
+    auth: { persistSession: false },
+  });
+}
+
+/**
+ * Invalidates the user's active session and refresh token on Supabase GoTrue.
+ */
+export async function revokeUserSession(
+  env: Env,
+  accessToken: string,
+): Promise<boolean> {
+  if (!accessToken || !env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) {
+    return false;
+  }
+  try {
+    const response = await fetch(`${base(env)}/auth/v1/logout`, {
+      method: "POST",
+      headers: {
+        apikey: env.PUBLIC_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    return response.ok;
+  } catch (err) {
+    console.warn("[auth] Session revocation notice:", err);
+    return false;
+  }
+}
+
+/**
  * True when the Security Office flagged this account with a temporary
  * password. The student must set a new one before using the app.
  */
@@ -280,4 +340,4 @@ async function safeJson(response: Response): Promise<AuthErrorBody | null> {
   } catch {
     return null;
   }
-}
+}
