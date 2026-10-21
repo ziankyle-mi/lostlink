@@ -6,6 +6,7 @@ import BrandMark from "~/components/BrandMark.astro";
 // Location presets come from the single shared campus location list, so the
 // report form always matches the /help campus map exactly.
 const presets = CAMPUS_LOCATIONS;
+const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
 ---
 
 <div
@@ -297,6 +298,14 @@ const presets = CAMPUS_LOCATIONS;
         <p class="text-xs text-stone-500 font-medium hidden sm:block">
           All reports are verified by the Security Office
         </p>
+
+        {
+          turnstileSiteKey && (
+            <div class="flex w-full justify-center pt-1">
+              <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" />
+            </div>
+          )
+        }
 
         <div class="flex items-center justify-end gap-2.5 w-full sm:w-auto">
           <button

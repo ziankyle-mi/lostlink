@@ -26,13 +26,13 @@ export const FeatureFeedScene: React.FC = () => {
   });
 
   // Smooth camera zoom directly into the live FilterBar and Cards (BIGGER display)
-  const scale = interpolate(frame, [0, 40, 160, 265], [1.15, 1.25, 1.25, 1.27], {
+  const scale = interpolate(frame, [0, 40, 160, 265], [1.18, 1.25, 1.25, 1.27], {
     extrapolateRight: "clamp",
   });
   const contentPanY = interpolate(
     frame,
     [0, 35, 140, 265],
-    [-200, -560, -570, -580],
+    [-400, -825, -835, -845],
     { extrapolateRight: "clamp" },
   );
 
@@ -43,11 +43,11 @@ export const FeatureFeedScene: React.FC = () => {
   });
 
   // --- 100% HUMAN MOUSE INTERACTION TRAJECTORY (Viewport coordinates) ---
-  // - Category Filter Pill: x: 570, y: 360
-  // - Item 1 "Claim this item" button: x: 280, y: 645
+  // - Category Filter Pill in screenshot: x: 580, y: 205
+  // - Item 1 "Claim this item" button: x: 320, y: 445
 
-  let cursorX = 1400;
-  let cursorY = 160;
+  let cursorX = 1350;
+  let cursorY = 140;
   let cursorType: "default" | "pointer" | "text" = "default";
   let cursorOpacity = 0;
   let clickFrame: number | undefined = undefined;
@@ -56,26 +56,26 @@ export const FeatureFeedScene: React.FC = () => {
     cursorOpacity = interpolate(frame, [15, 25], [0, 1], { extrapolateRight: "clamp" });
     const t = interpolate(frame, [22, 78], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    cursorX = 1400 + (570 - 1400) * ease;
-    cursorY = 160 + (360 - 160) * ease;
-    if (frame >= 70) cursorType = "pointer";
+    cursorX = 1350 + (580 - 1350) * ease;
+    cursorY = 140 + (205 - 140) * ease;
+    if (frame >= 68) cursorType = "pointer";
   } else if (frame >= 86 && frame < 115) {
     cursorOpacity = 1;
-    cursorX = 570;
-    cursorY = 360;
+    cursorX = 580;
+    cursorY = 205;
     cursorType = "pointer";
     clickFrame = 86;
   } else if (frame >= 115 && frame < 185) {
     cursorOpacity = 1;
     const t = interpolate(frame, [115, 175], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    cursorX = 570 + (280 - 570) * ease;
-    cursorY = 360 + (645 - 360) * ease;
+    cursorX = 580 + (320 - 580) * ease;
+    cursorY = 205 + (445 - 205) * ease;
     if (frame >= 165) cursorType = "pointer";
   } else if (frame >= 185) {
     cursorOpacity = interpolate(frame, [240, 255], [1, 0], { extrapolateRight: "clamp" });
-    cursorX = 280;
-    cursorY = 645;
+    cursorX = 320;
+    cursorY = 445;
     cursorType = "pointer";
     clickFrame = 185;
   }
@@ -177,17 +177,17 @@ export const FeatureFeedScene: React.FC = () => {
                 <div
                   style={{
                     position: "absolute",
-                    top: 338,
-                    left: 500,
+                    top: 188,
+                    left: 520,
                     backgroundColor: "#164f38",
                     color: "#ffffff",
                     border: "2px solid #d8ef8c",
                     borderRadius: 24,
-                    padding: "7px 18px",
+                    padding: "6px 16px",
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 700,
                     fontFamily: TRAILER_CONFIG.fonts.sans,
                     boxShadow: "0 8px 25px rgba(22, 79, 56, 0.4)",
@@ -219,7 +219,7 @@ export const FeatureFeedScene: React.FC = () => {
               <div
                 style={{
                   position: "absolute",
-                  top: 415,
+                  top: 265,
                   left: 120,
                   right: 120,
                   display: "grid",
@@ -484,7 +484,7 @@ export const FeatureFeedScene: React.FC = () => {
                 <div
                   style={{
                     position: "absolute",
-                    top: 480,
+                    top: 330,
                     left: 140,
                     width: 440,
                     backgroundColor: "#164f38",

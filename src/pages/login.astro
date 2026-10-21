@@ -7,6 +7,7 @@ import { safeNextPath } from "~/lib/auth";
 import { devBypassEnabled } from "~/lib/session";
 
 const env = Astro.locals.env;
+const turnstileSiteKey = env.TURNSTILE_SITE_KEY;
 const nextPath = safeNextPath(Astro.url.searchParams.get("next"));
 
 // The register and reset actions redirect here with ?registered=1 or ?updated=1.
@@ -114,6 +115,14 @@ const devOpen = devBypassEnabled(env);
         Forgot password?
       </a>
     </div>
+
+    {
+      turnstileSiteKey && (
+        <div class="mt-6 flex justify-center">
+          <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" />
+        </div>
+      )
+    }
 
     <div class="mt-8">
       <SubmitButton label="Sign in" busy="Signing in..." arrow />

@@ -3,6 +3,9 @@ import type { Env } from "./env";
 
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+// Base64 expands bytes by ~4/3. Reject oversized data URLs before decoding so
+// a malicious payload cannot allocate a huge buffer first.
+export const MAX_DATA_URL_LENGTH = Math.ceil((MAX_FILE_SIZE_BYTES * 4) / 3) + 64;
 export const STORAGE_BUCKET = "items-photos";
 
 function getExtension(mimeType: string): string {
@@ -213,6 +216,11 @@ export function parseBase64DataUrl(dataUrl: string): { data: Uint8Array; mimeTyp
 
   const mimeType = match[1];
   const base64Data = match[2];
+
+  // Reject by encoded length before allocating the decoded buffer.
+  const padding = base64Data.endsWith("==") ? 2 : base64Data.endsWith("=") ? 1 : 0;
+  const decodedBytes = Math.floor((base64Data.length * 3) / 4) - padding;
+  if (decodedBytes > MAX_FILE_SIZE_BYTES) return null;
 
   try {
     const binaryString = atob(base64Data);

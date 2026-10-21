@@ -90,7 +90,7 @@ export const FeatureReportScene: React.FC = () => {
     const t = interpolate(frame, [172, 202], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     cursorX = 1040 + (920 - 1040) * ease;
-    cursorY = 485 + (660 - 485) * ease;
+    cursorY = 485 + (705 - 485) * ease;
     if (frame >= 195) cursorType = "pointer";
     if (frame >= 202) clickFrame = 202;
   } else if (frame >= 210) {
@@ -98,7 +98,7 @@ export const FeatureReportScene: React.FC = () => {
     const t = interpolate(frame, [210, 228], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     cursorX = 920;
-    cursorY = 660 + (770 - 660) * ease;
+    cursorY = 705 + (820 - 705) * ease;
     if (frame >= 222) cursorType = "pointer";
     if (frame >= 228) clickFrame = 228;
   }
@@ -244,11 +244,11 @@ export const FeatureReportScene: React.FC = () => {
             <div
               style={{
                 position: "absolute",
-                top: 440,
-                left: 665,
-                width: 245,
-                height: 44,
-                backgroundColor: "#f7faf5",
+                top: 472,
+                left: 660,
+                width: 256,
+                height: 54,
+                backgroundColor: "#ffffff",
                 border: "2px solid #164f38",
                 borderRadius: 10,
                 display: "flex",
@@ -273,11 +273,11 @@ export const FeatureReportScene: React.FC = () => {
             <div
               style={{
                 position: "absolute",
-                top: 440,
-                left: 930,
-                width: 245,
-                height: 44,
-                backgroundColor: "#f7faf5",
+                top: 472,
+                left: 924,
+                width: 256,
+                height: 54,
+                backgroundColor: "#ffffff",
                 border: "2px solid #164f38",
                 borderRadius: 10,
                 display: "flex",
@@ -302,11 +302,11 @@ export const FeatureReportScene: React.FC = () => {
             <div
               style={{
                 position: "absolute",
-                top: 575,
-                left: 665,
-                width: 510,
+                top: 654,
+                left: 660,
+                width: 520,
                 height: 110,
-                backgroundColor: "#f5fbf7",
+                backgroundColor: "#ffffff",
                 border: "2px dashed #164f38",
                 borderRadius: 12,
                 display: "flex",
@@ -377,9 +377,9 @@ export const FeatureReportScene: React.FC = () => {
             <div
               style={{
                 position: "absolute",
-                top: 240,
-                left: 665,
-                width: 510,
+                top: 310,
+                left: 660,
+                width: 520,
                 backgroundColor: "#164f38",
                 color: "#ffffff",
                 border: "2px solid #d8ef8c",

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
+import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
 
 function getAdminClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -243,6 +244,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!claimantId) {
       return json({ ok: false, error: "Your account profile is missing. Contact the Security Office." }, 400);
     }
+
+    const claimKey = `claim:user:${claimantId}`;
+    const claimLimit = await isRateLimitedDurable(locals.env, claimKey);
+    if (claimLimit.isBlocked) {
+      const mins = Math.max(1, Math.ceil(claimLimit.remainingSeconds / 60));
+      return json({ ok: false, error: `Too many claims submitted. Please wait ${mins} minute(s).` }, 429);
+    }
+    await recordFailedAttemptDurable(locals.env, claimKey, {
+      maxFailures: 10,
+      lockoutDurationMs: 60 * 60 * 1000,
+    });
 
     // The claim rules live on the server, not only in the UI copy.
     const { data: item } = await supabase

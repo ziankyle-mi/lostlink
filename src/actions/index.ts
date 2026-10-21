@@ -38,6 +38,7 @@ import {
   isRateLimitedDurable,
   recordFailedAttemptDurable,
 } from "~/lib/rateLimit";
+import { readFormTurnstileToken, verifyTurnstile } from "~/lib/turnstile";
 
 function requireSupabase(locals: { env: import("~/lib/env").Env }): void {
   if (!hasSupabase(locals.env)) {
@@ -74,6 +75,15 @@ function assertDomain(locals: { env: import("~/lib/env").Env }, email: string): 
   }
 }
 
+function callerIp(context: { request: Request; clientAddress?: string }): string {
+  return (
+    context.request.headers.get("cf-connecting-ip") ||
+    context.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    context.clientAddress ||
+    "unknown-ip"
+  );
+}
+
 export const server = {
   login: defineAction({
     accept: "form",
@@ -82,12 +92,7 @@ export const server = {
       requireSupabase(context.locals);
       assertDomain(context.locals, email);
 
-      const clientIp =
-        context.request.headers.get("cf-connecting-ip") ||
-        context.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        context.clientAddress ||
-        "unknown-ip";
-
+      const clientIp = callerIp(context);
       const ipKey = `login:ip:${clientIp}`;
       const emailKey = `login:email:${email.toLowerCase().trim()}`;
 
@@ -109,6 +114,16 @@ export const server = {
           code: "TOO_MANY_REQUESTS",
           message: `Too many failed sign-in attempts for this account. Please wait ${mins} minute(s) before trying again.`,
         });
+      }
+
+      // Bot check before spending a password attempt.
+      const loginTurnstile = await verifyTurnstile(
+        context.locals.env,
+        await readFormTurnstileToken(context.request),
+        clientIp,
+      );
+      if (!loginTurnstile.ok) {
+        throw new ActionError({ code: "FORBIDDEN", message: loginTurnstile.error });
       }
 
       const result = await signInWithPassword(context.locals.env, email, password);
@@ -167,6 +182,36 @@ export const server = {
           message: "Agree to the terms and conditions to register.",
         });
       }
+
+      const clientIp = callerIp(context);
+      const registerKey = `register:ip:${clientIp}`;
+
+      // Five accounts per network per hour. This is a ceiling, not a workflow:
+      // the Security Office can still create accounts in person if needed.
+      const registerLimit = await isRateLimitedDurable(context.locals.env, registerKey);
+      if (registerLimit.isBlocked) {
+        const mins = Math.max(1, Math.ceil(registerLimit.remainingSeconds / 60));
+        throw new ActionError({
+          code: "TOO_MANY_REQUESTS",
+          message: `Too many accounts created from this network. Please wait ${mins} minute(s) or visit the Security Office.`,
+        });
+      }
+
+      const registerTurnstile = await verifyTurnstile(
+        context.locals.env,
+        await readFormTurnstileToken(context.request),
+        clientIp,
+      );
+      if (!registerTurnstile.ok) {
+        throw new ActionError({ code: "FORBIDDEN", message: registerTurnstile.error });
+      }
+
+      // Count this attempt before the signup call so a failing loop still
+      // consumes quota.
+      await recordFailedAttemptDurable(context.locals.env, registerKey, {
+        maxFailures: 5,
+        lockoutDurationMs: 60 * 60 * 1000,
+      });
 
       const result = await signUpWithPassword(
         context.locals.env,

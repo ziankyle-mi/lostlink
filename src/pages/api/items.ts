@@ -2,6 +2,8 @@ import type { APIRoute } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
 import { photoPathsFromColumn } from "~/lib/storage";
+import { verifyTurnstile } from "~/lib/turnstile";
+import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
 
 function getAdminClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -109,6 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       photos,
       photoUrls,
       photoPaths,
+      turnstileToken,
     } = body;
 
     // Basic Validations
@@ -167,6 +170,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (allPhotos.length > 3) {
       return new Response(JSON.stringify({ ok: false, error: "Maximum of 3 photos allowed." }), {
         status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const clientIp =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown-ip";
+    const reportKey = `report:user:${user.id}`;
+
+    // Ten reports per account per hour. Rate-limit before bot verification so
+    // a scripted loop cannot burn Turnstile verifications for free.
+    const reportLimit = await isRateLimitedDurable(locals.env, reportKey);
+    if (reportLimit.isBlocked) {
+      const mins = Math.max(1, Math.ceil(reportLimit.remainingSeconds / 60));
+      return new Response(
+        JSON.stringify({ ok: false, error: `Too many reports. Please wait ${mins} minute(s).` }),
+        { status: 429, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    await recordFailedAttemptDurable(locals.env, reportKey, {
+      maxFailures: 10,
+      lockoutDurationMs: 60 * 60 * 1000,
+    });
+
+    const botCheck = await verifyTurnstile(locals.env, turnstileToken, clientIp);
+    if (!botCheck.ok) {
+      return new Response(JSON.stringify({ ok: false, error: botCheck.error }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       });
     }

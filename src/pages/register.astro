@@ -29,6 +29,7 @@ const fieldError = (
 ) => fields?.[name]?.[0] ?? undefined;
 
 const devOpen = devBypassEnabled(Astro.locals.env);
+const turnstileSiteKey = Astro.locals.env.TURNSTILE_SITE_KEY;
 ---
 
 <AuthShell
@@ -276,6 +277,14 @@ const devOpen = devBypassEnabled(Astro.locals.env);
         <p id="agree-error" role="alert" class="field-error">
           {fieldError("agree")}
         </p>
+      )
+    }
+
+    {
+      turnstileSiteKey && (
+        <div class="flex justify-center pt-1">
+          <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" />
+        </div>
       )
     }
 

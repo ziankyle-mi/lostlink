@@ -1,10 +1,12 @@
 import type { APIRoute } from "astro";
 import {
+  MAX_DATA_URL_LENGTH,
   MAX_FILE_SIZE_BYTES,
   isAllowedMimeType,
   parseBase64DataUrl,
   uploadPhotoToStorage,
 } from "~/lib/storage";
+import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -18,6 +20,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const contentType = request.headers.get("content-type") || "";
 
   try {
+    const uploadKey = `upload:user:${user.id}`;
+    const uploadLimit = await isRateLimitedDurable(locals.env, uploadKey);
+    if (uploadLimit.isBlocked) {
+      const mins = Math.max(1, Math.ceil(uploadLimit.remainingSeconds / 60));
+      return new Response(
+        JSON.stringify({ ok: false, error: `Too many photo uploads. Please wait ${mins} minute(s).` }),
+        { status: 429, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    await recordFailedAttemptDurable(locals.env, uploadKey, {
+      maxFailures: 30,
+      lockoutDurationMs: 60 * 60 * 1000,
+    });
+
     const uploadedUrls: string[] = [];
     const uploadedPaths: string[] = [];
 
@@ -41,6 +57,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       for (let i = 0; i < images.length; i++) {
         const item = images[i];
+        if (typeof item !== "string" || item.length > MAX_DATA_URL_LENGTH) {
+          return new Response(
+            JSON.stringify({ ok: false, error: `Photo #${i + 1} exceeds the 5 MB limit.` }),
+            { status: 413, headers: { "Content-Type": "application/json" } },
+          );
+        }
         const parsed = parseBase64DataUrl(item);
         if (!parsed) {
           return new Response(
@@ -51,11 +73,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const result = await uploadPhotoToStorage(locals.env, parsed.data, parsed.mimeType);
         if (!result.ok || !result.url) {
+          console.error(`[api/upload] Photo #${i + 1} failed:`, result.error);
           return new Response(
-            JSON.stringify({
-              ok: false,
-              error: result.error || `Failed to upload photo #${i + 1} to storage.`,
-            }),
+            JSON.stringify({ ok: false, error: "Could not store the photo. Try again." }),
             { status: 500, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -115,11 +135,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const result = await uploadPhotoToStorage(locals.env, buffer, file.type);
 
         if (!result.ok || !result.url) {
+          console.error(`[api/upload] '${file.name}' failed:`, result.error);
           return new Response(
-            JSON.stringify({
-              ok: false,
-              error: result.error || `Failed to upload '${file.name}' to storage.`,
-            }),
+            JSON.stringify({ ok: false, error: "Could not store the photo. Try again." }),
             { status: 500, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -147,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const message = err instanceof Error ? err.message : "Unexpected upload error";
     console.error("[api/upload] Error:", message);
     return new Response(
-      JSON.stringify({ ok: false, error: message }),
+      JSON.stringify({ ok: false, error: "Could not process the photo. Try again." }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

@@ -31,6 +31,16 @@ Done: lost reports can be approved or rejected, completed records are protected,
 - Removed the demo feed fallback when the database is unavailable (`index.astro` returns an empty state instead).
 - Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success.
 
+## Phase 2 — Abuse controls and upload hardening (2026-10-22)
+
+Done: bot checks and per-account throttles now protect registration, login, reports, claims, and uploads.
+
+- Added `src/lib/turnstile.ts` (Cloudflare `siteverify`, fail-closed on network errors). Login, register, and report submission verify a token when `TURNSTILE_SECRET_KEY` is set. Widgets render when `TURNSTILE_SITE_KEY` is set.
+- **Owner action:** set both Turnstile keys in Cloudflare before go-live. With no secret key the check is skipped with a server warning.
+- Registration is limited to 5 accounts per IP per hour (durable Postgres limiter). Report creation is limited to 10/hour/account, claims to 10/hour, uploads to 30/hour.
+- Base64 photo payloads are rejected by encoded length before decoding; upload API returns generic errors instead of raw Supabase messages.
+- Verified: `astro check` 0 errors; `npm test` 92 passed, 2 skipped; `npm run build` success.
+
 ## Steps
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)

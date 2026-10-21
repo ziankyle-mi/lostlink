@@ -1165,6 +1165,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               if (submitBtn) submitBtn.disabled = false;
               if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
               if (submitBtnText) submitBtnText.textContent = "Submit Report";
+              (window as any).turnstile?.reset();
               showToast(uploadJson?.error || "Photo upload failed. Please try again.", "error");
               return;
             }
@@ -1174,6 +1175,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             if (submitBtn) submitBtn.disabled = false;
             if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
             if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            (window as any).turnstile?.reset();
             showToast("Photo upload failed. Check your connection and try again.", "error");
             return;
           }
@@ -1181,6 +1183,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
         // Step 2: Persist Item to Database
         if (submitBtnText) submitBtnText.textContent = "Saving report...";
+        const turnstileInput = document.querySelector(
+          '#quick-report-form [name="cf-turnstile-response"]',
+        );
+        const turnstileToken = turnstileInput ? turnstileInput.value : "";
         try {
           const itemRes = await fetch("/api/items", {
             method: "POST",
@@ -1193,6 +1199,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               description: itemDesc,
               eventDate: reportEventDate,
               photoPaths: finalPhotoPaths,
+              turnstileToken,
             }),
           });
           const itemJson = await itemRes.json().catch(() => null);
@@ -1201,6 +1208,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             if (submitBtn) submitBtn.disabled = false;
             if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
             if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            (window as any).turnstile?.reset();
             showToast(itemJson?.error || "Could not save the report. Try again.", "error");
             return;
           }
@@ -1214,6 +1222,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           if (submitBtn) submitBtn.disabled = false;
           if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
           if (submitBtnText) submitBtnText.textContent = "Submit Report";
+          (window as any).turnstile?.reset();
           showToast("Could not save the report. Check your connection and try again.", "error");
           return;
         }
