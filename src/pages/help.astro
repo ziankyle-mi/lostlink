@@ -44,10 +44,10 @@ const faqs = [
   <!-- Primary Custody Office Callout Banner -->
   <section class="mt-8 rounded-3xl p-6 sm:p-7 text-white shadow-card border border-white/10 bg-forest-700">
     <div class="flex items-center gap-2">
-      <span class="inline-block rounded-full bg-lime px-3 py-1 text-[11px] font-black tracking-wider text-forest-700 uppercase shadow-xs">
-        OFFICIAL CLAIM &amp; CUSTODY OFFICE
+      <span class="inline-block rounded-full bg-lime px-3 py-1 text-xs font-black tracking-wider text-forest-700 uppercase shadow-xs">
+        Official claim &amp; custody office
       </span>
-      <span class="size-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="size-2 rounded-full bg-lime" aria-hidden="true"></span>
     </div>
 
     <h2 class="mt-3 font-serif text-2xl sm:text-3xl font-black text-white leading-tight">
@@ -60,15 +60,15 @@ const faqs = [
 
     <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/10 text-xs">
       <div>
-        <p class="text-stone-400 font-bold uppercase tracking-wider text-[10px]">Office Location</p>
+        <p class="text-stone-400 font-bold uppercase tracking-wider text-xs">Office location</p>
         <p class="mt-0.5 font-bold text-white">LSB Building #3, Ground Floor</p>
       </div>
       <div>
-        <p class="text-stone-400 font-bold uppercase tracking-wider text-[10px]">Operating Hours</p>
+        <p class="text-stone-400 font-bold uppercase tracking-wider text-xs">Operating hours</p>
         <p class="mt-0.5 font-bold text-white">Mon – Fri, 8:00 AM – 5:00 PM</p>
       </div>
       <div>
-        <p class="text-stone-400 font-bold uppercase tracking-wider text-[10px]">Pickup Requirements</p>
+        <p class="text-stone-400 font-bold uppercase tracking-wider text-xs">Pickup requirements</p>
         <p class="mt-0.5 font-bold text-white">DLSAU ID + Claim Reference Code</p>
       </div>
     </div>
@@ -79,7 +79,7 @@ const faqs = [
     <div class="flex flex-wrap items-end justify-between gap-3 pb-5 border-b border-stone-100">
       <div>
         <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
-          DLSAU Campus Map
+          DLSAU campus map
         </h2>
         <p class="mt-1 text-sm text-stone-500">
           Buildings and designated custody drop-off points.
@@ -89,7 +89,7 @@ const faqs = [
       <button
         type="button"
         id="open-map-lightbox"
-        class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-stone-200/90 bg-white hover:bg-stone-50 px-4 py-2 text-xs font-bold text-forest-900 shadow-2xs transition-all cursor-pointer"
+        class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-stone-200/90 bg-white hover:bg-stone-50 px-4 py-2 text-xs font-bold text-forest-900 shadow-2xs transition-all cursor-pointer"
       >
         <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4" />
@@ -113,7 +113,7 @@ const faqs = [
           loading="lazy"
         />
         <div class="absolute inset-0 flex items-center justify-center bg-forest-900/0 transition-colors duration-300 group-hover:bg-forest-900/10">
-          <span class="flex size-12 items-center justify-center rounded-full bg-white/90 text-forest-900 shadow-md opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+          <span class="flex size-12 items-center justify-center rounded-full bg-white/90 text-forest-900 shadow-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100">
             <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4M9 9h6v6H9z" />
             </svg>
@@ -127,7 +127,7 @@ const faqs = [
       <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/60 px-4 py-3 transition-colors hover:bg-stone-100/70">
         <span class="flex items-center gap-2 text-sm font-bold text-forest-900">
           <span>Campus directory</span>
-          <span class="rounded-full bg-lime px-2 py-0.5 text-[11px] font-black text-forest-900">
+          <span class="rounded-full bg-lime px-2 py-0.5 text-xs font-black text-forest-900">
             {CAMPUS_BUILDINGS.length}
           </span>
         </span>
@@ -147,7 +147,7 @@ const faqs = [
           >
             <span
               class={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-black shadow-xs ${
-                b.isClaimOffice ? "bg-forest-700 text-lime" : "bg-amber-600 text-white"
+                b.isClaimOffice ? "bg-forest-700 text-lime" : "bg-[#ece5d6] text-forest-900 border border-stone-200"
               }`}
             >
               {b.id}
@@ -171,7 +171,7 @@ const faqs = [
   <!-- Full-screen map lightbox -->
   <div
     id="map-lightbox"
-    class="fixed inset-0 z-[70] hidden items-center justify-center bg-forest-900/85 backdrop-blur-sm p-4"
+    class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4"
     role="dialog"
     aria-modal="true"
     aria-label="Campus map"
@@ -180,7 +180,7 @@ const faqs = [
       <button
         id="close-map-lightbox"
         type="button"
-        class="absolute -top-11 right-0 flex size-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer"
+        class="absolute -top-12 right-0 flex size-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer"
         aria-label="Close map"
       >
         <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -232,7 +232,7 @@ const faqs = [
   <!-- FAQ Section -->
   <section class="mt-10 rounded-3xl bg-white border border-stone-200/70 p-6 sm:p-8 shadow-xs">
     <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight pb-4 border-b border-stone-100">
-      Frequently Asked Questions
+      Frequently asked questions
     </h2>
 
     <dl class="mt-6 space-y-6">

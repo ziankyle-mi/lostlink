@@ -2,6 +2,7 @@
 import { actions } from "astro:actions";
 import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
+import DashboardFooter from "~/components/DashboardFooter.astro";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
 import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
@@ -88,15 +89,15 @@ if (!item) {
       <StudentNavbar userEmail={userEmail} userRole={user?.role} />
 
       <!-- Main Container -->
-      <main class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 space-y-6">
+      <main class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-10 sm:py-8 lg:px-14 space-y-6">
         <!-- Breadcrumb Link -->
         <div>
           <a
             href="/"
-            class="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white/80 px-4 py-1.5 text-xs font-bold text-forest-900 shadow-2xs hover:bg-white hover:text-forest-700 transition-colors"
+            class="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-stone-200 bg-white/80 px-4 py-1.5 text-sm font-bold text-forest-900 shadow-2xs hover:bg-white hover:text-forest-700 transition-colors"
           >
             <span>&larr;</span>
-            <span>Back to Campus Feed</span>
+            <span>Back to campus feed</span>
           </a>
         </div>
 
@@ -113,16 +114,16 @@ if (!item) {
             </p>
             <a
               href="/"
-              class="mt-6 inline-block rounded-full bg-forest-900 px-6 py-2.5 text-xs font-bold text-lime hover:bg-forest-900 transition-colors shadow-xs"
+              class="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-forest-700 px-6 py-2.5 text-sm font-bold text-white hover:bg-forest-900 transition-all shadow-2xs active:scale-95"
             >
-              Browse Campus Feed
+              Browse campus feed
             </a>
           </div>
         ) : (
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-8 rounded-3xl border border-stone-200/80 bg-white p-6 sm:p-8 lg:p-10 shadow-xs">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-8 rounded-3xl border border-stone-200/60 bg-white p-6 sm:p-8 lg:p-10 shadow-xs">
             <!-- Left Column: Photos Gallery -->
             <div class="md:col-span-5 space-y-4">
-              <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-100 border border-stone-200 shadow-inner flex items-center justify-center">
+              <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center">
                 <!-- Status Badges -->
                 <div class="absolute left-3 top-3 z-10 flex items-center gap-2">
                   <span class={`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
@@ -175,9 +176,9 @@ if (!item) {
 
               {item.referenceCode && (
                 <div class="rounded-2xl bg-canvas p-4 border border-stone-200/80 text-center">
-                  <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Security Office Tag Code</p>
+                  <p class="text-xs font-bold uppercase tracking-wider text-stone-500">Security office tag code</p>
                   <div class="mt-1 flex items-center justify-center gap-2">
-                    <span id="item-detail-ref-code" class="font-mono text-xl font-black text-forest-900 tracking-wider">{item.referenceCode}</span>
+                    <span id="item-detail-ref-code" class="tabular-nums text-xl font-black text-forest-900 tracking-wider">{item.referenceCode}</span>
                     <button
                       type="button"
                       id="copy-item-ref-btn"
@@ -190,7 +191,7 @@ if (!item) {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                       <span class="copy-label">Copy</span>
-                      <span class="copy-ref-tooltip">Copied!</span>
+                      <span class="copy-ref-tooltip">Copied</span>
                     </button>
                   </div>
                   <p class="mt-1.5 text-xs text-stone-500">Bring this code to the campus security office for identification.</p>
@@ -214,7 +215,7 @@ if (!item) {
                     <p class="font-bold text-forest-900 mt-0.5">{item.location}</p>
                   </div>
                   <div>
-                    <p class="text-stone-400 font-medium">Date Reported</p>
+                    <p class="text-stone-400 font-medium">Date reported</p>
                     <p class="font-bold text-forest-900 mt-0.5">{item.eventDate}</p>
                   </div>
                 </div>
@@ -232,7 +233,7 @@ if (!item) {
                 {item.type === "found" && item.status === "approved" && (
                   <div>
                     {isReporter ? (
-                      <div class="rounded-2xl bg-sage-200 p-4 border border-line text-forest-900 text-xs">
+                      <div class="rounded-2xl bg-sage-200 p-4 border border-line text-forest-900 text-sm">
                         <p class="font-bold">You reported this found item.</p>
                         <p class="mt-0.5 text-stone-600">Thank you for turning it over to the Security Office. It is registered on the campus network.</p>
                       </div>
@@ -249,7 +250,7 @@ if (!item) {
                           <input type="hidden" id="claim-target-id" value={item.id} />
                           <div>
                             <label for="standalone-proof-input" class="block text-xs font-bold text-forest-900">
-                              Proof of Ownership
+                              Proof of ownership
                             </label>
                             <textarea
                               id="standalone-proof-input"
@@ -257,21 +258,21 @@ if (!item) {
                               minlength="20"
                               rows="3"
                               placeholder="Describe stickers, scratches, lock combinations, contents, or serial numbers..."
-                              class="mt-1.5 w-full rounded-xl border border-line bg-white p-3 text-xs sm:text-sm text-forest-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-forest-700/30"
+                              class="mt-1.5 w-full rounded-xl border border-line bg-white p-3 text-sm text-forest-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-forest-700/30"
                             ></textarea>
                           </div>
 
                           <button
                             type="submit"
                             id="standalone-submit-claim-btn"
-                            class="w-full min-h-11 rounded-full bg-forest-700 py-3 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 transition-all shadow-2xs cursor-pointer active:scale-95"
+                            class="w-full min-h-11 rounded-full bg-forest-700 py-3 text-sm font-bold text-white hover:bg-forest-900 transition-all shadow-2xs cursor-pointer active:scale-95"
                           >
                             Submit claim
                           </button>
                         </form>
 
-                        <div id="standalone-claim-success" class="hidden rounded-2xl bg-forest-700/10 p-4 border border-forest-700/20 text-forest-900 text-xs text-center font-bold">
-                          Claim request submitted! The Security Office will review your proof. Check <a href="/profile" class="underline">My Activity</a> for status updates.
+                        <div id="standalone-claim-success" class="hidden rounded-2xl bg-forest-700/10 p-4 border border-forest-700/20 text-forest-900 text-sm text-center font-bold">
+                          Claim request submitted. The Security Office will review your proof. Check <a href="/profile" class="underline">your profile</a> for status updates.
                         </div>
                       </div>
                     )}
@@ -279,14 +280,14 @@ if (!item) {
                 )}
 
                 {item.type === "found" && item.status === "claimed" && (
-                  <div class="rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 text-xs">
+                  <div class="rounded-2xl bg-lime/30 p-4 border border-lime-600/40 text-forest-900 text-sm">
                     <p class="font-bold">Item claimed and returned</p>
                     <p class="mt-0.5 text-stone-600">This item has been verified by the Security Office and successfully returned to its owner.</p>
                   </div>
                 )}
 
                 {item.type === "lost" && item.status === "resolved" && (
-                  <div class="rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 text-xs">
+                  <div class="rounded-2xl bg-lime/30 p-4 border border-lime-600/40 text-forest-900 text-sm">
                     <p class="font-bold">This report is resolved</p>
                     <p class="mt-0.5 text-stone-600">The reporter marked this item as recovered. It is no longer listed as active.</p>
                   </div>
@@ -325,16 +326,7 @@ if (!item) {
     </div>
 
     <!-- Campus Footer -->
-    <footer class="mt-14 border-t border-stone-200/70 bg-[#ece5d6]/70 py-6 text-center text-xs text-stone-500">
-      <div class="mx-auto max-w-5xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>&copy; {new Date().getFullYear()} LostLink &bull; De La Salle Araneta University</p>
-        <div class="flex items-center gap-4 font-semibold text-forest-900">
-          <a href="/" class="hover:underline">Campus Feed</a>
-          <a href="/profile" class="hover:underline">My Activity</a>
-          <a href="/help" class="hover:underline">Guidelines</a>
-        </div>
-      </div>
-    </footer>
+    <DashboardFooter />
   </div>
 
   <script>
@@ -349,9 +341,9 @@ if (!item) {
           const tooltip = copyRefBtn.querySelector(".copy-ref-tooltip");
           const copyLabel = copyRefBtn.querySelector(".copy-label");
           if (tooltip) tooltip.classList.add("visible");
-          if (copyLabel) copyLabel.textContent = "Copied!";
+          if (copyLabel) copyLabel.textContent = "Copied";
           if ((window as any).llToast) {
-            (window as any).llToast(`Reference code ${refCode} copied!`, "success");
+            (window as any).llToast(`Reference code ${refCode} copied`, "success");
           }
           setTimeout(() => {
             if (tooltip) tooltip.classList.remove("visible");
@@ -403,7 +395,7 @@ if (!item) {
             claimForm.classList.add("hidden");
             claimSuccess?.classList.remove("hidden");
             if ((window as any).llToast) {
-              (window as any).llToast("Claim verification submitted to Security Office!", "success");
+              (window as any).llToast("Claim verification submitted to the Security Office", "success");
             }
           } else {
             const errorMsg = data.error || "Could not submit claim. Please try again.";

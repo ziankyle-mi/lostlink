@@ -14,7 +14,7 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
   data-open="false"
   data-timeout-seconds={timeoutSeconds}
   data-warning-seconds={warningSeconds}
-  class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-forest-900/70 backdrop-blur-xs transition-opacity duration-300"
+  class="fixed inset-0 z-[120] hidden items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
   role="alertdialog"
   aria-modal="true"
   aria-labelledby="inactivity-title"
@@ -22,21 +22,21 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
 >
   <div
     id="inactivity-card"
-    class="w-full max-w-md rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-stone-200/90 text-left transition-transform duration-300 scale-95"
+    class="w-full max-w-md rounded-card bg-white p-6 sm:p-8 shadow-card border border-stone-200/60 text-left transition-transform duration-300 scale-95"
   >
     <div class="flex items-center gap-3">
-      <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 border border-amber-200/60 shadow-2xs">
+      <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-lime/40 text-forest-700 border border-lime-600/30 shadow-2xs">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
       </div>
       <div>
-        <span class="inline-block rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-          Security Timeout
+        <span class="inline-block rounded-full bg-lime px-2.5 py-0.5 text-xs font-bold text-forest-900 uppercase tracking-wider">
+          Security timeout
         </span>
-        <h2 id="inactivity-title" class="font-serif text-xl sm:text-2xl font-bold text-forest-900 tracking-tight leading-tight mt-0.5">
-          Inactivity Warning
+        <h2 id="inactivity-title" class="font-serif text-xl sm:text-2xl font-black text-forest-900 tracking-tight leading-tight mt-0.5">
+          Session expiring
         </h2>
       </div>
     </div>
@@ -51,7 +51,7 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
     <div class="mt-4 h-2 w-full rounded-full bg-stone-100 overflow-hidden" aria-hidden="true">
       <div
         id="inactivity-progress-bar"
-        class="h-full rounded-full bg-amber-500 transition-all duration-1000 ease-linear"
+        class="h-full rounded-full bg-forest-700 transition-all duration-1000 ease-linear"
         style="width: 100%;"
       ></div>
     </div>
@@ -67,7 +67,7 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
       <button
         type="button"
         id="inactivity-stay-btn"
-        class="inline-flex min-h-11 items-center justify-center rounded-full bg-forest-900 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-forest-900 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
+        class="inline-flex min-h-11 items-center justify-center rounded-full bg-forest-700 px-6 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-forest-900 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
       >
         Stay signed in
       </button>

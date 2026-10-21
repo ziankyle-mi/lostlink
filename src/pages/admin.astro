@@ -7,6 +7,7 @@ import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.
 import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
 import UsersManagement from "~/components/admin/UsersManagement.astro";
+import DashboardFooter from "~/components/DashboardFooter.astro";
 import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
 import { actions } from "astro:actions";
 import {
@@ -384,11 +385,11 @@ function parseAuditEvent(
   if (action.startsWith("password_recovery_requested:")) {
     const target = action.replace("password_recovery_requested:", "").trim();
     return {
-      title: "Password Recovery Requested",
-      badgeText: "Reset Pending",
-      badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+      title: "Password recovery requested",
+      badgeText: "Reset pending",
+      badgeClass: "bg-lime/40 text-forest-900 border-lime-600/40",
       iconType: "key",
-      iconBg: "bg-amber-50 text-amber-800 border-amber-200",
+      iconBg: "bg-lime/40 text-forest-700 border-lime-600/30",
       description: `${target} requested a password reset. Awaiting DLSAU ID verification at Security Office.`,
       target,
       operator: "Student Portal",
@@ -665,7 +666,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       <AdminTicker />
 
       <!-- Main Layout Container -->
-      <div class={`mx-auto w-full ${currentTab === "users" ? "max-w-[1660px]" : "max-w-[1520px]"} px-4 py-6 sm:px-6 sm:py-8 lg:px-10`}>
+      <div class={`mx-auto w-full ${currentTab === "users" ? "max-w-[1660px]" : "max-w-[1520px]"} px-4 py-6 sm:px-10 sm:py-8 lg:px-14`}>
         <div class="flex flex-col-reverse lg:flex-row items-start gap-7 lg:gap-8">
           <!-- Main Content (Left Column) -->
           <main class="w-full flex-1 min-w-0 space-y-7">
@@ -676,7 +677,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                   {dateEyebrow}
                 </p>
                 <h1 class="mt-1 font-serif text-4xl sm:text-5xl lg:text-[3.25rem] font-black text-forest-900 tracking-tight leading-none">
-                  {currentTab === "users" ? "User Management" : "Overview"}
+                  {currentTab === "users" ? "User management" : "Overview"}
                 </h1>
               </div>
 
@@ -714,10 +715,12 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                     <button
                       type="button"
                       id="log-found-cta-btn"
-                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-xs cursor-pointer"
+                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-2xs cursor-pointer"
                     >
                       <span>Log a found item</span>
-                      <span class="text-base font-black leading-none">+</span>
+                      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
                     </button>
                   </>
                 )}
@@ -763,42 +766,35 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     </div>
 
     <!-- Campus Footer -->
-    <footer class="mt-14 border-t border-stone-200/70 bg-[#ece5d6]/70 py-6 text-center text-xs text-stone-500">
-      <div class="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p>&copy; {today.getFullYear()} LostLink &bull; De La Salle Araneta University Disciplinary & Security Office</p>
-        <div class="flex items-center gap-4 font-semibold text-forest-900">
-          <a href="/" class="hover:underline">Campus Feed</a>
-          <a href="/help" class="hover:underline">Guidelines</a>
-          <a href="/privacy" class="hover:underline">Privacy</a>
-        </div>
-      </div>
-    </footer>
+    <DashboardFooter wide />
   </div>
 
   <!-- Interactive Review Claim Modal -->
   <div
     id="review-claim-modal"
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs p-4"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4"
     role="dialog"
     aria-modal="true"
     aria-labelledby="modal-claim-title"
   >
-    <div class="w-full max-w-lg rounded-[2rem] bg-white p-7 shadow-2xl border border-stone-200/80">
+    <div class="w-full max-w-lg rounded-card bg-white p-7 shadow-card border border-stone-200/60">
       <div class="flex items-center justify-between border-b border-stone-100 pb-4">
         <div>
           <span class="rounded-full bg-forest-700/10 px-3 py-1 text-xs font-bold text-forest-700">
-            Claim Verification Dossier
+            Claim verification dossier
           </span>
           <h3 id="modal-claim-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
-            Item Claim Review
+            Item claim review
           </h3>
         </div>
         <button
           type="button"
           id="close-review-modal-btn"
-          class="size-9 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
+          class="size-11 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
         >
-          &times;
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
@@ -815,7 +811,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         </div>
 
         <div class="rounded-xl border border-lime-600/30 bg-lime/30 p-3 text-xs text-forest-700">
-          <strong>Verification Protocol:</strong> Check the physical item in custody against these private details before handing it over. Ensure claimant signs the custody logbook.
+          <strong>Verification protocol:</strong> Check the physical item in custody against these private details before handing it over. Ensure claimant signs the custody logbook.
         </div>
       </div>
 
@@ -823,16 +819,16 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         <button
           type="button"
           id="modal-reject-btn"
-          class="rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+          class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-sm font-bold text-stone-700 transition-colors cursor-pointer"
         >
-          Flag / Request Details
+          Flag / request details
         </button>
         <button
           type="button"
           id="modal-release-btn"
-          class="rounded-full bg-lime hover:bg-[#c9e376] px-6 py-2.5 text-xs font-black text-forest-700 transition-all shadow-xs cursor-pointer"
+          class="inline-flex min-h-11 items-center justify-center rounded-full bg-lime hover:bg-[#c9e376] px-6 py-2.5 text-sm font-black text-forest-700 transition-all shadow-2xs cursor-pointer"
         >
-          Approve &amp; Release Item
+          Approve and release item
         </button>
       </div>
     </div>
@@ -853,15 +849,17 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             Disciplinary Office SOP
           </span>
           <h3 id="intake-guidelines-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
-            Campus Intake &amp; Custody Guidelines
+            Campus intake and custody guidelines
           </h3>
         </div>
         <button
           type="button"
-          class="close-intake-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          class="close-intake-modal size-11 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
           aria-label="Close dialog"
         >
-          &times;
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
@@ -876,7 +874,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
             <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">1</span>
             <div>
-              <p class="font-bold text-forest-900 text-xs sm:text-sm">Physical Handover &amp; Inspection</p>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Physical handover &amp; inspection</p>
               <p class="text-xs text-stone-500 mt-0.5">Finder presents the recovered item. Inspect device state, verify power condition, and note distinguishing marks or accessories.</p>
             </div>
           </div>
@@ -884,7 +882,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
             <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">2</span>
             <div>
-              <p class="font-bold text-forest-900 text-xs sm:text-sm">Digital Tagging &amp; Reference Code Assignment</p>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Digital tagging &amp; reference code assignment</p>
               <p class="text-xs text-stone-500 mt-0.5">Click "Confirm intake" in the intake queue to generate the permanent campus reference token (e.g. DLSAU-2026-F089) and affix the physical barcode tag.</p>
             </div>
           </div>
@@ -892,7 +890,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
             <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">3</span>
             <div>
-              <p class="font-bold text-forest-900 text-xs sm:text-sm">Secure Storage Placement</p>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Secure storage placement</p>
               <p class="text-xs text-stone-500 mt-0.5">Store valuables, phones, calculators, and IDs in Office Locker Vault A-D. Store large bags and tumblers in Storage Cage 1.</p>
             </div>
           </div>
@@ -908,7 +906,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
           <div class="flex items-start gap-3 rounded-xl border border-stone-200/80 p-3.5 bg-white shadow-2xs">
             <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-forest-700 text-xs font-black text-white">5</span>
             <div>
-              <p class="font-bold text-forest-900 text-xs sm:text-sm">Custody Release Protocol</p>
+              <p class="font-bold text-forest-900 text-xs sm:text-sm">Custody release protocol</p>
               <p class="text-xs text-stone-500 mt-0.5">Verify student ID against the claimant profile and approved claim ticket. Have the student sign the Physical Custody Release Logbook.</p>
             </div>
           </div>
@@ -937,7 +935,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     <div class="relative w-full max-w-lg rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto">
       <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
         <div>
-          <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+          <span class="rounded-full bg-danger/10 px-3 py-1 text-xs font-bold text-danger">
             Report review
           </span>
           <h3 id="reject-report-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
@@ -948,10 +946,12 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         <button
           type="button"
           id="reject-report-close-btn"
-          class="size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          class="size-11 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
           aria-label="Close dialog"
         >
-          &times;
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
@@ -970,9 +970,9 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             minlength="5"
             maxlength="500"
             placeholder="Example: The photo does not show the item clearly. Please repost with a clearer photo."
-            class="mt-1.5 w-full rounded-xl border border-line bg-white p-3 text-xs sm:text-sm text-forest-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-forest-700/30"
+            class="mt-1.5 w-full rounded-xl border border-line bg-white p-3 text-sm text-forest-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-forest-700/30"
           ></textarea>
-          <p id="reject-report-error" class="hidden mt-1.5 text-xs font-semibold text-rose-700"></p>
+          <p id="reject-report-error" class="hidden mt-1.5 text-xs font-semibold text-danger"></p>
         </div>
       </div>
 
@@ -980,14 +980,14 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         <button
           type="button"
           id="reject-report-cancel-btn"
-          class="rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-xs font-bold text-stone-700 transition-colors cursor-pointer"
+          class="inline-flex min-h-11 items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 px-5 py-2.5 text-sm font-bold text-stone-700 transition-colors cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="button"
           id="reject-report-confirm-btn"
-          class="rounded-full bg-rose-600 hover:bg-rose-700 px-6 py-2.5 text-xs font-black text-white transition-all shadow-xs cursor-pointer"
+          class="inline-flex min-h-11 items-center justify-center rounded-full bg-danger hover:bg-danger/90 px-6 py-2.5 text-sm font-bold text-white transition-all shadow-2xs cursor-pointer"
         >
           Reject report
         </button>
@@ -1015,11 +1015,11 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             </svg>
           </div>
           <div>
-            <span class="inline-block rounded-full bg-forest-700/10 px-3 py-0.5 text-[10px] font-black tracking-widest text-forest-700 uppercase">
+            <span class="inline-block rounded-full bg-forest-700/10 px-3 py-0.5 text-xs font-black tracking-widest text-forest-700 uppercase">
               Campus Audit Trail
             </span>
             <h3 id="audit-log-modal-title" class="mt-0.5 font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight leading-tight">
-              Full Administrative <span class="italic font-bold text-forest-700">Audit Log</span>
+              Full administrative <span class="italic font-bold text-forest-700">Audit log</span>
             </h3>
             <p class="mt-1 text-xs sm:text-sm text-stone-500 leading-normal">
               Chronological record of verified claims, custodial intakes, role alterations, and account moderation.
@@ -1070,16 +1070,16 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
 
       <!-- Filter chips for audit log -->
       <div class="mt-3.5 flex items-center gap-2 overflow-x-auto pb-1 flex-wrap" id="audit-filter-pills">
-        <button type="button" class="audit-filter-pill active min-h-9 rounded-full bg-forest-700 px-4 py-1.5 text-xs font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-audit-filter="all">
+        <button type="button" class="audit-filter-pill active min-h-11 rounded-full bg-forest-700 px-4 py-2 text-sm font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-audit-filter="all">
           All activity ({allAuditEvents.length})
         </button>
-        <button type="button" class="audit-filter-pill min-h-9 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="claim">
+        <button type="button" class="audit-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="claim">
           Claim verifications
         </button>
-        <button type="button" class="audit-filter-pill min-h-9 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="intake">
+        <button type="button" class="audit-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="intake">
           Custodial intake
         </button>
-        <button type="button" class="audit-filter-pill min-h-9 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-1.5 text-xs font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
+        <button type="button" class="audit-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
           User moderation
         </button>
       </div>
@@ -1155,7 +1155,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                   <h4 class="font-bold text-forest-900 text-sm leading-tight">
                     {evt.title}
                   </h4>
-                  <span class={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${evt.badgeClass}`}>
+                  <span class={`rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${evt.badgeClass}`}>
                     {evt.badgeText}
                   </span>
                 </div>
@@ -1182,7 +1182,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
 
             <!-- Timestamp badge -->
             <div class="shrink-0 text-right">
-              <span class="inline-block rounded-full bg-stone-100 px-3 py-1 font-mono text-xs font-semibold text-stone-600 whitespace-nowrap border border-stone-200/50">
+              <span class="inline-block rounded-full bg-stone-100 px-3 py-1 tabular-nums text-xs font-semibold text-stone-600 whitespace-nowrap border border-stone-200/50">
                 {evt.time}
               </span>
             </div>
@@ -1227,7 +1227,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             Custodial policy &bull; {CUSTODY_OVERDUE_DAYS}+ days overdue
           </span>
           <h3 id="unclaimed-items-modal-title" class="font-serif text-2xl font-black text-forest-900 mt-2">
-            Unclaimed Items Review
+            Unclaimed items review
           </h3>
           <p class="text-xs text-stone-500 mt-0.5">
             {unclaimedOverdue.length === 0
@@ -1237,10 +1237,12 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         </div>
         <button
           type="button"
-          class="close-unclaimed-modal size-9 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer text-lg"
+          class="close-unclaimed-modal size-11 rounded-full bg-stone-100 hover:bg-stone-200 active:scale-95 flex items-center justify-center text-stone-600 transition-colors cursor-pointer"
           aria-label="Close dialog"
         >
-          &times;
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
@@ -1254,10 +1256,10 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       <div class="mt-4 space-y-3" id="unclaimed-items-list">
         {
           custodyColumnsMissing ? (
-            <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900">
+            <div class="rounded-2xl border border-lime-600/40 bg-lime/30 p-4 text-xs text-forest-900">
               <p class="font-bold">Database update needed</p>
               <p class="mt-1 leading-relaxed">
-                Run the statements in <span class="font-mono">docs/migrations.sql</span> in the
+                Run the statements in <span class="font-semibold underline">docs/migrations.sql</span> in the
                 Supabase SQL editor to turn on custody tracking.
               </p>
             </div>
@@ -1291,7 +1293,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                       <h4 class="font-bold text-forest-900 text-sm sm:text-base">{item.name}</h4>
-                      <span class="rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 text-xs font-bold">
+                      <span class="rounded-full bg-lime/50 text-forest-900 border border-lime-600/30 px-2.5 py-0.5 text-xs font-bold">
                         {custodyAgeLabel(item.days)}
                       </span>
                     </div>
@@ -1301,7 +1303,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                         item.referenceCode && (
                           <>
                             {" "}&bull; Ref:{" "}
-                            <span class="font-mono font-semibold text-stone-700">
+                            <span class="tabular-nums font-semibold text-stone-700">
                               {item.referenceCode}
                             </span>
                           </>
@@ -1648,7 +1650,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
             showToast("Network error. The claim was not verified.");
           } finally {
             releaseBtn.disabled = false;
-            releaseBtn.textContent = "Approve & Release Item";
+            releaseBtn.textContent = "Approve and release item";
             if (modal) {
               modal.classList.add("hidden");
               modal.classList.remove("flex");
@@ -1680,7 +1682,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
                 const statusSpan = activeClaimRow.querySelector("span[class*='rounded-full']");
                 if (statusSpan) {
                   statusSpan.textContent = "Denied";
-                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-red-100 text-red-800";
+                  statusSpan.className = "inline-block rounded-full px-3 py-1 text-xs font-bold leading-none bg-danger/10 text-danger";
                 }
               }
             } else {

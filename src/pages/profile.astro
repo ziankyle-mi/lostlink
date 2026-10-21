@@ -137,10 +137,10 @@ function parsePhotos(photoPath?: string | null): string[] {
       <StudentNavbar userEmail={userEmail} userRole={isUserAdmin ? "admin" : user.role} />
 
       <!-- Main Container (Page frame matching UI design system) -->
-      <main class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-8 lg:px-10 xl:px-14 py-8 sm:py-10 space-y-8 sm:space-y-10">
+      <main class="mx-auto w-full max-w-7xl px-4 sm:px-10 lg:px-14 py-8 sm:py-10 space-y-8 sm:space-y-10">
         <!-- Page Eyebrow and Heading -->
         <div class="space-y-1.5">
-          <p class="text-xs sm:text-sm font-bold tracking-[0.25em] uppercase text-forest-900/70">
+          <p class="text-sm font-bold tracking-[0.25em] uppercase text-forest-900/70">
             {dateEyebrow}
           </p>
           <h1 class="font-serif text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-forest-900 leading-tight">
@@ -172,7 +172,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                   </span>
                 )}
               </div>
-              <p class="mt-1 text-xs sm:text-sm text-stone-500 font-medium flex items-center gap-2 flex-wrap">
+              <p class="mt-1 text-sm text-stone-500 font-medium flex items-center gap-2 flex-wrap">
                 <span>{userEmail}</span>
                 {userStudentId && (
                   <span class="rounded bg-stone-100 border border-stone-200/80 px-2 py-0.5 text-xs font-semibold text-stone-700">
@@ -198,7 +198,9 @@ function parsePhotos(photoPath?: string | null): string[] {
               class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-full sm:w-auto text-sm cursor-pointer"
             >
               <span>Post an item</span>
-              <span aria-hidden="true">+</span>
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
             </a>
             <a
               href="/"
@@ -271,7 +273,7 @@ function parsePhotos(photoPath?: string | null): string[] {
         >
           <div class="relative space-y-2 max-w-2xl">
             <div class="flex items-center gap-2">
-              <span class="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-lime border border-white/10">
+              <span class="inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-wider text-lime border border-white/10">
                 CAMPUS HANDOVER PROTOCOL
               </span>
               <Icon name="shield" class="size-4 text-lime opacity-80" />
@@ -279,7 +281,7 @@ function parsePhotos(photoPath?: string | null): string[] {
             <h3 class="font-serif text-xl sm:text-2xl font-black text-white leading-tight">
               Have an item to drop off or retrieve?
             </h3>
-            <p class="text-xs sm:text-sm font-normal text-stone-200/90 leading-relaxed">
+            <p class="text-sm font-normal text-stone-200/90 leading-relaxed">
               The Disciplinary &amp; Security Office is located in the Life Science Building (LSB, Building #3) and is open Monday to Friday, 8:00 AM – 5:00 PM. Bring your student ID and reference tag code for secure handovers.
             </p>
           </div>
@@ -297,7 +299,7 @@ function parsePhotos(photoPath?: string | null): string[] {
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200/70">
             <div>
               <h2 class="font-serif text-2xl sm:text-3xl font-black text-forest-900 leading-tight">
-                Items I Reported
+                Items I reported
               </h2>
               <p class="mt-1 text-sm text-stone-500">
                 Track administrative verification, campus custody, and handover status.
@@ -305,10 +307,12 @@ function parsePhotos(photoPath?: string | null): string[] {
             </div>
             <a
               href="/?report=found"
-              class="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-5 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-fit cursor-pointer"
+              class="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all w-fit cursor-pointer"
             >
               <span>Post an item</span>
-              <span aria-hidden="true">+</span>
+              <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
             </a>
           </div>
 
@@ -320,14 +324,14 @@ function parsePhotos(photoPath?: string | null): string[] {
                 </svg>
               </div>
               <h3 class="mt-4 font-serif text-xl font-bold text-forest-900">No items reported yet</h3>
-              <p class="mt-1 text-xs sm:text-sm text-stone-500 max-w-sm mx-auto">
+              <p class="mt-1 text-sm text-stone-500 max-w-sm mx-auto">
                 Lost something on campus or found someone else's property? Post a report to alert the university community.
               </p>
               <a
                 href="/?report=found"
-                class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer"
+                class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer"
               >
-                <span>Go to Feed &amp; Report</span>
+                <span>Go to feed &amp; report</span>
                 <span aria-hidden="true">&rarr;</span>
               </a>
             </div>
@@ -348,14 +352,14 @@ function parsePhotos(photoPath?: string | null): string[] {
 
                         <span class={`rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
                           item.status === "approved"
-                            ? "bg-forest-700 text-lime"
+                            ? "bg-lime text-forest-900"
                             : item.status === "pending"
                               ? "bg-[#ece5d6] text-forest-900"
                               : item.status === "claimed" || item.status === "resolved"
-                                ? "bg-lime text-forest-900"
+                                ? "bg-forest-700 text-white"
                                 : "bg-danger/10 text-danger"
                         }`}>
-                          {item.status === "approved" ? "LIVE ON FEED" : item.status === "pending" ? "UNDER REVIEW" : item.status.toUpperCase()}
+                          {item.status === "approved" ? "Live on feed" : item.status === "pending" ? "Under review" : item.status.toUpperCase()}
                         </span>
                       </div>
 
@@ -373,11 +377,11 @@ function parsePhotos(photoPath?: string | null): string[] {
                       </p>
 
                       {item.reference_code && (
-                        <div class="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-canvas px-2.5 py-1 text-xs font-mono font-bold text-forest-900">
+                        <div class="mt-3.5 inline-flex items-center gap-1.5 rounded-lg bg-canvas px-2.5 py-1 text-xs tabular-nums font-bold text-forest-900">
                           <span>Tag: {item.reference_code}</span>
                           <button
                             type="button"
-                            class="copy-ref-btn p-0.5 text-forest-900/70 hover:text-forest-900 cursor-pointer"
+                            class="copy-ref-btn relative -m-1 flex size-7 items-center justify-center rounded-full text-forest-900/70 hover:bg-stone-200 hover:text-forest-900 cursor-pointer after:absolute after:-inset-2 after:content-['']"
                             data-copy-ref={item.reference_code}
                             title="Copy tag code"
                             aria-label="Copy tag code"
@@ -385,19 +389,19 @@ function parsePhotos(photoPath?: string | null): string[] {
                             <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            <span class="copy-ref-tooltip">Copied!</span>
+                            <span class="copy-ref-tooltip">Copied</span>
                           </button>
                         </div>
                       )}
 
                       {item.status === "pending" && item.type === "found" && (
-                        <p class="mt-3 text-xs text-amber-900 bg-amber-50 rounded-xl p-3 border border-amber-200/70 leading-relaxed font-medium">
+                        <p class="mt-3 text-xs text-forest-900 bg-lime/30 rounded-xl p-3 border border-lime-600/40 leading-relaxed font-medium">
                           &bull; Please drop this item off at the Security Office (Admin 1F) with reference tag code.
                         </p>
                       )}
 
                       {item.status === "rejected" && item.reject_reason && (
-                        <p class="mt-3 text-xs text-rose-900 bg-rose-50 rounded-xl p-3 border border-rose-200/70 leading-relaxed font-medium">
+                        <p class="mt-3 text-xs text-danger bg-danger/10 rounded-xl p-3 border border-danger/20 leading-relaxed font-medium">
                           Reason: {item.reject_reason}
                         </p>
                       )}
@@ -409,7 +413,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                       </span>
                       <a
                         href={`/item/${item.id}`}
-                        class="font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
+                        class="inline-flex min-h-11 items-center font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
                       >
                         View details &rarr;
                       </a>
@@ -426,7 +430,7 @@ function parsePhotos(photoPath?: string | null): string[] {
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200/70">
             <div>
               <h2 class="font-serif text-2xl sm:text-3xl font-black text-forest-900 leading-tight">
-                My Submitted Claims
+                My submitted claims
               </h2>
               <p class="mt-1 text-sm text-stone-500">
                 Ownership verification requests submitted to the Security &amp; Disciplinary Office.
@@ -436,7 +440,7 @@ function parsePhotos(photoPath?: string | null): string[] {
               href="/"
               class="text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
             >
-              Browse Campus Feed &rarr;
+              Browse campus feed &rarr;
             </a>
           </div>
 
@@ -448,14 +452,14 @@ function parsePhotos(photoPath?: string | null): string[] {
                 </svg>
               </div>
               <h3 class="mt-4 font-serif text-xl font-bold text-forest-900">No claims submitted</h3>
-              <p class="mt-1 text-xs sm:text-sm text-stone-500 max-w-sm mx-auto">
+              <p class="mt-1 text-sm text-stone-500 max-w-sm mx-auto">
                 Spotted your lost item on the feed? Click "Claim this item" and submit unique identifying proof.
               </p>
               <a
                 href="/"
-                class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer"
+                class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-forest-700 px-6 py-2.5 text-sm font-bold text-white hover:bg-forest-900 active:scale-95 shadow-2xs transition-all cursor-pointer"
               >
-                <span>Browse Campus Feed</span>
+                <span>Browse campus feed</span>
                 <span aria-hidden="true">&rarr;</span>
               </a>
             </div>
@@ -474,14 +478,14 @@ function parsePhotos(photoPath?: string | null): string[] {
                       <div class="min-w-0 flex-1 space-y-1">
                         <div class="flex items-center gap-2.5 flex-wrap">
                           <h4 class="font-bold text-base text-forest-900">
-                            {targetItem?.name || "Item Claim"}
+                            {targetItem?.name || "Item claim"}
                           </h4>
                           {targetItem?.reference_code && (
-                            <span class="inline-flex items-center gap-1 rounded bg-canvas px-2 py-0.5 text-xs font-mono font-bold text-forest-900">
+                            <span class="inline-flex items-center gap-1 rounded bg-canvas px-2 py-0.5 text-xs tabular-nums font-bold text-forest-900">
                               <span>{targetItem.reference_code}</span>
                               <button
                                 type="button"
-                                class="copy-ref-btn p-0.5 text-forest-900/70 hover:text-forest-900 cursor-pointer"
+                                class="copy-ref-btn relative -m-1 flex size-7 items-center justify-center rounded-full text-forest-900/70 hover:bg-stone-200 hover:text-forest-900 cursor-pointer after:absolute after:-inset-2 after:content-['']"
                                 data-copy-ref={targetItem.reference_code}
                                 title="Copy reference code"
                                 aria-label="Copy reference code"
@@ -489,11 +493,11 @@ function parsePhotos(photoPath?: string | null): string[] {
                                 <svg class="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
-                                <span class="copy-ref-tooltip">Copied!</span>
+                                <span class="copy-ref-tooltip">Copied</span>
                               </button>
                             </span>
                           )}
-                          <span class={`rounded-full px-3 py-1 text-xs font-bold ${
+                          <span class={`claim-status-badge rounded-full px-3 py-1 text-xs font-bold ${
                             claim.status === "verified"
                               ? "bg-lime text-forest-900"
                               : claim.status === "pending"
@@ -501,10 +505,10 @@ function parsePhotos(photoPath?: string | null): string[] {
                                 : "bg-danger/10 text-danger"
                           }`}>
                             {claim.status === "verified"
-                              ? "VERIFIED • VISIT DO"
+                              ? "Verified · visit DO"
                               : claim.status === "pending"
-                                ? "UNDER REVIEW"
-                                : "DENIED"}
+                                ? "Under review"
+                                : "Denied"}
                           </span>
                         </div>
                         <p class="text-xs text-stone-600 line-clamp-1 italic">
@@ -521,7 +525,7 @@ function parsePhotos(photoPath?: string | null): string[] {
                           type="button"
                           data-withdraw-claim={claim.id}
                           data-withdraw-label={targetItem?.name || "this item"}
-                          class="withdraw-claim-btn rounded-full border border-rose-200/90 bg-rose-50 hover:bg-rose-100 active:scale-95 px-4 py-2 text-xs font-bold text-rose-700 transition-all shadow-2xs cursor-pointer"
+                          class="withdraw-claim-btn inline-flex min-h-11 items-center justify-center rounded-full border border-danger/20 bg-danger/10 hover:bg-danger/20 active:scale-95 px-4 py-2 text-sm font-bold text-danger transition-all shadow-2xs cursor-pointer"
                         >
                           Withdraw
                         </button>
@@ -529,9 +533,9 @@ function parsePhotos(photoPath?: string | null): string[] {
                       {targetItem?.id && (
                         <a
                           href={`/item/${targetItem.id}`}
-                          class="text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
+                          class="inline-flex min-h-11 items-center text-sm font-bold text-forest-900 underline underline-offset-4 hover:text-forest-700"
                         >
-                          View Item &rarr;
+                          View item &rarr;
                         </a>
                       )}
                     </div>
@@ -560,7 +564,7 @@ function parsePhotos(photoPath?: string | null): string[] {
         const tooltip = btn.querySelector(".copy-ref-tooltip");
         if (tooltip) tooltip.classList.add("visible");
         if ((window as any).llToast) {
-          (window as any).llToast(`Reference code ${ref} copied!`, "success");
+          (window as any).llToast(`Reference code ${ref} copied`, "success");
         }
         setTimeout(() => {
           if (tooltip) tooltip.classList.remove("visible");

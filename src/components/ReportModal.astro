@@ -18,12 +18,12 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
 >
   <div class="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto custom-scrollbar rounded-card border border-line bg-white p-6 sm:p-8 shadow-card transition-all">
     <!-- Header with Brand Accent & Close Button -->
-    <div class="flex items-start justify-between gap-4 border-b border-line/80 pb-5">
+    <div class="flex items-start justify-between gap-4 border-b border-line/60 pb-5">
       <div class="flex items-center gap-3.5">
         <BrandMark class="size-11 rounded-2xl shadow-xs shrink-0" size={44} />
         <div>
           <h3 id="report-modal-title" class="font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight leading-tight">
-            Post an Item to <span class="italic font-bold text-forest-700">Campus Feed</span>
+            Post an item to the <span class="italic font-bold text-forest-700">Campus Feed</span>
           </h3>
           <p class="mt-1 text-xs sm:text-sm text-stone-500 leading-normal">
             Submit an item to be verified and published across De La Salle Araneta University.
@@ -35,7 +35,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
       <button
         type="button"
         id="close-report-modal"
-        class="flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-stone-50 text-stone-500 hover:bg-forest-700 hover:text-white hover:border-forest-700 transition-all cursor-pointer shadow-2xs active:scale-95"
+        class="flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-stone-50 text-stone-500 hover:bg-forest-700 hover:text-white hover:border-forest-700 transition-all cursor-pointer shadow-2xs active:scale-95"
         aria-label="Close dialog"
       >
         <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -47,7 +47,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
     <!-- Step 1: Type Selection Choice (Found vs Lost) -->
     <div class="mt-5">
       <span class="block text-xs font-bold uppercase tracking-wider text-forest-900/80 mb-2.5">
-        Report Classification
+        Report classification
       </span>
       <div class="grid grid-cols-2 gap-3 sm:gap-4">
         <button
@@ -68,7 +68,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
               </svg>
             </span>
           </div>
-          <span class="mt-3 text-sm sm:text-[0.9375rem] font-bold text-forest-900">I Found Something</span>
+          <span class="mt-3 text-sm sm:text-[0.9375rem] font-bold text-forest-900">I found something</span>
           <span class="mt-0.5 text-xs text-stone-500 leading-snug">
             Turned in or held at Security Office
           </span>
@@ -92,7 +92,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
               </svg>
             </span>
           </div>
-          <span class="mt-3 text-sm sm:text-[0.9375rem] font-bold text-forest-900">I Lost Something</span>
+          <span class="mt-3 text-sm sm:text-[0.9375rem] font-bold text-forest-900">I lost something</span>
           <span class="mt-0.5 text-xs text-stone-500 leading-snug">
             Broadcast request to campus
           </span>
@@ -111,7 +111,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
       <div>
         <div class="flex items-center justify-between mb-1.5">
           <label for="report-name" class="text-xs font-bold uppercase tracking-wider text-forest-900">
-            Item Name <span class="text-danger">*</span>
+            Item name <span class="text-danger">*</span>
           </label>
           <span class="text-xs text-stone-400 font-medium">e.g. Wallet, Hydroflask, ID</span>
         </div>
@@ -179,7 +179,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
       <!-- Custom Location (Optional) -->
       <div id="report-location-other-wrap" class="hidden">
         <label for="report-location-other" class="block text-xs font-bold uppercase tracking-wider text-forest-900 mb-1.5">
-          Custom Campus Location <span class="text-danger">*</span>
+          Custom campus location <span class="text-danger">*</span>
         </label>
         <input
           type="text"
@@ -190,7 +190,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
       </div>
 
       <!-- Step 2: Photo Upload (1-3 images, required for Found, optional for Lost) -->
-      <div class="rounded-2xl border border-line/80 bg-stone-50 p-4 sm:p-5 space-y-3.5">
+      <div class="rounded-2xl border border-line/60 bg-stone-50 p-4 sm:p-5 space-y-3.5">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span class="flex size-7 items-center justify-center rounded-lg bg-forest-700/10 text-forest-700">
@@ -200,7 +200,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
               </svg>
             </span>
             <label class="text-xs font-bold uppercase tracking-wider text-forest-900 mb-0" id="report-photos-label">
-              Item Photos <span id="photo-req-star" class="text-danger">*</span>
+              Item photos <span id="photo-req-star" class="text-danger">*</span>
             </label>
           </div>
           <span
@@ -232,7 +232,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
           aria-label="Upload item photos"
           class="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-white p-6 text-center transition-all hover:border-forest-700 hover:bg-forest-700/[0.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-forest-700/20 shadow-2xs"
         >
-          <div class="flex size-12 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 group-hover:scale-110 group-hover:bg-forest-700 group-hover:text-white transition-all shadow-2xs">
+          <div class="flex size-12 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 group-hover:bg-forest-700 group-hover:text-white transition-all shadow-2xs">
             <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -294,7 +294,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
       </div>
 
       <!-- Modal Footer -->
-      <div class="flex items-center justify-between gap-3 pt-4 border-t border-line/80">
+      <div class="flex items-center justify-between gap-3 pt-4 border-t border-line/60">
         <p class="text-xs text-stone-500 font-medium hidden sm:block">
           All reports are verified by the Security Office
         </p>
@@ -332,22 +332,22 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
 
     <div
       id="report-success-msg"
-      class="hidden mt-4 rounded-2xl border border-emerald-600/30 bg-emerald-50/80 p-4 text-center text-sm font-semibold text-forest-900 shadow-xs"
+      class="hidden mt-4 rounded-2xl border border-lime-600/40 bg-lime/30 p-4 text-center text-sm font-semibold text-forest-900 shadow-2xs"
     >
       <div class="flex items-center justify-center gap-2">
-        <svg class="size-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <svg class="size-5 text-forest-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
         <span id="report-success-msg-text">
-          Report submitted successfully! The Security Office will review your post.
+          Report submitted. The Security Office will review your post.
         </span>
       </div>
 
       <!-- Reference code + copy button (revealed for Found items after a successful post) -->
-      <div id="report-success-ref" class="hidden mt-3 pt-3 border-t border-emerald-600/25">
+      <div id="report-success-ref" class="hidden mt-3 pt-3 border-t border-lime-600/30">
         <div class="flex items-center justify-center gap-1.5">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Tag code</span>
-          <span id="report-success-ref-code" class="font-mono text-lg font-black text-forest-900 tracking-wider">LL-0000</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-forest-700">Tag code</span>
+          <span id="report-success-ref-code" class="text-lg font-black text-forest-900 tracking-wider tabular-nums">LL-0000</span>
           <button
             type="button"
             id="report-copy-ref-btn"
@@ -360,10 +360,10 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
               <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             <span class="copy-label">Copy</span>
-            <span class="copy-ref-tooltip">Copied!</span>
+            <span class="copy-ref-tooltip">Copied</span>
           </button>
         </div>
-        <p class="mt-1.5 text-xs text-emerald-800 font-medium">Write this code on the item tag before turning it in.</p>
+        <p class="mt-1.5 text-xs text-forest-700 font-medium">Write this code on the item tag before turning it in.</p>
       </div>
     </div>
   </div>
@@ -526,7 +526,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
           const removeBtn = document.createElement("button");
           removeBtn.type = "button";
           removeBtn.setAttribute("aria-label", `Remove photo ${index + 1}`);
-          removeBtn.className = "absolute right-2 top-2 flex size-6.5 items-center justify-center rounded-full bg-danger text-white shadow-md hover:scale-110 cursor-pointer text-xs font-bold transition-all active:scale-90";
+          removeBtn.className = "absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-danger text-white shadow-2xs cursor-pointer transition-all after:absolute after:-inset-1.5 after:rounded-full after:content-[''] active:scale-95";
           removeBtn.innerHTML = '<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>';
           removeBtn.onclick = (e) => {
             e.stopPropagation();
@@ -535,7 +535,7 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
           };
 
           const badge = document.createElement("span");
-          badge.className = "absolute bottom-2 left-2 rounded-full bg-forest-900/80 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs";
+          badge.className = "absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-bold text-white";
           badge.textContent = `Photo ${index + 1}`;
 
           card.appendChild(img);

@@ -64,6 +64,17 @@ Done: the repo now documents and automates the release path instead of relying o
 
 **Owner actions still required:** rotate the leaked Supabase service-role key and old account passwords, purge git history, set Turnstile keys, and apply `docs/migrations-production.sql` to the production project.
 
+## Phase 5 — Repo-wide design-system consistency (2026-10-22)
+
+Done: every web screen and shared component now follows the UI design system contract instead of mixing one-off styles.
+
+- Applied the sanctioned tokens across student, auth, help, error, and admin surfaces: `forest`, `lime`, `canvas`, `sage`, `danger`, `rounded-card`/`rounded-control`, and the four approved shadows.
+- Normalized actions to the 44px, `text-sm`, pill recipe; removed text close glyphs and the `+` character in favor of inline SVG icons; removed `font-mono` from visible IDs in favor of `tabular-nums`.
+- Removed unsanctioned effects: dotted auth glow, pulsing attention badges, decorative hover scaling, `shadow-inner`, and extra shadow layers. Modal backdrops, radii, borders, and close controls are now uniform.
+- Converted headings, labels, empty states, toasts, and notification titles to sentence case; kept proper nouns and the documented 10px console pill.
+- Fixed invalid/duplicated utility classes, sub-12px copy, non-token micro type sizes, and mismatched page gutters. Admin keeps its intentional wide frame, and `DashboardFooter` now matches it via a `wide` variant.
+- Verified: `astro check` 0 errors / 0 warnings; `npm test` 93 passed, 2 skipped; `npm run build` success.
+
 ## Steps
 
 - [x] 1. Setup, layout (navbar deferred: it belongs with step 5, no navbar exists in `context/`)

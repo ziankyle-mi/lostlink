@@ -614,7 +614,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
         if (type === "found") {
           typeBadge.textContent = "FOUND";
-          typeBadge.className = "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-forest-700 text-white";
+          typeBadge.className = "rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider bg-forest-700 text-white";
           if (refContainer) {
             refContainer.classList.remove("hidden");
             document.getElementById("modal-ref-code").textContent = ref || "LL-4821";
@@ -623,7 +623,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           if (submitBtn) submitBtn.textContent = "Submit Claim Verification";
         } else {
           typeBadge.textContent = "LOST";
-          typeBadge.className = "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-lime text-forest-900 border border-lime-600/30";
+          typeBadge.className = "rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider bg-lime text-forest-900 border border-lime-600/30";
           if (refContainer) refContainer.classList.add("hidden");
           if (proofLabel) proofLabel.textContent = "Did you find this? Let the owner know";
           if (submitBtn) submitBtn.textContent = "Notify Finder / Report Found";
@@ -777,7 +777,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             await navigator.clipboard.writeText(refText);
             const tooltip = modalCopyBtn.querySelector(".copy-ref-tooltip");
             if (tooltip) tooltip.classList.add("visible");
-            showToast(`Reference code ${refText} copied to clipboard!`, "success");
+            showToast(`Reference code ${refText} copied to clipboard`, "success");
             setTimeout(() => {
               if (tooltip) tooltip.classList.remove("visible");
             }, 2000);
@@ -837,7 +837,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         }
         if (form) form.classList.add("hidden");
         if (successMsg) successMsg.classList.remove("hidden");
-        showToast("Claim verification submitted to Security Office!", "success");
+        showToast("Claim verification submitted to the Security Office", "success");
         setTimeout(hideClaimModal, 2200);
       };
 
@@ -1164,7 +1164,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
             if (!uploadRes.ok || !uploadJson?.ok || !Array.isArray(uploadJson.paths)) {
               if (submitBtn) submitBtn.disabled = false;
               if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-              if (submitBtnText) submitBtnText.textContent = "Submit Report";
+              if (submitBtnText) submitBtnText.textContent = "Submit report";
               (window as any).turnstile?.reset();
               showToast(uploadJson?.error || "Photo upload failed. Please try again.", "error");
               return;
@@ -1174,7 +1174,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           } catch {
             if (submitBtn) submitBtn.disabled = false;
             if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-            if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            if (submitBtnText) submitBtnText.textContent = "Submit report";
             (window as any).turnstile?.reset();
             showToast("Photo upload failed. Check your connection and try again.", "error");
             return;
@@ -1207,7 +1207,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           if (!itemRes.ok || !itemJson?.ok || !itemJson.item?.id) {
             if (submitBtn) submitBtn.disabled = false;
             if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-            if (submitBtnText) submitBtnText.textContent = "Submit Report";
+            if (submitBtnText) submitBtnText.textContent = "Submit report";
             (window as any).turnstile?.reset();
             showToast(itemJson?.error || "Could not save the report. Try again.", "error");
             return;
@@ -1221,7 +1221,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         } catch {
           if (submitBtn) submitBtn.disabled = false;
           if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-          if (submitBtnText) submitBtnText.textContent = "Submit Report";
+          if (submitBtnText) submitBtnText.textContent = "Submit report";
           (window as any).turnstile?.reset();
           showToast("Could not save the report. Check your connection and try again.", "error");
           return;
@@ -1262,14 +1262,14 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           `).join("");
 
           const sliderControls = finalPhotoUrls.length > 1 ? `
-            <button type="button" class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full border border-line/60 bg-white/95 text-forest-900 shadow-2xs backdrop-blur-xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:border-forest-700 hover:bg-forest-700 hover:text-white active:scale-95 cursor-pointer" aria-label="Previous photo" title="Previous photo">
+            <button type="button" class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full bg-black/60 text-white shadow-2xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:bg-black/80 active:scale-95 cursor-pointer" aria-label="Previous photo" title="Previous photo">
               <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <button type="button" class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full border border-line/60 bg-white/95 text-forest-900 shadow-2xs backdrop-blur-xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:border-forest-700 hover:bg-forest-700 hover:text-white active:scale-95 cursor-pointer" aria-label="Next photo" title="Next photo">
+            <button type="button" class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full bg-black/60 text-white shadow-2xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:bg-black/80 active:scale-95 cursor-pointer" aria-label="Next photo" title="Next photo">
               <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
             </button>
-            <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full border border-line/60 bg-white/95 px-2.5 py-1 text-xs font-bold text-forest-900 shadow-2xs backdrop-blur-xs">
-              <span class="current-slide-idx text-forest-700">1</span><span class="font-medium text-stone-500">/${finalPhotoUrls.length}</span>
+            <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full bg-black/60 px-2.5 py-1 text-xs font-bold text-white shadow-2xs">
+              <span class="current-slide-idx text-lime">1</span><span class="font-medium text-white/70">/${finalPhotoUrls.length}</span>
             </div>
           ` : "";
 
@@ -1333,7 +1333,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         // Reset submit button state
         if (submitBtn) submitBtn.disabled = false;
         if (submitBtnSpinner) submitBtnSpinner.classList.add("hidden");
-        if (submitBtnText) submitBtnText.textContent = "Submit Report";
+        if (submitBtnText) submitBtnText.textContent = "Submit report";
 
         // Reset form & photos
         const form = document.getElementById("quick-report-form");
@@ -1363,8 +1363,8 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
               const tooltip = copyRefBtn.querySelector(".copy-ref-tooltip");
               const copyLabel = copyRefBtn.querySelector(".copy-label");
               if (tooltip) tooltip.classList.add("visible");
-              if (copyLabel) copyLabel.textContent = "Copied!";
-              showToast("Reference code " + refCode + " copied!", "success");
+              if (copyLabel) copyLabel.textContent = "Copied";
+              showToast("Reference code " + refCode + " copied", "success");
               setTimeout(() => {
                 if (tooltip) tooltip.classList.remove("visible");
                 if (copyLabel) copyLabel.textContent = "Copy";

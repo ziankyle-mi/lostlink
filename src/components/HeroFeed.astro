@@ -10,7 +10,7 @@ interface Props {
 const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
 ---
 
-<section class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-8 lg:px-10 xl:px-14 pt-4 sm:pt-6 pb-4" aria-labelledby="campus-feed-title">
+<section class="mx-auto w-full max-w-7xl px-4 sm:px-10 lg:px-14 pt-4 sm:pt-6 pb-4" aria-labelledby="campus-feed-title">
   <!-- Title / Eyebrow Header (Scaled generously) -->
   <div class="text-center pt-2 sm:pt-3 pb-6 sm:pb-10">
     <p class="text-xs sm:text-sm font-bold tracking-[0.25em] uppercase text-forest-900/70">
@@ -31,10 +31,10 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
   <div class="grid grid-cols-1 gap-5 sm:gap-8 md:grid-cols-2">
     <!-- Left Card: Found an item? -->
     <div
-      class="relative overflow-hidden rounded-3xl bg-forest-700 p-6 sm:p-10 lg:p-12 text-white shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
+      class="relative overflow-hidden rounded-3xl bg-forest-700 p-6 sm:p-10 lg:p-12 text-white shadow-xs flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
     >
       <!-- Watermark Graphic -->
-      <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-[#1e5c41] opacity-60" />
+      <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-white/10 opacity-60" />
 
       <!-- Subtle animated wave background -->
       <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-40 overflow-hidden select-none opacity-20">
@@ -49,13 +49,13 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
       <!-- Card Content Top -->
       <div class="relative z-10">
         <span class="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white/95">
-          I FOUND SOMETHING
+          I found something
         </span>
         <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight">
           Found an item?<br />
           <span class="text-lime">Post it here.</span>
         </h2>
-        <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-[1.0625rem] text-white/80 leading-relaxed">
+        <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-lg text-white/80 leading-relaxed">
           Add a photo, note where you found it and where it's being kept.
         </p>
       </div>
@@ -65,7 +65,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         <button
           type="button"
           data-open-report="found"
-          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-lime px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-forest-900 shadow-2xs transition-all hover:bg-[#c9e376] hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
+          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-lime px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-forest-900 shadow-2xs transition-all hover:bg-[#c9e376] active:scale-95 cursor-pointer w-full sm:w-auto"
         >
           <span>Post a found item</span>
           <span aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
@@ -78,10 +78,10 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
 
     <!-- Right Card: Lost something? -->
     <div
-      class="relative overflow-hidden rounded-3xl bg-lime p-6 sm:p-10 lg:p-12 text-forest-900 shadow-sm flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
+      class="relative overflow-hidden rounded-3xl bg-lime p-6 sm:p-10 lg:p-12 text-forest-900 shadow-xs flex flex-col justify-between min-h-[280px] sm:min-h-[340px]"
     >
       <!-- Watermark Graphic -->
-      <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-[#c2dc6d] opacity-55" />
+      <ActionCardsWatermark class="absolute -right-6 -top-6 h-[125%] w-auto max-w-[50%] pointer-events-none select-none text-forest-900/10 opacity-55" />
 
       <!-- Subtle animated wave background -->
       <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-40 overflow-hidden select-none opacity-15">
@@ -96,13 +96,13 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
       <!-- Card Content Top -->
       <div class="relative z-10">
         <span class="inline-flex items-center rounded-full border border-forest-900/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-forest-900">
-          I LOST SOMETHING
+          I lost something
         </span>
         <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight text-forest-900">
           Lost something?<br />
           <span>Tell the community.</span>
         </h2>
-        <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-[1.0625rem] text-forest-900/85 leading-relaxed">
+        <p class="mt-2.5 sm:mt-3 max-w-sm text-sm sm:text-base lg:text-lg text-forest-900/85 leading-relaxed">
           Describe it, say where you last saw it and we'll keep your post visible.
         </p>
       </div>
@@ -112,7 +112,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         <button
           type="button"
           data-open-report="lost"
-          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-forest-700 px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-forest-900 hover:shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
+          class="inline-flex min-h-[3.25rem] items-center justify-center gap-2 rounded-full bg-forest-700 px-6 sm:px-7 py-3 text-sm sm:text-base font-bold text-white shadow-2xs transition-all hover:bg-forest-900 active:scale-95 cursor-pointer w-full sm:w-auto"
         >
           <span>Post a lost item</span>
           <span aria-hidden="true"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>

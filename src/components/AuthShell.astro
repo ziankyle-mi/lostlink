@@ -33,41 +33,17 @@ const stories = [
     <header class="flex items-center justify-between gap-4 border-b border-line py-5 sm:py-6">
       <BrandHeader />
       <div class="flex items-center gap-5">
-        <p class="hidden text-[0.8125rem] font-medium tracking-wide text-forest-700 uppercase md:block">
+        <p class="hidden text-sm font-medium tracking-wide text-forest-700 uppercase md:block">
           DLSAU Campus Community
         </p>
-        <a href="/help" class="help-pill">Need Help?</a>
+        <a href="/help" class="help-pill">Need help?</a>
       </div>
     </header>
 
     <main class="grid flex-1 gap-5 py-6 lg:grid-cols-2 lg:gap-8 lg:py-8">
       <aside
-        class="relative hidden flex-col justify-between overflow-hidden rounded-[2.25rem] p-9 text-white lg:flex xl:p-10 border border-white/10 shadow-card bg-forest-700"
+        class="relative hidden flex-col justify-between overflow-hidden rounded-card p-9 text-white lg:flex xl:p-10 border border-white/10 shadow-card bg-forest-700"
       >
-        <!-- Subtle organic ambient glow (really soft and diffused) -->
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
-          <!-- Dotted trail: same lime as the accent, arcs from above the badge into the light behind the headline -->
-          <svg class="absolute inset-0 h-full w-full" viewBox="0 0 1000 800" preserveAspectRatio="none" fill="none">
-            <path
-              d="M 400 -40 C 520 120 760 90 860 240 C 900 300 880 350 800 380"
-              stroke="#d8ef8c"
-              stroke-opacity="0.5"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-dasharray="0.01 16"
-              vector-effect="non-scaling-stroke"
-            >
-            </path>
-          </svg>
-          <!-- Terminal marker where the trail lands in the glow -->
-          <span class="absolute left-[80%] top-[47.5%] -translate-x-1/2 -translate-y-1/2">
-            <span
-              class="block size-2 rounded-full bg-lime shadow-xs"
-            >
-            </span>
-          </span>
-        </div>
-
         <!-- Subtle animated organic wave layers -->
         <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 h-44 overflow-hidden select-none opacity-20">
           <svg class="animate-wave-slow absolute -bottom-1 left-0 w-[200%] h-36 text-lime" viewBox="0 0 1200 120" preserveAspectRatio="none" fill="currentColor">
@@ -79,7 +55,7 @@ const stories = [
         </div>
 
         <div class="relative flex items-start justify-between">
-          <span class="rounded-full border border-white/25 bg-white/[0.04] px-4 py-1.5 text-xs sm:text-[0.875rem] font-medium tracking-wide text-white/90">
+          <span class="rounded-full border border-white/25 bg-white/[0.04] px-4 py-1.5 text-sm font-medium tracking-wide text-white/90">
             DLSAU &middot; Lost &amp; Found
           </span>
         </div>
@@ -115,7 +91,7 @@ const stories = [
                     <span set:html={story.text} />
                   </p>
                   {story.name && (
-                    <p class="mt-2 text-[0.8125rem] font-semibold leading-snug text-forest-900/70">
+                    <p class="mt-2 text-sm font-semibold leading-snug text-forest-900/70">
                       &mdash; {story.name}
                     </p>
                   )}

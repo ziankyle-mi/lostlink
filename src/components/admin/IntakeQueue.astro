@@ -67,14 +67,14 @@ const queueItems = liveIntake !== undefined
 ---
 
 <section
-  class="scroll-mt-8 rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between"
+  class="scroll-mt-8 rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs flex flex-col justify-between"
   id="inventory"
 >
   <div>
     <!-- Header -->
     <div>
       <h2 class="font-serif text-2xl font-black text-forest-900 tracking-tight">
-        {isAdmin ? "Waiting for review" : "Campus Claiming Checklist"}
+        {isAdmin ? "Waiting for review" : "Campus claiming checklist"}
       </h2>
       <p class="mt-1 text-sm text-stone-500">
         {isAdmin
@@ -141,7 +141,7 @@ const queueItems = liveIntake !== undefined
                 data-intake-id={item.id}
                 data-intake-name={item.name}
                 data-intake-type={item.type}
-                class="remove-intake-btn rounded-full border border-rose-200/90 bg-rose-50 hover:bg-rose-100 active:scale-95 px-3 py-1.5 text-xs font-bold text-rose-700 transition-all shadow-2xs cursor-pointer"
+                class="remove-intake-btn inline-flex min-h-11 items-center justify-center rounded-full border border-danger/20 bg-danger/10 hover:bg-danger/20 active:scale-95 px-3 py-1.5 text-xs font-bold text-danger transition-all shadow-2xs cursor-pointer"
                 title="Reject report"
               >
                 Reject
@@ -151,7 +151,7 @@ const queueItems = liveIntake !== undefined
                 data-intake-id={item.id}
                 data-intake-name={item.name}
                 data-intake-type={item.type}
-                class="confirm-intake-btn rounded-full bg-lime hover:bg-[#c9e376] active:scale-95 px-4 py-1.5 text-xs font-bold text-forest-700 transition-all shadow-xs cursor-pointer"
+                class="confirm-intake-btn inline-flex min-h-11 items-center justify-center rounded-full bg-lime hover:bg-[#c9e376] active:scale-95 px-4 py-2 text-sm font-bold text-forest-700 transition-all shadow-2xs cursor-pointer"
               >
                 {item.type === "lost" ? "Approve report" : "Confirm received"}
               </button>
@@ -166,7 +166,7 @@ const queueItems = liveIntake !== undefined
             1
           </span>
           <div class="text-xs sm:text-sm text-stone-700">
-            <p class="font-bold text-forest-900">Valid Identification</p>
+            <p class="font-bold text-forest-900">Valid identification</p>
             <p class="mt-0.5 text-stone-600">Present your physical DLSAU ID card or currently validated Certificate of Registration (COR).</p>
           </div>
         </div>
@@ -176,7 +176,7 @@ const queueItems = liveIntake !== undefined
             2
           </span>
           <div class="text-xs sm:text-sm text-stone-700">
-            <p class="font-bold text-forest-900">Proof of Ownership</p>
+            <p class="font-bold text-forest-900">Proof of ownership</p>
             <p class="mt-0.5 text-stone-600">Be ready to describe hidden marks, phone unlock passwords, or unique contents to the office officer.</p>
           </div>
         </div>
@@ -186,7 +186,7 @@ const queueItems = liveIntake !== undefined
             3
           </span>
           <div class="text-xs sm:text-sm text-stone-700">
-            <p class="font-bold text-forest-900">Office Hours & Location</p>
+            <p class="font-bold text-forest-900">Office hours &amp; location</p>
             <p class="mt-0.5 text-stone-600">Disciplinary Office, Admin Building Room 102. Open Monday to Friday, 8:00 AM &ndash; 5:00 PM.</p>
           </div>
         </div>

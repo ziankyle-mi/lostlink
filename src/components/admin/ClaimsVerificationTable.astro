@@ -17,7 +17,7 @@ export const adminClaims = [
     claimant: "Juan D. Reyes",
     studentId: "2023-01234",
     statusText: "At the office now",
-    statusStyle: "bg-lime text-forest-700",
+    statusStyle: "bg-lime text-forest-900",
     time: "Today, 2:10 PM",
     privateDetails: "Contains DLSAU library card, 2 guitar picks, and receipt from cafeteria.",
   },
@@ -30,7 +30,7 @@ export const adminClaims = [
     claimant: "Maria Santos",
     studentId: "2022-04871",
     statusText: "Awaiting visit",
-    statusStyle: "bg-stone-200 text-stone-700",
+    statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Today, 11:42 AM",
     privateDetails: "ID in a dark green leather lanyard with a yellow smiley button.",
   },
@@ -43,7 +43,7 @@ export const adminClaims = [
     claimant: "Paolo Cruz",
     studentId: "2024-00318",
     statusText: "Awaiting visit",
-    statusStyle: "bg-stone-200 text-stone-700",
+    statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Yesterday, 4:05 PM",
     privateDetails: "3 silver keys, 1 motorcycle key, DLSAU Agrivet keychain.",
   },
@@ -56,7 +56,7 @@ export const adminClaims = [
     claimant: "Ana Villanueva +1",
     studentId: "2 claims on this",
     statusText: "Two claimants",
-    statusStyle: "bg-forest-700 text-white",
+    statusStyle: "bg-danger/10 text-danger",
     time: "Yesterday, 1:30 PM",
     privateDetails: "White charging case with subtle scratch on the bottom right corner.",
   },
@@ -69,7 +69,7 @@ export const adminClaims = [
     claimant: "Rico Mendoza",
     studentId: "2023-02290",
     statusText: "Awaiting visit",
-    statusStyle: "bg-stone-200 text-stone-700",
+    statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Oct 8, 9:15 AM",
     privateDetails: "Automatic black umbrella with green handle strap.",
   },
@@ -85,7 +85,7 @@ export const studentClaims = [
     claimant: "You (Claim Submitted)",
     studentId: "2022-04871",
     statusText: "At the office now",
-    statusStyle: "bg-lime text-forest-700",
+    statusStyle: "bg-lime text-forest-900",
     time: "Today, 2:10 PM",
     privateDetails: "Casio fx-991EX with name sticker 'M. Santos' on back lid.",
   },
@@ -98,7 +98,7 @@ export const studentClaims = [
     claimant: "You (Lost Report)",
     studentId: "Report #LR-104",
     statusText: "Awaiting visit",
-    statusStyle: "bg-stone-200 text-stone-700",
+    statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Yesterday, 4:05 PM",
     privateDetails: "Security matches found keys turned in at Admin Lobby.",
   },
@@ -111,7 +111,7 @@ export const studentClaims = [
     claimant: "You (Turned in to DO)",
     studentId: "Custody #IN-082",
     statusText: "In DO custody",
-    statusStyle: "bg-forest-700 text-white",
+    statusStyle: "bg-danger/10 text-danger",
     time: "Oct 8, 9:15 AM",
     privateDetails: "Safely logged at Disciplinary Office. Ready for owner release.",
   },
@@ -145,7 +145,7 @@ const mappedLiveClaims = liveClaims && liveClaims.length > 0
       claimant: c.profiles?.full_name ?? "Student Claimant",
       studentId: c.profiles?.email ? c.profiles.email.split("@")[0] : "Verified Student",
       statusText: c.status === "verified" ? "Verified" : (c.status === "denied" ? "Denied" : "Awaiting visit"),
-      statusStyle: c.status === "verified" ? "bg-lime text-forest-700" : (c.status === "denied" ? "bg-red-100 text-red-800" : "bg-stone-200 text-stone-700"),
+      statusStyle: c.status === "verified" ? "bg-lime text-forest-900" : (c.status === "denied" ? "bg-danger/10 text-danger" : "bg-[#ece5d6] text-forest-900"),
       time: formatClaimDate(c.created_at),
       privateDetails: c.proof_description ?? "Proof details provided during claim verification.",
     }))
@@ -156,7 +156,7 @@ const items = liveClaims !== undefined
   : (isAdmin ? adminClaims : studentClaims);
 ---
 
-<section class="rounded-[2rem] bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs" id="claims">
+<section class="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs" id="claims">
   <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-5 border-b border-stone-100">
     <div>
@@ -179,7 +179,7 @@ const items = liveClaims !== undefined
   </div>
 
   <!-- Table Header (Desktop) -->
-  <div class="hidden sm:grid sm:grid-cols-12 gap-4 py-3 border-b border-stone-100 text-[11px] font-black tracking-wider text-stone-400 uppercase">
+  <div class="hidden sm:grid sm:grid-cols-12 gap-4 py-3 border-b border-stone-100 text-xs font-black tracking-wider text-stone-400 uppercase">
     <div class="col-span-4 lg:col-span-5">ITEM</div>
     <div class="col-span-3 lg:col-span-3">CLAIMANT</div>
     <div class="col-span-3 lg:col-span-2">STATUS</div>
@@ -269,7 +269,7 @@ const items = liveClaims !== undefined
           <p class="truncate text-sm font-bold text-stone-900 leading-tight">
             {item.claimant}
           </p>
-          <p class="truncate text-xs text-stone-500 mt-0.5 font-mono">
+          <p class="truncate text-xs text-stone-500 mt-0.5 tabular-nums">
             {item.studentId}
           </p>
         </div>
@@ -292,7 +292,7 @@ const items = liveClaims !== undefined
             data-claim-item={item.name}
             data-claim-claimant={item.claimant}
             data-claim-details={item.privateDetails}
-            class="claim-review-btn inline-flex items-center gap-1 text-sm font-bold text-forest-900 hover:text-forest-700 transition-colors cursor-pointer"
+            class="claim-review-btn inline-flex min-h-11 items-center gap-1 text-sm font-bold text-forest-900 hover:text-forest-700 transition-colors cursor-pointer"
           >
             {isAdmin ? "Review \u2192" : "View ticket \u2192"}
           </button>
