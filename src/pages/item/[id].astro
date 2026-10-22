@@ -143,12 +143,57 @@ if (!item) {
                 </div>
 
                 {item.images && item.images.length > 0 ? (
-                  <img
-                    id="main-item-photo"
-                    src={item.images[0]}
-                    alt={item.name}
-                    class="h-full w-full object-cover transition-all"
-                  />
+                  <div
+                    class={`card-slider relative h-full w-full overflow-hidden ${item.images.length > 1 ? "cursor-grab" : ""}`}
+                    data-images-count={item.images.length}
+                    data-current-idx="0"
+                  >
+                    <div class="slider-track flex h-full w-full transition-transform duration-300 ease-out">
+                      {item.images.map((photo: string, photoIdx: number) => (
+                        <div
+                          id={photoIdx === 0 ? "main-item-photo" : undefined}
+                          class="slider-slide relative h-full w-full shrink-0 bg-stone-100"
+                        >
+                          <img
+                            src={photo}
+                            alt={`${item.name} - Photo ${photoIdx + 1}`}
+                            loading={photoIdx === 0 ? "eager" : "lazy"}
+                            class="h-full w-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {item.images.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          class="slider-prev absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full bg-black/60 text-white shadow-2xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:bg-black/80 active:scale-95 cursor-pointer"
+                          aria-label="Previous photo"
+                          title="Previous photo"
+                        >
+                          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          class="slider-next absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex size-10 items-center justify-center rounded-full bg-black/60 text-white shadow-2xs transition-all after:absolute after:-inset-0.5 after:rounded-full after:content-[''] hover:bg-black/80 active:scale-95 cursor-pointer"
+                          aria-label="Next photo"
+                          title="Next photo"
+                        >
+                          <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+
+                        <div class="slider-badge absolute bottom-3 right-3 z-20 rounded-full bg-black/60 px-2.5 py-1 text-xs font-bold text-white shadow-2xs">
+                          <span class="current-slide-idx text-lime">1</span><span class="font-medium text-white/70">/{item.images.length}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   <div class="flex flex-col items-center justify-center text-stone-400 p-6 text-center">
                     <svg class="size-16 text-forest-700/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -165,8 +210,11 @@ if (!item) {
                   {item.images.map((photo: string, idx: number) => (
                     <button
                       type="button"
-                      class="size-16 shrink-0 overflow-hidden rounded-xl border border-stone-200 hover:border-forest-700 transition-colors cursor-pointer"
-                      data-photo-src={photo}
+                      class={`size-16 shrink-0 overflow-hidden rounded-xl border transition-colors cursor-pointer ${
+                        idx === 0 ? "border-forest-700" : "border-stone-200"
+                      } hover:border-forest-700`}
+                      data-photo-idx={idx}
+                      aria-label={`Show photo ${idx + 1}`}
                     >
                       <img src={photo} alt={`Photo ${idx + 1}`} class="h-full w-full object-cover" />
                     </button>
@@ -330,6 +378,8 @@ if (!item) {
   </div>
 
   <script>
+    import { initAllCardSliders, setSlide } from "~/lib/photoSlider";
+
     // Copy reference code to clipboard
     const copyRefBtn = document.getElementById("copy-item-ref-btn");
     if (copyRefBtn) {
@@ -355,13 +405,26 @@ if (!item) {
       });
     }
 
-    // Thumbnail switcher without inline event handlers (CSP-safe, no string
-    // interpolation of URLs into executable JavaScript).
-    document.querySelectorAll<HTMLButtonElement>("[data-photo-src]").forEach((btn) => {
+    // Photo gallery: the shared photoSlider module provides cursor-side arrows,
+    // drag/touch swipe, and prev/next button clicks. Thumbnails select a slide
+    // directly and stay in sync via the slider's ll:slide event (no inline
+    // handlers or URL interpolation — CSP-safe).
+    const gallerySlider = document.querySelector<HTMLElement>(".card-slider");
+    initAllCardSliders();
+
+    const photoThumbs = document.querySelectorAll<HTMLButtonElement>("[data-photo-idx]");
+    photoThumbs.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const main = document.getElementById("main-item-photo") as HTMLImageElement | null;
-        const src = btn.dataset.photoSrc;
-        if (main && src) main.src = src;
+        if (gallerySlider) setSlide(gallerySlider, Number(btn.dataset.photoIdx || 0));
+      });
+    });
+
+    gallerySlider?.addEventListener("ll:slide", (event) => {
+      const activeIndex = (event as CustomEvent<{ index: number }>).detail.index;
+      photoThumbs.forEach((thumb) => {
+        const isActive = Number(thumb.dataset.photoIdx) === activeIndex;
+        thumb.classList.toggle("border-forest-700", isActive);
+        thumb.classList.toggle("border-stone-200", !isActive);
       });
     });
 

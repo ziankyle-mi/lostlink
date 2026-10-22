@@ -528,6 +528,41 @@
   scrollbar-color: #d8cfbe transparent;
 }
 
+/* Cursor-side photo slider: on hover-capable pointers the prev/next arrows
+   only appear on the half of the photo the cursor is over (JS sets
+   data-side="left|right"). Touch devices keep both arrows visible, and
+   keyboard focus always reveals the focused arrow. */
+@media (hover: hover) and (pointer: fine) {
+  .card-slider .slider-prev,
+  .card-slider .slider-next {
+    opacity: 0;
+    transition:
+      opacity 150ms ease,
+      background-color 150ms ease,
+      transform 90ms ease;
+  }
+
+  .card-slider[data-side="left"] .slider-prev,
+  .card-slider[data-side="right"] .slider-next {
+    opacity: 1;
+  }
+}
+
+.card-slider .slider-prev:focus-visible,
+.card-slider .slider-next:focus-visible {
+  opacity: 1;
+}
+
+/* While dragging, the track follows the cursor with no transition and the
+   pointer shows the grabbing cursor (set via the is-dragging class). */
+.card-slider.is-dragging .slider-track {
+  transition: none;
+}
+
+.card-slider.is-dragging {
+  cursor: grabbing;
+}
+
 /* ── Human-Computer Interaction (HCI) Fluid Responsive Design System ──
    Dynamic layout adjustment and continuous scaling for a single layout:
    - Fluid typography via CSS clamp() (continuous interpolation across all screen sizes)

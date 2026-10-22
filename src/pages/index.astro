@@ -139,6 +139,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
   <!-- Client-side Interactive Filtering, Modals, and Search Logic -->
   <script>
     // @ts-nocheck -- legacy DOM script, migrated out of is:inline for CSP.
+    import { initAllCardSliders } from "~/lib/photoSlider";
     (function () {
       // State
       let currentFilterType = "all";
@@ -683,6 +684,11 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
           if (e.target.closest(".slider-prev") || e.target.closest(".slider-next")) {
             return;
           }
+          // A completed drag-to-swipe is not a card click.
+          const draggedSlider = e.target.closest(".card-slider");
+          if (draggedSlider && draggedSlider.dataset.dragJustEnded) {
+            return;
+          }
           if (e.target.closest(".admin-remove-card-btn")) {
             return;
           }
@@ -698,69 +704,10 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
       }
 
       // Slidable Photo Carousel Controls (prev/next buttons)
-      document.addEventListener("click", (e) => {
-        const prevBtn = e.target.closest(".slider-prev");
-        const nextBtn = e.target.closest(".slider-next");
-        if (prevBtn || nextBtn) {
-          e.stopPropagation();
-          e.preventDefault();
-          const slider = (prevBtn || nextBtn).closest(".card-slider");
-          if (!slider) return;
-          const track = slider.querySelector(".slider-track");
-          const count = parseInt(slider.dataset.imagesCount || "1", 10);
-          const badgeIdx = slider.querySelector(".current-slide-idx");
-          let currentIdx = parseInt(slider.dataset.currentIdx || "0", 10);
-
-          if (prevBtn) {
-            currentIdx = (currentIdx - 1 + count) % count;
-          } else {
-            currentIdx = (currentIdx + 1) % count;
-          }
-
-          slider.dataset.currentIdx = String(currentIdx);
-          if (track) track.style.transform = `translateX(-${currentIdx * 100}%)`;
-          if (badgeIdx) badgeIdx.textContent = String(currentIdx + 1);
-        }
-      }, true);
-
-      // Touch swipe support for card-slider on mobile
-      let touchStartX = 0;
-      let touchStartY = 0;
-      let activeSlider = null;
-
-      document.addEventListener("touchstart", (e) => {
-        activeSlider = e.target.closest(".card-slider");
-        if (activeSlider) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-        }
-      }, { passive: true });
-
-      document.addEventListener("touchend", (e) => {
-        if (!activeSlider) return;
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const diffX = touchEndX - touchStartX;
-        const diffY = touchEndY - touchStartY;
-
-        if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
-          const count = parseInt(activeSlider.dataset.imagesCount || "1", 10);
-          if (count > 1) {
-            let currentIdx = parseInt(activeSlider.dataset.currentIdx || "0", 10);
-            if (diffX < 0) {
-              currentIdx = (currentIdx + 1) % count;
-            } else {
-              currentIdx = (currentIdx - 1 + count) % count;
-            }
-            activeSlider.dataset.currentIdx = String(currentIdx);
-            const track = activeSlider.querySelector(".slider-track");
-            const badgeIdx = activeSlider.querySelector(".current-slide-idx");
-            if (track) track.style.transform = `translateX(-${currentIdx * 100}%)`;
-            if (badgeIdx) badgeIdx.textContent = String(currentIdx + 1);
-          }
-        }
-        activeSlider = null;
-      }, { passive: true });
+      // Photo sliders (cursor-side arrows, button clicks, drag/touch swipe)
+      // live in the shared photoSlider module — one implementation for the
+      // feed cards and the item-detail gallery.
+      initAllCardSliders();
 
       if (closeClaimModal) closeClaimModal.addEventListener("click", hideClaimModal);
       if (cancelClaimBtn) cancelClaimBtn.addEventListener("click", hideClaimModal);
@@ -1229,7 +1176,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
         // Build newly created card DOM with confirmed photo URLs
         const newCard = document.createElement("article");
-        newCard.className = "item-card group relative flex flex-col justify-between overflow-hidden rounded-card border border-line/80 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-card cursor-pointer";
+        newCard.className = "item-card group relative isolate flex flex-col justify-between overflow-hidden rounded-card border border-line/80 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-card cursor-pointer";
         newCard.dataset.itemId = itemId;
         newCard.dataset.itemType = reportType;
         newCard.dataset.itemCategory = itemCategory;
