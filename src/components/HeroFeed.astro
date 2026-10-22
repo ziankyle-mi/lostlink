@@ -18,11 +18,11 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
     </p>
     <h1
       id="campus-feed-title"
-      class="mt-2 font-serif text-5xl sm:text-7xl md:text-8xl lg:text-[5.5rem] font-black tracking-tight text-forest-900 leading-[1.03]"
+      class="mt-2 font-serif text-[clamp(2.5rem,7.5vw,5.5rem)] font-black tracking-tight text-forest-900 leading-[1.03]"
     >
       Lost<span class="italic font-serif font-black text-forest-900">&</span>Found
     </h1>
-    <p class="mx-auto mt-3 sm:mt-4 max-w-lg text-sm sm:text-lg md:text-xl leading-relaxed text-forest-900/80 px-2">
+    <p class="mx-auto mt-3 sm:mt-4 max-w-lg text-[clamp(0.9375rem,1.8vw,1.1875rem)] leading-relaxed text-forest-900/80 px-2">
       Everything the DLSAU community has lost or found, all in one place.
     </p>
   </div>
@@ -51,7 +51,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         <span class="inline-flex items-center rounded-full border border-white/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white/95">
           I found something
         </span>
-        <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight">
+        <h2 class="mt-4 sm:mt-5 font-serif text-[clamp(1.5rem,3.5vw,2.65rem)] font-bold leading-tight">
           Found an item?<br />
           <span class="text-lime">Post it here.</span>
         </h2>
@@ -98,7 +98,7 @@ const { foundCount = FOUND_COUNT, lostCount = LOST_COUNT } = Astro.props;
         <span class="inline-flex items-center rounded-full border border-forest-900/30 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-forest-900">
           I lost something
         </span>
-        <h2 class="mt-4 sm:mt-5 font-serif text-2xl sm:text-4xl lg:text-[2.65rem] font-bold leading-tight text-forest-900">
+        <h2 class="mt-4 sm:mt-5 font-serif text-[clamp(1.5rem,3.5vw,2.65rem)] font-bold leading-tight text-forest-900">
           Lost something?<br />
           <span>Tell the community.</span>
         </h2>

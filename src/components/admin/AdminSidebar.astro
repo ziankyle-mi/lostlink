@@ -1,5 +1,4 @@
 ---
-import { actions } from "astro:actions";
 import BrandMark from "~/components/BrandMark.astro";
 import { DEMO_STATS, FOUND_COUNT, LOST_COUNT } from "~/data/mockItems";
 import { adminClaims, studentClaims } from "~/components/admin/ClaimsVerificationTable.astro";
@@ -332,9 +331,10 @@ const userName = isAdmin
         >
           {isAdmin ? "Student View" : "Admin"}
         </a>
-        <form method="POST" action={actions.logout} class="flex-1">
+        <form method="POST" action="/api/auth/logout" class="flex-1" id="admin-signout-form">
           <button
             type="submit"
+            id="admin-signout-btn"
             class="flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-lime px-3 text-sm font-bold text-forest-700 transition-all hover:bg-[#c9e376] active:scale-95"
           >
             <svg
@@ -358,3 +358,19 @@ const userName = isAdmin
     </div>
   </div>
 </aside>
+
+<script>
+  // @ts-nocheck
+  (function () {
+    const adminSignoutBtn = document.getElementById("admin-signout-btn");
+    if (adminSignoutBtn) {
+      adminSignoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch (err) {}
+        window.location.href = "/login";
+      });
+    }
+  })();
+</script>

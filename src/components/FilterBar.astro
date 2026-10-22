@@ -190,19 +190,19 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
       </div>
 
       <!-- Search Pill Input (Beside Category and Date so it fits directly in the filter bar) -->
-      <div class="relative flex items-center min-w-[150px] sm:min-w-[170px] md:min-w-[195px] max-w-xs">
+      <div class="relative flex items-center w-full sm:w-auto flex-1 min-w-[150px] sm:min-w-[170px] md:min-w-[195px] max-w-md group">
         <input
           type="search"
           id="global-search-input"
           autocomplete="off"
           aria-label="Search campus lost and found items"
-          class="peer w-full min-h-11 rounded-full bg-[#ece5d6] py-1.5 pl-3.5 sm:pl-4 pr-8 text-sm text-forest-900 placeholder:text-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs"
+          class="peer w-full min-h-11 rounded-full bg-[#ece5d6] py-1.5 pl-3.5 sm:pl-4 pr-10 text-sm text-forest-900 placeholder:text-transparent hover:bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-forest-700/25 transition-all shadow-2xs border border-transparent hover:border-stone-300/80 focus:border-stone-300"
         />
 
         <!-- Sliding Words Animated Placeholder -->
         <div
           id="global-search-slider"
-          class="pointer-events-none absolute left-3.5 sm:left-4 right-8 flex items-center h-full select-none text-sm text-stone-500 font-normal transition-opacity duration-200"
+          class="pointer-events-none absolute left-3.5 sm:left-4 right-10 flex items-center h-full select-none text-sm text-stone-500 font-normal transition-opacity duration-200"
           aria-hidden="true"
         >
           <span class="shrink-0 text-stone-500 mr-1 font-normal">Search</span>
@@ -224,17 +224,25 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
           </div>
         </div>
 
-        <svg
-          class="pointer-events-none absolute right-2.5 size-4 text-stone-500 transition-colors peer-focus:text-forest-700"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
+        <button
+          type="button"
+          id="global-search-btn"
+          class="absolute right-1.5 flex size-8 items-center justify-center rounded-full text-stone-500 hover:text-forest-900 hover:bg-white/90 hover:shadow-2xs active:scale-95 transition-all duration-200 cursor-pointer peer-focus:text-forest-700 peer-focus:bg-white/60"
+          aria-label="Focus search input"
+          title="Search campus items"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+          <svg
+            class="size-4 transition-transform duration-200 group-hover:scale-110"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2.2"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -286,7 +294,15 @@ const locationOptions = [...LOCATION_FILTER_OPTIONS];
     const input = document.getElementById("global-search-input");
     const slider = document.getElementById("global-search-slider");
     const track = document.getElementById("global-search-slider-track");
+    const searchBtn = document.getElementById("global-search-btn");
     if (!input || !slider || !track) return;
+
+    if (searchBtn) {
+      searchBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        input.focus();
+      });
+    }
 
     const count = track.children.length;
     if (count <= 1) return;

@@ -35,5 +35,11 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      exclude: ["devalue"],
+    },
+    ssr: {
+      noExternal: ["devalue"],
+    },
   },
 });

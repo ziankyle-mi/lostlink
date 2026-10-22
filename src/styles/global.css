@@ -167,18 +167,21 @@
   }
 
   .caption {
-    margin-top: 1.5rem;
+    margin-top: 1.75rem;
     text-align: center;
     font-size: 0.9375rem;
     color: var(--color-sage-700);
   }
 
   .caption a {
+    display: inline-block;
+    margin-left: 0.35rem;
     font-weight: 600;
     color: var(--color-ink);
     text-decoration: underline;
     text-underline-offset: 4px;
     text-decoration-color: rgba(8, 46, 26, 0.3);
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
   }
 
   .caption a:hover {
@@ -523,5 +526,82 @@
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #d8cfbe transparent;
+}
+
+/* ── Human-Computer Interaction (HCI) Fluid Responsive Design System ──
+   Dynamic layout adjustment and continuous scaling for a single layout:
+   - Fluid typography via CSS clamp() (continuous interpolation across all screen sizes)
+   - Dynamic Viewport Units (dvh / svh) for mobile navigation & keyboard accommodation
+   - Fitts's Law touch-target compliance (minimum 44px on coarse pointers)
+   - Fluid horizontal container containment preventing edge overflow
+   - Safe-area insets for modern mobile notches and home indicators
+   ──────────────────────────────────────────────────────────────────── */
+
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Fluid responsive typography utilities */
+.text-fluid-hero {
+  font-size: clamp(2.5rem, 7.5vw, 5.5rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+}
+
+.text-fluid-section-title {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.text-fluid-card-title {
+  font-size: clamp(1.125rem, 2.5vw, 1.625rem);
+  line-height: 1.25;
+}
+
+.text-fluid-body {
+  font-size: clamp(0.875rem, 1.2vw + 0.5rem, 1.0625rem);
+  line-height: 1.55;
+}
+
+/* Fluid responsive spacing utilities */
+.p-fluid-page {
+  padding-left: clamp(1rem, 4vw, 3.5rem);
+  padding-right: clamp(1rem, 4vw, 3.5rem);
+}
+
+.py-fluid-section {
+  padding-top: clamp(1.5rem, 3.5vw, 3rem);
+  padding-bottom: clamp(1.5rem, 3.5vw, 3rem);
+}
+
+/* Fitts's Law Touch Target Guarantee for mobile devices */
+@media (pointer: coarse) {
+  button,
+  a[role="button"],
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  .touch-target {
+    min-height: 44px;
+  }
+}
+
+/* Fluid responsive table wrapper with subtle scroll hint */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Seamless mobile modal viewport containment */
+.modal-viewport-container {
+  max-height: calc(100dvh - 2rem);
+  overscroll-behavior: contain;
 }
 

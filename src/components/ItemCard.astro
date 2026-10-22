@@ -11,7 +11,7 @@ const { item, isAdmin = false } = Astro.props;
 ---
 
 <article
-  class="item-card group relative flex flex-col justify-between overflow-hidden rounded-card border border-line/60 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-card cursor-pointer"
+  class="item-card group relative isolate flex flex-col justify-between overflow-hidden rounded-card border border-line/60 bg-white shadow-2xs transition-all duration-200 hover:-translate-y-1 hover:shadow-card cursor-pointer"
   data-item-id={item.id}
   data-item-type={item.type}
   data-item-category={item.category}
@@ -51,7 +51,7 @@ const { item, isAdmin = false } = Astro.props;
     {isAdmin && (
       <button
         type="button"
-        class="admin-remove-card-btn absolute right-3.5 top-3.5 z-30 flex size-11 items-center justify-center rounded-full border border-danger/20 bg-white text-danger shadow-xs transition-all hover:bg-danger hover:text-white active:scale-95 cursor-pointer"
+        class="admin-remove-card-btn absolute right-3.5 top-3.5 z-20 flex size-11 items-center justify-center rounded-full border border-danger/20 bg-white text-danger shadow-xs transition-all hover:bg-danger hover:text-white active:scale-95 cursor-pointer"
         data-item-id={item.id}
         data-item-name={item.name}
         title="Remove post (admin)"

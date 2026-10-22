@@ -46,9 +46,8 @@ const PUBLIC_PREFIXES = [
   "/items",
 ];
 const ACTION_PREFIX = "/_actions";
-// Signing in and registering have to work while logged out. Every other
-// action needs a session.
-const PUBLIC_ACTIONS = new Set(["login", "register", "forgotPassword", "devLogin"]);
+// Signing in, registering, and signing out have to work regardless of session validity.
+const PUBLIC_ACTIONS = new Set(["login", "register", "forgotPassword", "devLogin", "logout"]);
 
 function actionName(pathname: string): string {
   return pathname.slice(ACTION_PREFIX.length + 1);
@@ -77,6 +76,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const user = await resolveUser(context.cookies, env);
   context.locals.user = user;
+
+  // Sign out route must always execute to clear session cookies even if user is null or expired
+  if (pathname === "/api/auth/logout") {
+    return withSecurityHeaders(await next());
+  }
 
   if (!user) {
     // Action handlers and API routes do their own role checks or return JSON 401

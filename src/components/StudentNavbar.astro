@@ -1,6 +1,4 @@
 ---
-import { actions } from "astro:actions";
-
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
 
@@ -351,9 +349,10 @@ const initials = getInitials(userEmail);
             </div>
 
             <div class="mt-3 border-t border-line pt-3">
-              <form method="POST" action={actions.logout}>
+              <form method="POST" action="/api/auth/logout" id="user-signout-form">
                 <button
                   type="submit"
+                  id="user-signout-btn"
                   class="w-full rounded-xl bg-danger/10 px-3 py-2.5 text-left text-sm font-bold text-danger transition-colors hover:bg-danger/20 cursor-pointer"
                 >
                   Sign out
@@ -523,6 +522,17 @@ const initials = getInitials(userEmail);
           } else {
             window.location.href = "/?report=found";
           }
+        });
+      }
+
+      const signoutBtn = document.getElementById("user-signout-btn");
+      if (signoutBtn) {
+        signoutBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          try {
+            await fetch("/api/auth/logout", { method: "POST" });
+          } catch (err) {}
+          window.location.href = "/login";
         });
       }
 
