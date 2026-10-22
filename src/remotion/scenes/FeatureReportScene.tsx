@@ -37,7 +37,13 @@ export const FeatureReportScene: React.FC = () => {
   );
 
   // Smooth exit transition
-  const exitOpacity = interpolate(frame, [242, 264], [1, 0], {
+  const exitOpacity = interpolate(frame, [257, 279], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Smooth 15-frame entry crossfade from previous scene
+  const entryOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -133,7 +139,7 @@ export const FeatureReportScene: React.FC = () => {
         width: "100%",
         height: "100%",
         position: "relative",
-        opacity: exitOpacity,
+        opacity: entryOpacity * exitOpacity,
         overflow: "hidden",
       }}
     >
@@ -143,7 +149,7 @@ export const FeatureReportScene: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: 18,
+          top: 24,
           left: 0,
           right: 0,
           zIndex: 30,
@@ -159,9 +165,9 @@ export const FeatureReportScene: React.FC = () => {
           style={{
             color: "#ffffff",
             fontFamily: TRAILER_CONFIG.fonts.serif,
-            fontSize: 38,
+            fontSize: 34,
             fontWeight: 700,
-            margin: "0 0 4px 0",
+            margin: "0 0 6px 0",
             letterSpacing: "-0.015em",
             textShadow: "0 4px 20px rgba(0,0,0,0.7)",
           }}
@@ -173,7 +179,7 @@ export const FeatureReportScene: React.FC = () => {
           style={{
             color: "rgba(245, 241, 230, 0.88)",
             fontFamily: TRAILER_CONFIG.fonts.sans,
-            fontSize: 18,
+            fontSize: 16,
             margin: 0,
             letterSpacing: "-0.01em",
           }}
@@ -182,11 +188,11 @@ export const FeatureReportScene: React.FC = () => {
         </p>
       </div>
 
-      {/* Big Browser Window (1840px x 940px) */}
+      {/* Big Browser Window (1840px x 930px) */}
       <div
         style={{
           position: "absolute",
-          top: 86,
+          top: 104,
           left: "50%",
           transform: `translateX(-50%) scale(${windowSpring})`,
           zIndex: 20,
@@ -197,7 +203,7 @@ export const FeatureReportScene: React.FC = () => {
           fallbackSrc={cfg.fallbackImage}
           urlPath="lostlink.dlsau.edu.ph/report"
           width={1840}
-          height={940}
+          height={930}
           scale={scale}
           contentPanY={contentPanY}
         >

@@ -46,7 +46,7 @@ export const Trailer: React.FC = () => {
       {/* Scene 1: Hook (0s - 6.17s) + Voiceover */}
       <Sequence
         from={timings.hook.from}
-        durationInFrames={timings.hook.duration}
+        durationInFrames={timings.hook.duration + 15}
         name="Scene 1: Problem Hook"
       >
         {assets.voiceHook ? (
@@ -60,7 +60,7 @@ export const Trailer: React.FC = () => {
       {/* Scene 2: Reveal (6.17s - 14.17s) + Voiceover */}
       <Sequence
         from={timings.reveal.from}
-        durationInFrames={timings.reveal.duration}
+        durationInFrames={timings.reveal.duration + 15}
         name="Scene 2: Brand Reveal & Pitch"
       >
         {assets.voiceReveal ? (
@@ -74,7 +74,7 @@ export const Trailer: React.FC = () => {
       {/* Scene 3: Feature 1 - Campus Feed (14.17s - 23.00s) + Voiceover */}
       <Sequence
         from={timings.feature1.from}
-        durationInFrames={timings.feature1.duration}
+        durationInFrames={timings.feature1.duration + 15}
         name="Scene 3: Campus Discovery Feed"
       >
         {assets.voiceFeature1 ? (
@@ -88,7 +88,7 @@ export const Trailer: React.FC = () => {
       {/* Scene 4: Feature 2 - Rapid Reporting (23.00s - 31.83s) + Voiceover */}
       <Sequence
         from={timings.feature2.from}
-        durationInFrames={timings.feature2.duration}
+        durationInFrames={timings.feature2.duration + 15}
         name="Scene 4: Rapid Item Reporting"
       >
         {assets.voiceFeature2 ? (
@@ -102,7 +102,7 @@ export const Trailer: React.FC = () => {
       {/* Scene 5: Feature 3 - Disciplinary Office (31.83s - 39.83s) + Voiceover */}
       <Sequence
         from={timings.feature3.from}
-        durationInFrames={timings.feature3.duration}
+        durationInFrames={timings.feature3.duration + 15}
         name="Scene 5: Disciplinary Office Console"
       >
         {assets.voiceFeature3 ? (
@@ -116,7 +116,7 @@ export const Trailer: React.FC = () => {
       {/* Scene 6: Modern Tech Stack (39.83s - 49.17s) + Voiceover */}
       <Sequence
         from={timings.techStack.from}
-        durationInFrames={timings.techStack.duration}
+        durationInFrames={timings.techStack.duration + 15}
         name="Scene 6: Modern Tech Stack"
       >
         {assets.voiceTech ? (

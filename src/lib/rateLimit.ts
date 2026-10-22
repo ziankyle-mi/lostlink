@@ -134,20 +134,31 @@ function normalizeKey(key: string): string {
  * A database failure never blocks a legitimate sign-in (fail open only for
  * availability; the local limiter still applies).
  */
+let durableRpcDisabled = false;
+
 export async function isRateLimitedDurable(
   env: Env,
   key: string,
 ): Promise<{ isBlocked: boolean; remainingSeconds: number }> {
   const local = isRateLimited(key);
-  if (local.isBlocked) return local;
+  if (local.isBlocked || durableRpcDisabled) return local;
 
   const supabase = durableClient(env);
   if (!supabase) return local;
 
   try {
-    const { data, error } = await supabase.rpc("ll_check_rate_limit", {
-      p_key: normalizeKey(key),
-    });
+    const { data, error } = await Promise.race([
+      supabase.rpc("ll_check_rate_limit", { p_key: normalizeKey(key) }),
+      new Promise<{ data: null; error: { code: string; message: string } }>((_, reject) =>
+        setTimeout(() => reject(new Error("RPC timeout")), 2000),
+      ),
+    ]);
+
+    if (error?.code === "PGRST202") {
+      durableRpcDisabled = true;
+      return local;
+    }
+
     if (error || !data) return local;
 
     const row = Array.isArray(data) ? data[0] : data;
@@ -155,7 +166,7 @@ export async function isRateLimitedDurable(
       return { isBlocked: true, remainingSeconds: Number(row.remaining_seconds) || 60 };
     }
   } catch (err) {
-    console.warn("[rateLimit] Durable check failed:", err);
+    console.warn("[rateLimit] Durable check skipped/timed out:", err);
   }
   return local;
 }
@@ -169,15 +180,28 @@ export async function recordFailedAttemptDurable(
   const lockoutDurationMs = options.lockoutDurationMs ?? 5 * 60 * 1000;
   const local = recordFailedAttempt(key, options);
 
+  if (durableRpcDisabled) return local;
+
   const supabase = durableClient(env);
   if (!supabase) return local;
 
   try {
-    const { data, error } = await supabase.rpc("ll_record_failed_attempt", {
-      p_key: normalizeKey(key),
-      p_max_failures: maxFailures,
-      p_lock_seconds: Math.ceil(lockoutDurationMs / 1000),
-    });
+    const { data, error } = await Promise.race([
+      supabase.rpc("ll_record_failed_attempt", {
+        p_key: normalizeKey(key),
+        p_max_failures: maxFailures,
+        p_lock_seconds: Math.ceil(lockoutDurationMs / 1000),
+      }),
+      new Promise<{ data: null; error: { code: string; message: string } }>((_, reject) =>
+        setTimeout(() => reject(new Error("RPC timeout")), 2000),
+      ),
+    ]);
+
+    if (error?.code === "PGRST202") {
+      durableRpcDisabled = true;
+      return local;
+    }
+
     if (error || !data) return local;
 
     const row = Array.isArray(data) ? data[0] : data;
@@ -188,21 +212,25 @@ export async function recordFailedAttemptDurable(
       attemptsLeft: Number(row.attempts_left) || 0,
     };
   } catch (err) {
-    console.warn("[rateLimit] Durable record failed:", err);
+    console.warn("[rateLimit] Durable record skipped/timed out:", err);
     return local;
   }
 }
 
 export async function clearRateLimitDurable(env: Env, key: string): Promise<void> {
   clearRateLimit(key);
+  if (durableRpcDisabled) return;
 
   const supabase = durableClient(env);
   if (!supabase) return;
 
   try {
-    await supabase.rpc("ll_clear_rate_limit", { p_key: normalizeKey(key) });
+    await Promise.race([
+      supabase.rpc("ll_clear_rate_limit", { p_key: normalizeKey(key) }),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("RPC timeout")), 2000)),
+    ]);
   } catch (err) {
-    console.warn("[rateLimit] Durable clear failed:", err);
+    // Non-fatal, local limiter was already cleared
   }
 }
 

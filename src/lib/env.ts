@@ -67,8 +67,17 @@ export function readEnv(runtimeEnv?: Record<string, unknown>): Env {
     }
     return "";
   };
+  const rawSupabaseUrl = pick("PUBLIC_SUPABASE_URL");
+  const isDev =
+    (typeof import.meta !== "undefined" && Boolean(import.meta.env?.DEV)) ||
+    (typeof process !== "undefined" && process.env?.NODE_ENV === "development");
+  const supabaseUrl =
+    isDev && rawSupabaseUrl.includes("supabase.co")
+      ? "http://127.0.0.1:54321"
+      : rawSupabaseUrl;
+
   return {
-    PUBLIC_SUPABASE_URL: pick("PUBLIC_SUPABASE_URL"),
+    PUBLIC_SUPABASE_URL: supabaseUrl,
     PUBLIC_SUPABASE_ANON_KEY: pick("PUBLIC_SUPABASE_ANON_KEY"),
     SUPABASE_SERVICE_ROLE_KEY: pick("SUPABASE_SERVICE_ROLE_KEY"),
     ALLOWED_EMAIL_DOMAIN: pick("ALLOWED_EMAIL_DOMAIN"),

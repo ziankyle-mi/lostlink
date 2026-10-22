@@ -38,7 +38,13 @@ export const RevealScene: React.FC = () => {
   });
 
   // Cinematic 22-frame exit fade at the end of 240 frames
-  const exitOpacity = interpolate(frame, [216, 238], [1, 0], {
+  const exitOpacity = interpolate(frame, [231, 253], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Smooth 15-frame entry crossfade from previous scene
+  const entryOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -53,7 +59,7 @@ export const RevealScene: React.FC = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        opacity: exitOpacity,
+        opacity: entryOpacity * exitOpacity,
         transform: `scale(${zoom})`,
       }}
     >

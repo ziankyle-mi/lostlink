@@ -26,9 +26,34 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
   return Astro.redirect(logoutResult.data.redirect, 302);
 }
 
+const env = Astro.locals.env || readEnv();
 const user = Astro.locals.user;
 const userEmail = user?.email ?? "dlsau.lostlink@dlsau.edu.ph";
-const isRealAdmin = user?.role === "admin";
+let isRealAdmin = user?.role === "admin";
+
+// If not logged in, take them to login with return path rather than failing silently
+if (!user) {
+  return Astro.redirect("/login?next=/admin", 302);
+}
+
+// Fallback check against database in case role was not populated in session cookie
+if (!isRealAdmin && user?.email && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+  try {
+    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("email", user.email.toLowerCase().trim())
+      .maybeSingle();
+    if (prof?.role === "admin") {
+      isRealAdmin = true;
+    }
+  } catch (err) {
+    console.warn("[admin] Role verification fallback notice:", err);
+  }
+}
 
 // The admin console is guarded on the server: non-admins are sent back to the feed.
 if (!isRealAdmin) {
@@ -47,7 +72,6 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
 }).toUpperCase();
 
 // Query live data from Supabase
-const env = Astro.locals.env || readEnv();
 let liveMetrics = {
   itemsInCustody: 0,
   activeLostReports: 0,

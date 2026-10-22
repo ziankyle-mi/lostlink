@@ -37,14 +37,20 @@ export const FeatureFeedScene: React.FC = () => {
   );
 
   // Smooth exit crossfade
-  const exitOpacity = interpolate(frame, [242, 264], [1, 0], {
+  const exitOpacity = interpolate(frame, [257, 279], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Smooth 15-frame entry crossfade from previous scene
+  const entryOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
   // --- 100% HUMAN MOUSE INTERACTION TRAJECTORY (Viewport coordinates) ---
   // - Category Filter Pill in screenshot: x: 580, y: 205
-  // - Item 1 "Claim this item" button: x: 320, y: 445
+  // - Item 1 "Claim this item" button: x: 320, y: 428
 
   let cursorX = 1350;
   let cursorY = 140;
@@ -70,12 +76,12 @@ export const FeatureFeedScene: React.FC = () => {
     const t = interpolate(frame, [115, 175], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     cursorX = 580 + (320 - 580) * ease;
-    cursorY = 205 + (445 - 205) * ease;
+    cursorY = 205 + (428 - 205) * ease;
     if (frame >= 165) cursorType = "pointer";
   } else if (frame >= 185) {
     cursorOpacity = interpolate(frame, [240, 255], [1, 0], { extrapolateRight: "clamp" });
     cursorX = 320;
-    cursorY = 445;
+    cursorY = 428;
     cursorType = "pointer";
     clickFrame = 185;
   }
@@ -103,7 +109,7 @@ export const FeatureFeedScene: React.FC = () => {
         width: "100%",
         height: "100%",
         position: "relative",
-        opacity: exitOpacity,
+        opacity: entryOpacity * exitOpacity,
         overflow: "hidden",
       }}
     >
@@ -113,7 +119,7 @@ export const FeatureFeedScene: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: 18,
+          top: 24,
           left: 0,
           right: 0,
           zIndex: 30,
@@ -129,9 +135,9 @@ export const FeatureFeedScene: React.FC = () => {
           style={{
             color: "#ffffff",
             fontFamily: TRAILER_CONFIG.fonts.serif,
-            fontSize: 38,
+            fontSize: 34,
             fontWeight: 700,
-            margin: "0 0 4px 0",
+            margin: "0 0 6px 0",
             letterSpacing: "-0.015em",
             textShadow: "0 4px 20px rgba(0,0,0,0.7)",
           }}
@@ -143,7 +149,7 @@ export const FeatureFeedScene: React.FC = () => {
           style={{
             color: "rgba(245, 241, 230, 0.88)",
             fontFamily: TRAILER_CONFIG.fonts.sans,
-            fontSize: 18,
+            fontSize: 16,
             margin: 0,
             letterSpacing: "-0.01em",
           }}
@@ -152,11 +158,11 @@ export const FeatureFeedScene: React.FC = () => {
         </p>
       </div>
 
-      {/* Big Browser Window (1840px x 940px) */}
+      {/* Big Browser Window (1840px x 930px) */}
       <div
         style={{
           position: "absolute",
-          top: 86,
+          top: 104,
           left: "50%",
           transform: `translateX(-50%) scale(${windowSpring})`,
           zIndex: 20,
@@ -167,7 +173,7 @@ export const FeatureFeedScene: React.FC = () => {
           fallbackSrc={cfg.fallbackImage}
           urlPath="lostlink.dlsau.edu.ph"
           width={1840}
-          height={940}
+          height={930}
           scale={scale}
           contentPanY={contentPanY}
           overlay={
@@ -215,11 +221,24 @@ export const FeatureFeedScene: React.FC = () => {
                 </div>
               )}
 
+              {/* Clean canvas background to mask out the duplicate static cards from screenshot */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 215,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "#f5f1e6",
+                  zIndex: 25,
+                }}
+              />
+
               {/* INTERACTIVE LAYER 2: Live Verified Item Cards Grid filling the window */}
               <div
                 style={{
                   position: "absolute",
-                  top: 265,
+                  top: 248,
                   left: 120,
                   right: 120,
                   display: "grid",

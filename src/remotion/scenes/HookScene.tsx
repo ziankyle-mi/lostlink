@@ -22,11 +22,11 @@ export const HookScene: React.FC = () => {
   });
 
   // Smooth cinematic exit transition at end of 185-frame scene
-  const exitOpacity = interpolate(frame, [160, 182], [1, 0], {
+  const exitOpacity = interpolate(frame, [175, 197], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const exitScale = interpolate(frame, [160, 182], [1, 0.97], {
+  const exitScale = interpolate(frame, [175, 197], [1, 0.97], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

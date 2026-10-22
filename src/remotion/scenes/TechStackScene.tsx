@@ -44,7 +44,13 @@ export const TechStackScene: React.FC = () => {
   }
 
   // Smooth 22-frame exit crossfade at end of 280 frames
-  const exitOpacity = interpolate(frame, [255, 277], [1, 0], {
+  const exitOpacity = interpolate(frame, [270, 292], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Smooth 15-frame entry crossfade from previous scene
+  const entryOpacity = interpolate(frame, [0, 15], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -59,7 +65,7 @@ export const TechStackScene: React.FC = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        opacity: exitOpacity,
+        opacity: entryOpacity * exitOpacity,
         overflow: "hidden",
       }}
     >

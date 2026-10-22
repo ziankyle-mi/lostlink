@@ -32,6 +32,12 @@ export const OutroScene: React.FC = () => {
     config: { damping: 14, mass: 0.7 },
   });
 
+  // Smooth 15-frame entry crossfade from previous scene
+  const entryOpacity = interpolate(frame, [0, 15], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
   // End fade to dark at the conclusion of 180 frames (holding for 2+ seconds after speech)
   const fadeOut = interpolate(frame, [155, 178], [1, 0.0], {
     extrapolateLeft: "clamp",
@@ -48,7 +54,7 @@ export const OutroScene: React.FC = () => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        opacity: fadeOut,
+        opacity: entryOpacity * fadeOut,
         overflow: "hidden",
       }}
     >

@@ -120,9 +120,10 @@ export const server = {
       }
 
       // Bot check before spending a password attempt.
+      const turnstileToken = await readFormTurnstileToken(context.request);
       const loginTurnstile = await verifyTurnstile(
         context.locals.env,
-        await readFormTurnstileToken(context.request),
+        turnstileToken,
         clientIp,
       );
       if (!loginTurnstile.ok) {
@@ -131,8 +132,10 @@ export const server = {
 
       const result = await signInWithPassword(context.locals.env, email, password);
       if ("error" in result) {
-        const ipFail = await recordFailedAttemptDurable(context.locals.env, ipKey);
-        const emailFail = await recordFailedAttemptDurable(context.locals.env, emailKey);
+        const [ipFail, emailFail] = await Promise.all([
+          recordFailedAttemptDurable(context.locals.env, ipKey),
+          recordFailedAttemptDurable(context.locals.env, emailKey),
+        ]);
 
         if (ipFail.isBlocked || emailFail.isBlocked) {
           throw new ActionError({
