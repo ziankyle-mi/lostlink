@@ -4,8 +4,13 @@ import { INITIAL_CAMPUS_USERS } from "~/data/mockUsers";
 import { readEnv } from "~/lib/env";
 import { enrichCampusUser, COLLEGES, DEGREE_PROGRAMS } from "~/data/campusPrograms";
 
-describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
-  const env = readEnv();
+describe("Admin Users Management & Actions API", () => {
+  const rawEnv = readEnv();
+  const env = {
+    ...rawEnv,
+    PUBLIC_SUPABASE_URL: rawEnv.PUBLIC_SUPABASE_URL || "https://dummy.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: rawEnv.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key",
+  };
 
   it("verifies mock campus users data structure", () => {
     expect(INITIAL_CAMPUS_USERS.length).toBeGreaterThan(0);

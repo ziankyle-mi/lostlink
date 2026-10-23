@@ -68,9 +68,13 @@ export function readEnv(runtimeEnv?: Record<string, unknown>): Env {
     return "";
   };
   const rawSupabaseUrl = pick("PUBLIC_SUPABASE_URL");
+  const isTest =
+    (typeof process !== "undefined" &&
+      (process.env?.NODE_ENV === "test" || Boolean(process.env?.VITEST)));
   const isDev =
-    (typeof import.meta !== "undefined" && Boolean(import.meta.env?.DEV)) ||
-    (typeof process !== "undefined" && process.env?.NODE_ENV === "development");
+    !isTest &&
+    ((typeof import.meta !== "undefined" && Boolean(import.meta.env?.DEV)) ||
+      (typeof process !== "undefined" && process.env?.NODE_ENV === "development"));
   const supabaseUrl =
     isDev && rawSupabaseUrl.includes("supabase.co")
       ? "http://127.0.0.1:54321"

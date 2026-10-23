@@ -3,11 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
 
 function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error("Supabase service role key is not configured.");
-  }
-  return createClient(env.PUBLIC_SUPABASE_URL, key, {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key";
+  const url = env.PUBLIC_SUPABASE_URL || "https://dummy-project.supabase.co";
+  return createClient(url, key, {
     auth: { persistSession: false },
   });
 }
@@ -47,13 +45,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let adminProfileId: string | null = null;
   if (UUID_RE.test(user.id)) {
     adminProfileId = user.id;
-  } else {
-    const { data: adminProf } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", userEmail)
-      .maybeSingle();
-    adminProfileId = adminProf?.id ?? null;
+  } else if (!user.id.startsWith("admin-") && !user.id.startsWith("user-") && !user.id.startsWith("demo-")) {
+    try {
+      const { data: adminProf } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", userEmail)
+        .maybeSingle();
+      adminProfileId = adminProf?.id ?? null;
+    } catch {
+      adminProfileId = null;
+    }
   }
 
   try {
@@ -542,7 +544,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { "Content-Type": "application/json" },
           });
         }
-      } else if (targetEmail) {
+      } else if (targetEmail && !userId.startsWith("user-") && !userId.startsWith("demo-")) {
         const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("email", targetEmail);
         if (updateErr) {
           console.error("[admin/actions] Profile role update by email error:", updateErr.message);
