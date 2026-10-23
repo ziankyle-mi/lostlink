@@ -281,14 +281,14 @@ const turnstileSiteKey = Astro.locals.env?.TURNSTILE_SITE_KEY;
           <label for="report-desc" class="text-xs font-bold uppercase tracking-wider text-forest-900">
             Description <span class="text-danger">*</span>
           </label>
-          <span class="text-xs text-stone-400 font-medium">Min 10 characters</span>
+          <span class="text-xs text-stone-500 font-medium">Min 25 characters (include brand, color, unique marks)</span>
         </div>
         <textarea
           id="report-desc"
           required
           rows="3"
-          minlength="10"
-          placeholder="Provide identifiable details, colors, or condition (e.g. keychains, brand, unique stickers)..."
+          minlength="25"
+          placeholder="Provide detailed marks: exact color, brand, condition, scratches, keychains, or contents..."
           class="w-full rounded-control border border-line bg-white p-3.5 text-sm sm:text-[0.9375rem] font-medium text-forest-900 placeholder:text-stone-400 focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 transition-all shadow-2xs outline-none resize-none"
         ></textarea>
       </div>

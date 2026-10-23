@@ -139,8 +139,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    if (!description || typeof description !== "string" || description.trim().length < 10) {
-      return new Response(JSON.stringify({ ok: false, error: "Description must be at least 10 characters." }), {
+    if (!description || typeof description !== "string" || description.trim().length < 25) {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: "Please provide a more complete description (at least 25 characters) detailing color, brand, condition, or unique marks to help identify the item."
+      }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
