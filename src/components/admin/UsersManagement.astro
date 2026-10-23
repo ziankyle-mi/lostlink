@@ -313,7 +313,12 @@ const defaultSelectedUser = users[0] || null;
           data-hide-inactive="false"
           title="Toggle visibility of suspended/inactive accounts in directory"
         >
-          <span id="hide-inactive-icon">👁️</span>
+          <span id="hide-inactive-icon">
+            <svg class="size-3.5 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </span>
           <span id="hide-inactive-label">Hide suspended users</span>
         </button>
         <span class="text-stone-300">&bull;</span>

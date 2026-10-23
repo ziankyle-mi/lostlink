@@ -143,9 +143,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // ACTION: Reject a pending report with a reason the reporter can read.
+    // ACTION: Reject a pending report with a categorized reason the reporter can read.
     if (action === "reject_report") {
       const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+      const category = typeof body.category === "string" ? body.category.trim() : "Incomplete Description";
 
       if (!itemId || !UUID_RE.test(String(itemId))) {
         return new Response(JSON.stringify({ ok: false, error: "A valid item ID is required." }), {
@@ -154,9 +155,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      if (reason.length < 5 || reason.length > 500) {
+      if (reason.length < 5 || reason.length > 600) {
         return new Response(
-          JSON.stringify({ ok: false, error: "A rejection reason of 5 to 500 characters is required." }),
+          JSON.stringify({ ok: false, error: "A rejection reason of 5 to 600 characters is required." }),
           { status: 400, headers: { "Content-Type": "application/json" } },
         );
       }
@@ -198,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (adminProfileId) {
         await supabase.from("admin_log").insert({
           admin_id: adminProfileId,
-          action: `report_rejected: ${item.name}`,
+          action: `report_rejected: ${item.name} (${category}) - ${reason.slice(0, 100)}`,
           item_id: itemId,
         });
       }
@@ -206,12 +207,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (item.reporter_id) {
         await supabase.from("notifications").insert({
           user_id: item.reporter_id,
-          message: `Your ${item.type} item report for "${item.name}" was not approved. Reason: ${reason}`,
+          message: `[Report Rejected: ${category}] For your ${item.type} report "${item.name}": ${reason}`,
           link: "/profile",
         });
       }
 
-      return new Response(JSON.stringify({ ok: true, status: "rejected", message: "Report rejected." }), {
+      return new Response(JSON.stringify({ ok: true, status: "rejected", message: "Report rejected and student notified." }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -353,7 +354,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ACTION: Deny Claim
+    // ACTION: Deny Claim with categorized reason and detailed student notification
     if (action === "deny_claim") {
       if (!claimId) {
         return new Response(JSON.stringify({ ok: false, error: "Claim ID required." }), {
@@ -369,7 +370,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const { data: claim } = await supabase.from("claims").select("id, item_id, claimant_id, status").eq("id", claimId).maybeSingle();
+      const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+      const category = typeof body.category === "string" ? body.category.trim() : "Description Mismatch";
+
+      if (reason.length < 5 || reason.length > 600) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "A specific explanation of 5 to 600 characters is required." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: claim } = await supabase
+        .from("claims")
+        .select("id, item_id, claimant_id, status, items ( name, reference_code )")
+        .eq("id", claimId)
+        .maybeSingle();
+
       if (!claim) {
         return new Response(JSON.stringify({ ok: false, error: "Claim not found." }), {
           status: 404,
@@ -406,22 +422,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
+      const itemName = (claim.items as any)?.name || "Item";
+      const notifMessage = `[Claim Denied: ${category}] For item "${itemName}": ${reason}`;
+
       await supabase.from("notifications").insert({
         user_id: claim.claimant_id,
-        message: "Your ownership claim could not be verified by security staff.",
-        link: "/profile",
+        message: notifMessage,
+        link: "/profile#all-claims",
       });
 
       if (adminProfileId) {
         await supabase.from("admin_log").insert({
           admin_id: adminProfileId,
-          action: "claim_denied",
+          action: `claim_denied: ${itemName} (${category}) - ${reason.slice(0, 100)}`,
           item_id: claim.item_id,
           claim_id: claimId,
         });
       }
 
-      return new Response(JSON.stringify({ ok: true, status: "denied" }), {
+      return new Response(JSON.stringify({ ok: true, status: "denied", message: "Claim denied and claimant notified." }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
