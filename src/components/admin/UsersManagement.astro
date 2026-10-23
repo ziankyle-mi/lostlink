@@ -303,8 +303,19 @@ const defaultSelectedUser = users[0] || null;
         </span>
         <span class="text-stone-300">&bull;</span>
         <span class="inline-flex items-center gap-1.5 text-stone-600 font-bold">
-          <span class="size-2 rounded-full bg-danger"></span> Suspended
+          <span class="size-2 rounded-full bg-danger"></span> Suspended / Hidden
         </span>
+        <span class="text-stone-300">&bull;</span>
+        <button
+          type="button"
+          id="toggle-hide-inactive-btn"
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-stone-300/60 bg-white hover:bg-stone-50 text-forest-900 font-bold text-xs transition-all cursor-pointer shadow-2xs active:scale-95"
+          data-hide-inactive="false"
+          title="Toggle visibility of suspended/inactive accounts in directory"
+        >
+          <span id="hide-inactive-icon">👁️</span>
+          <span id="hide-inactive-label">Hide suspended users</span>
+        </button>
         <span class="text-stone-300">&bull;</span>
         <button
           type="button"
@@ -603,7 +614,7 @@ const defaultSelectedUser = users[0] || null;
                 data-user-name={defaultSelectedUser?.full_name}
                 data-target-active={defaultSelectedUser?.active ? "false" : "true"}
               >
-                {defaultSelectedUser?.active ? "Suspend account" : "Reactivate account"}
+                {defaultSelectedUser?.active ? "Suspend / Hide user" : "Reactivate / Unhide user"}
               </button>
 
               <!-- Reset Link Button -->
@@ -788,10 +799,11 @@ const defaultSelectedUser = users[0] || null;
 
       <div class="mt-4 text-sm text-stone-600 space-y-3">
         <p id="status-modal-description">
-          Are you sure you want to suspend this account?
+          Are you sure you want to suspend and hide this account?
         </p>
-        <div class="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600">
-          Suspended students will not be able to report items or submit ownership claims until reactivated by the Disciplinary Office.
+        <div class="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600 space-y-1">
+          <p class="font-bold text-forest-900">Campus feed and access protection</p>
+          <p>Hiding or suspending this account blocks student sign-in and immediately hides all their reported lost & found items from the public campus feed.</p>
         </div>
       </div>
 
@@ -807,7 +819,7 @@ const defaultSelectedUser = users[0] || null;
           id="confirm-status-toggle-btn"
           class="inline-flex min-h-11 items-center justify-center rounded-full bg-danger hover:bg-danger/90 active:scale-95 px-6 py-2.5 text-sm font-bold text-white transition-all shadow-2xs cursor-pointer"
         >
-          Confirm suspension
+          Confirm suspend / hide
         </button>
       </div>
     </div>
@@ -1033,6 +1045,10 @@ const defaultSelectedUser = users[0] || null;
     const deleteModalDesc = document.getElementById("delete-modal-description");
     const confirmDeleteBtn = document.getElementById("confirm-delete-user-btn");
 
+    const toggleHideInactiveBtn = document.getElementById("toggle-hide-inactive-btn");
+    const hideInactiveLabel = document.getElementById("hide-inactive-label");
+    let hideInactive = false;
+
     let currentCollege = "all";
     let currentDegree = "all";
     let pendingTarget = null;
@@ -1198,11 +1214,11 @@ const defaultSelectedUser = users[0] || null;
         } else {
           dossierToggleStatusBtn.disabled = false;
           if (active) {
-            dossierToggleStatusBtn.textContent = "Suspend account";
+            dossierToggleStatusBtn.textContent = "Suspend / Hide user";
             dossierToggleStatusBtn.setAttribute("data-target-active", "false");
             dossierToggleStatusBtn.className = "inline-flex min-h-11 items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 px-4 py-2 text-xs font-bold text-stone-700 transition-all active:scale-95 cursor-pointer";
           } else {
-            dossierToggleStatusBtn.textContent = "Reactivate account";
+            dossierToggleStatusBtn.textContent = "Reactivate / Unhide user";
             dossierToggleStatusBtn.setAttribute("data-target-active", "true");
             dossierToggleStatusBtn.className = "inline-flex min-h-11 items-center justify-center rounded-full bg-lime hover:bg-[#c9e376] px-4 py-2 text-xs font-bold text-forest-900 border border-lime-600/40 transition-all active:scale-95 cursor-pointer";
           }
@@ -1257,12 +1273,14 @@ const defaultSelectedUser = users[0] || null;
         const studentId = (card.getAttribute("data-student-id") || "").toLowerCase();
         const collegeCode = card.getAttribute("data-college-code") || "";
         const programCode = card.getAttribute("data-program-code") || "";
+        const isActive = card.getAttribute("data-user-active") === "true";
 
         const matchesQuery = !query || name.includes(query) || email.includes(query) || studentId.includes(query);
         const matchesCollege = currentCollege === "all" || collegeCode === currentCollege;
         const matchesDegree = currentDegree === "all" || programCode === currentDegree;
+        const matchesActive = !hideInactive || isActive;
 
-        if (matchesQuery && matchesCollege && matchesDegree) {
+        if (matchesQuery && matchesCollege && matchesDegree && matchesActive) {
           card.style.display = "";
           visibleCount++;
           if (!firstVisibleCard) firstVisibleCard = card;
@@ -1352,12 +1370,34 @@ const defaultSelectedUser = users[0] || null;
       searchInput.addEventListener("input", applyFilters);
     }
 
+    // Toggle Hide Inactive / Suspended Users
+    if (toggleHideInactiveBtn) {
+      toggleHideInactiveBtn.addEventListener("click", () => {
+        hideInactive = !hideInactive;
+        toggleHideInactiveBtn.setAttribute("data-hide-inactive", String(hideInactive));
+        if (hideInactive) {
+          toggleHideInactiveBtn.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-forest-900 bg-forest-700 text-white font-bold text-xs transition-all cursor-pointer shadow-2xs active:scale-95";
+          if (hideInactiveLabel) hideInactiveLabel.textContent = "Showing active (suspended hidden)";
+        } else {
+          toggleHideInactiveBtn.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-stone-300/60 bg-white hover:bg-stone-50 text-forest-900 font-bold text-xs transition-all cursor-pointer shadow-2xs active:scale-95";
+          if (hideInactiveLabel) hideInactiveLabel.textContent = "Hide suspended users";
+        }
+        applyFilters();
+      });
+    }
+
     // Reset Filters button
     if (resetFiltersBtn) {
       resetFiltersBtn.addEventListener("click", () => {
         if (searchInput) searchInput.value = "";
         currentCollege = "all";
         currentDegree = "all";
+        hideInactive = false;
+        if (toggleHideInactiveBtn) {
+          toggleHideInactiveBtn.setAttribute("data-hide-inactive", "false");
+          toggleHideInactiveBtn.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-stone-300/60 bg-white hover:bg-stone-50 text-forest-900 font-bold text-xs transition-all cursor-pointer shadow-2xs active:scale-95";
+          if (hideInactiveLabel) hideInactiveLabel.textContent = "Hide suspended users";
+        }
         if (degreeSelect) degreeSelect.value = "all";
 
         collegePills.forEach((p) => {

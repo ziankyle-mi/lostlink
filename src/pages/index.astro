@@ -34,12 +34,12 @@ if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
     );
     const { data: dbItems } = await supabase
       .from("items")
-      .select("id,type,name,category,location,event_date,description,photo_path,status,hide_photo,created_at")
+      .select("id,type,name,category,location,event_date,description,photo_path,status,hide_photo,reporter_id,created_at,profiles!reporter_id(active)")
       .order("created_at", { ascending: false });
     // Campus feed only displays active, approved items waiting to be claimed or found.
-    // When an item is claimed, resolved, or rejected, it is automatically hidden from this public feed.
+    // When an item is claimed, resolved, or rejected, or its poster is hidden/suspended, it is hidden from public feed.
     const visibleDbItems = (dbItems || []).filter(
-      (item) => item.status === "approved",
+      (item: any) => item.status === "approved" && (!item.profiles || item.profiles.active !== false),
     );
 
     // Sign every private-bucket path once, then reuse the URLs. Items flagged
