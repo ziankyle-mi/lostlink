@@ -246,7 +246,35 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
 
       if (overdueError) {
         custodyColumnsMissing = true;
-        console.warn("[admin] unclaimed review needs docs/migrations.sql:", overdueError.message);
+        console.warn("[admin] unclaimed review fallback scan:", overdueError.message);
+        const { data: fallbackData } = await supabase
+          .from("items")
+          .select(`
+            id,
+            name,
+            category,
+            location,
+            reference_code,
+            created_at,
+            profiles ( full_name )
+          `)
+          .eq("type", "found")
+          .eq("status", "approved")
+          .lt("created_at", cutoff)
+          .order("created_at", { ascending: true });
+
+        if (fallbackData) {
+          unclaimedOverdue = fallbackData.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            category: row.category,
+            location: row.location,
+            referenceCode: row.reference_code,
+            days: daysInCustody(row.created_at),
+            extendedUntil: null,
+            reporterName: row.profiles?.full_name ?? "Unknown reporter",
+          }));
+        }
       } else if (overdueData) {
         unclaimedOverdue = overdueData
           .filter((row: any) => isCustodyOverdue(row))
@@ -1493,15 +1521,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
 <!-- Overdue items: live query, never hardcoded -->
       <div class="mt-4 space-y-3" id="unclaimed-items-list">
         {
-          custodyColumnsMissing ? (
-            <div class="rounded-2xl border border-lime-600/40 bg-lime/30 p-4 text-xs text-forest-900">
-              <p class="font-bold">Database update needed</p>
-              <p class="mt-1 leading-relaxed">
-                Run the statements in <span class="font-semibold underline">docs/migrations.sql</span> in the
-                Supabase SQL editor to turn on custody tracking.
-              </p>
-            </div>
-          ) : unclaimedOverdue.length === 0 ? (
+          unclaimedOverdue.length === 0 ? (
             <div class="rounded-2xl border border-stone-200/80 bg-canvas/40 p-6 text-center">
               <p class="text-sm font-bold text-forest-900">Nothing is overdue</p>
               <p class="mt-1 text-xs text-stone-500">
@@ -1592,6 +1612,18 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
             ))
           )
         }
+
+        {custodyColumnsMissing && (
+          <div class="rounded-2xl border border-stone-200/80 bg-stone-50 p-4 text-xs text-stone-700 flex items-start gap-3 shadow-2xs">
+            <span class="size-2 rounded-full bg-forest-700 shrink-0 mt-1.5" aria-hidden="true"></span>
+            <div>
+              <p class="font-bold text-forest-900">Custodial database tracking setup</p>
+              <p class="mt-0.5 text-stone-600 leading-relaxed">
+                Found items are scanned live by date. Run the 2 statements in <code class="font-mono text-forest-900 bg-stone-200/70 px-1 py-0.5 rounded font-bold">docs/migrations.sql</code> in the Supabase SQL editor to enable persistent 15-day extensions and donation turnover flags.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div class="mt-6 flex items-center justify-end pt-4 border-t border-stone-100">

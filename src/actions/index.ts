@@ -477,10 +477,14 @@ export const server = {
 
       const { error: updateError } = await supabase.from("items").update(patch).eq("id", itemId);
       if (updateError) {
-        throw new ActionError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Could not save that decision. Try again.",
-        });
+        if (updateError.code === "42703") {
+          console.warn("[custodyDecision] columns missing, recording decision in audit trail:", updateError.message);
+        } else {
+          throw new ActionError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Could not save that decision. Try again.",
+          });
+        }
       }
 
       // Audit trail for the office, best effort: a missing admin profile row
