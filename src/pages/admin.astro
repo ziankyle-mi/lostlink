@@ -3,7 +3,7 @@ import Base from "~/layouts/Base.astro";
 import AdminTicker from "~/components/admin/AdminTicker.astro";
 import AdminSidebar from "~/components/admin/AdminSidebar.astro";
 import AdminMetrics from "~/components/admin/AdminMetrics.astro";
-import ClaimsVerificationTable from "~/components/admin/ClaimsVerificationTable.astro";
+import ClaimsVerificationTable, { adminClaims } from "~/components/admin/ClaimsVerificationTable.astro";
 import IntakeQueue from "~/components/admin/IntakeQueue.astro";
 import RecentActivity from "~/components/admin/RecentActivity.astro";
 import UsersManagement from "~/components/admin/UsersManagement.astro";
@@ -167,7 +167,7 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
           profiles ( full_name, email )
         `)
         .order("created_at", { ascending: false })
-        .limit(10),
+        .limit(50),
       supabase
         .from("items")
         .select(`
@@ -678,6 +678,28 @@ const liveAuditEvents = liveLogs.map((log: any, idx: number) => {
 });
 
 const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defaultAuditEvents.slice(liveAuditEvents.length)] : defaultAuditEvents;
+
+const mappedAdminClaims = liveClaims && liveClaims.length > 0
+  ? liveClaims.map((c: any) => ({
+      id: c.id,
+      name: c.items?.name ?? "Reported Item",
+      location: c.items?.location ? `Found at ${c.items.location}` : "Campus grounds",
+      iconBg: "bg-sage-200",
+      iconType: c.items?.category === "IDs, Cards & Wallets" ? "wallet" : "id-card",
+      claimant: c.profiles?.full_name ?? "Student Claimant",
+      studentId: c.profiles?.email ? c.profiles.email.split("@")[0] : "Verified Student",
+      status: c.status === "verified" ? "verified" : (c.status === "denied" ? "denied" : "pending"),
+      statusText: c.status === "verified" ? "Verified & Released" : (c.status === "denied" ? "Denied" : "Awaiting visit"),
+      statusStyle: c.status === "verified" ? "bg-lime text-forest-900" : (c.status === "denied" ? "bg-danger/10 text-danger" : "bg-[#ece5d6] text-forest-900"),
+      time: c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recently",
+      privateDetails: c.proof_description ?? "Proof details provided during claim verification.",
+    }))
+  : adminClaims;
+
+const allClaimsForModal = mappedAdminClaims;
+const pendingClaimsCount = allClaimsForModal.filter((c: any) => c.status === "pending").length;
+const verifiedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "verified").length;
+const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "denied").length;
 ---
 
 <Base
@@ -1236,6 +1258,198 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
     </div>
   </div>
 
+  <!-- Modal 2b: All Campus Claims & Verifications Modal -->
+  <div
+    id="all-claims-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-3 sm:p-5 backdrop-blur-sm transition-all"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="all-claims-modal-title"
+  >
+    <div class="relative w-full max-w-4xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[90dvh] overflow-y-auto custom-scrollbar transition-all">
+      <!-- Header with Shield Lockup & Close Button -->
+      <div class="flex items-start justify-between gap-4 border-b border-line/80 pb-5">
+        <div class="flex items-center gap-3.5">
+          <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-forest-700 text-lime shadow-xs">
+            <svg class="size-5.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
+          <div>
+            <span class="inline-block rounded-full bg-forest-700/10 px-3 py-0.5 text-xs font-black tracking-widest text-forest-700 uppercase">
+              Campus Claims Registry
+            </span>
+            <h3 id="all-claims-modal-title" class="mt-0.5 font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight leading-tight">
+              All campus <span class="italic font-bold text-forest-700">Claims &amp; Verifications</span>
+            </h3>
+            <p class="mt-1 text-xs sm:text-sm text-stone-500 leading-normal">
+              Inspect student ownership proof, verify claims against physical items, and track custody handover statuses.
+            </p>
+          </div>
+        </div>
+
+        <!-- Close button -->
+        <button
+          type="button"
+          class="close-all-claims-modal flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-stone-50 text-stone-500 hover:bg-forest-700 hover:text-white hover:border-forest-700 transition-all cursor-pointer shadow-2xs active:scale-95"
+          aria-label="Close dialog"
+        >
+          <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Quick Guidance -->
+      <div class="mt-4 rounded-2xl bg-stone-50 border border-line/80 p-4 text-xs text-stone-600 flex items-start gap-3 shadow-2xs">
+        <div class="flex size-6 shrink-0 items-center justify-center rounded-full bg-forest-700/10 text-forest-700 mt-0.5" aria-hidden="true">
+          <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
+        <div class="leading-relaxed">
+          <strong class="font-bold text-forest-900">Verification protocol:</strong>
+          Click <span class="font-semibold text-forest-900">"Review dossier &rarr;"</span> on any claim to compare the claimant's private answers with the physical item in vault custody. Release only after the student presents a valid DLSAU ID card.
+        </div>
+      </div>
+
+      <!-- Live Search Box -->
+      <div class="mt-4 relative">
+        <svg class="size-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          id="all-claims-search"
+          placeholder="Search claims by item name, claimant name, student ID, or proof details..."
+          class="w-full min-h-[3rem] pl-11 pr-4 py-2 text-sm bg-white rounded-full border border-line shadow-2xs focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 outline-none transition-all placeholder:text-stone-400 text-forest-900 font-medium"
+        />
+      </div>
+
+      <!-- Filter chips -->
+      <div class="mt-3.5 flex items-center gap-2 overflow-x-auto pb-1 flex-wrap" id="all-claims-filter-pills">
+        <button type="button" class="all-claims-filter-pill active min-h-11 rounded-full bg-forest-700 px-4 py-2 text-sm font-bold text-white shadow-2xs transition-all active:scale-95 cursor-pointer" data-claim-filter="all">
+          All claims ({allClaimsForModal.length})
+        </button>
+        <button type="button" class="all-claims-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-claim-filter="pending">
+          Awaiting visit / Pending ({pendingClaimsCount})
+        </button>
+        <button type="button" class="all-claims-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-claim-filter="verified">
+          Verified &amp; Released ({verifiedClaimsCount})
+        </button>
+        <button type="button" class="all-claims-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-claim-filter="denied">
+          Denied ({deniedClaimsCount})
+        </button>
+      </div>
+
+      <!-- Claims Table/List in Modal -->
+      <div class="mt-4 space-y-3 max-h-[460px] overflow-y-auto custom-scrollbar pr-1" id="all-claims-container">
+        {allClaimsForModal.map((item) => (
+          <div
+            class="all-claims-row flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-4 rounded-2xl border border-line/80 bg-white hover:border-forest-700/40 hover:bg-stone-50/60 transition-all shadow-2xs group"
+            data-claim-status={item.status}
+          >
+            <div class="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+              <div class={`size-11 sm:size-12 shrink-0 rounded-2xl flex items-center justify-center ${item.iconBg}`}>
+                {item.iconType === "wallet" && (
+                  <svg class="size-5 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path>
+                    <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>
+                  </svg>
+                )}
+                {item.iconType === "id-card" && (
+                  <svg class="size-5 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="14" x="3" y="5" rx="2"></rect>
+                    <circle cx="8" cy="11" r="2"></circle>
+                    <path d="M14 9h3"></path>
+                    <path d="M14 13h3"></path>
+                  </svg>
+                )}
+                {item.iconType === "keys" && (
+                  <svg class="size-5 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7.5" cy="15.5" r="4.5"></circle>
+                    <path d="m21 3-9.5 9.5"></path>
+                    <path d="m15.5 7.5 3 3"></path>
+                  </svg>
+                )}
+                {item.iconType === "earbuds" && (
+                  <svg class="size-5 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="16" height="12" x="4" y="6" rx="4"></rect>
+                    <path d="M4 12h16"></path>
+                    <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
+                  </svg>
+                )}
+                {item.iconType !== "wallet" && item.iconType !== "id-card" && item.iconType !== "keys" && item.iconType !== "earbuds" && (
+                  <svg class="size-5 text-forest-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12A10 10 0 0 0 2 12Z"></path>
+                    <path d="M12 12v7a2 2 0 0 0 4 0"></path>
+                    <path d="M12 2v2"></path>
+                  </svg>
+                )}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h4 class="font-bold text-forest-900 text-sm leading-tight truncate">
+                    {item.name}
+                  </h4>
+                  <span class={`rounded-full px-2.5 py-0.5 text-xs font-bold leading-none ${item.statusStyle}`}>
+                    {item.statusText}
+                  </span>
+                </div>
+                <p class="text-xs text-stone-500 mt-1 truncate">
+                  <span class="font-medium text-stone-400">Claimant:</span> <strong class="text-stone-800">{item.claimant}</strong> &bull; <span class="tabular-nums font-medium text-stone-500">{item.studentId}</span>
+                </p>
+                <p class="text-xs text-stone-600 bg-stone-50 rounded-lg p-2 mt-1.5 border border-stone-200/60 line-clamp-2">
+                  <span class="font-semibold text-stone-500">Proof:</span> {item.privateDetails}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between sm:flex-col sm:items-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
+              <span class="text-xs tabular-nums text-stone-400">
+                {item.time}
+              </span>
+              <button
+                type="button"
+                data-claim-id={item.id}
+                data-claim-item={item.name}
+                data-claim-claimant={item.claimant}
+                data-claim-details={item.privateDetails}
+                class="claim-review-btn inline-flex min-h-10 items-center justify-center rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-4 py-1.5 text-xs font-bold text-white transition-all shadow-2xs cursor-pointer"
+              >
+                Review dossier &rarr;
+              </button>
+            </div>
+          </div>
+        ))}
+
+        <div id="all-claims-empty-state" class="hidden py-10 text-center text-xs sm:text-sm text-stone-500 font-medium">
+          No claims match your search or filter.
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-5 flex items-center justify-between gap-3 pt-4 border-t border-line/80">
+        <div class="flex items-center gap-1.5 text-xs text-stone-500 font-medium hidden sm:flex">
+          <svg class="size-4 text-forest-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>De La Salle Araneta University &bull; Disciplinary &amp; Security Office</span>
+        </div>
+        <button
+          type="button"
+          class="close-all-claims-modal min-h-10 rounded-full border border-line bg-white hover:bg-stone-50 active:scale-95 px-6 py-2 text-xs font-bold text-forest-900 transition-all shadow-2xs cursor-pointer ml-auto"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal 3: Unclaimed Overdue Items Modal -->
   <div
     id="unclaimed-items-modal"
@@ -1423,9 +1637,10 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       const toast = document.getElementById("toast-notification");
       const toastMsg = document.getElementById("toast-message");
 
-      // 3 New Modals
+      // Modals
       const intakeModal = document.getElementById("intake-guidelines-modal");
       const auditModal = document.getElementById("audit-log-modal");
+      const allClaimsModal = document.getElementById("all-claims-modal");
       const unclaimedModal = document.getElementById("unclaimed-items-modal");
       const rejectReportModal = document.getElementById("reject-report-modal");
       const rejectReportName = document.getElementById("reject-report-name");
@@ -1438,6 +1653,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
 
       const openIntakeBtn = document.getElementById("open-intake-guidelines-btn");
       const openAuditBtn = document.getElementById("open-audit-log-btn");
+      const openAllClaimsBtn = document.getElementById("open-all-claims-btn");
       const sidebarAuditLink = document.getElementById("sidebar-activity-log-link");
       const openUnclaimedBtn = document.getElementById("open-unclaimed-modal-btn");
 
@@ -1457,7 +1673,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       }
 
       function closeAllModals() {
-        [modal, intakeModal, auditModal, unclaimedModal, rejectReportModal].forEach((m) => {
+        [modal, intakeModal, auditModal, allClaimsModal, unclaimedModal, rejectReportModal].forEach((m) => {
           if (m) {
             m.classList.add("hidden");
             m.classList.remove("flex");
@@ -1574,6 +1790,89 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
         });
       }
 
+      // Feature 2b: Open & Close All Claims Modal + Filtering & Live Search
+      const allClaimsSearchInput = document.getElementById("all-claims-search");
+      const allClaimsFilterPills = document.querySelectorAll(".all-claims-filter-pill");
+      const allClaimRows = document.querySelectorAll(".all-claims-row");
+      const allClaimsEmptyState = document.getElementById("all-claims-empty-state");
+      let currentClaimFilter = "all";
+      let currentClaimQuery = "";
+
+      function filterClaimRows() {
+        let visibleCount = 0;
+        allClaimRows.forEach((row) => {
+          const status = row.getAttribute("data-claim-status");
+          const text = row.textContent.toLowerCase();
+          const matchesStatus = currentClaimFilter === "all" || status === currentClaimFilter;
+          const matchesQuery = !currentClaimQuery || text.includes(currentClaimQuery);
+          const show = matchesStatus && matchesQuery;
+          row.style.display = show ? "" : "none";
+          if (show) visibleCount++;
+        });
+        if (allClaimsEmptyState) {
+          allClaimsEmptyState.classList.toggle("hidden", visibleCount > 0);
+        }
+      }
+
+      function openAllClaims() {
+        closeAllModals();
+        if (allClaimsSearchInput) {
+          allClaimsSearchInput.value = "";
+          currentClaimQuery = "";
+        }
+        currentClaimFilter = "all";
+        allClaimsFilterPills.forEach((p) => {
+          const isAll = p.getAttribute("data-claim-filter") === "all";
+          p.classList.toggle("bg-forest-700", isAll);
+          p.classList.toggle("text-white", isAll);
+          p.classList.toggle("shadow-2xs", isAll);
+          p.classList.toggle("active", isAll);
+          p.classList.toggle("bg-stone-100", !isAll);
+          p.classList.toggle("text-stone-700", !isAll);
+        });
+        filterClaimRows();
+        if (allClaimsModal) {
+          allClaimsModal.classList.remove("hidden");
+          allClaimsModal.classList.add("flex");
+        }
+      }
+
+      if (openAllClaimsBtn) openAllClaimsBtn.addEventListener("click", openAllClaims);
+      document.querySelectorAll(".close-all-claims-modal").forEach((btn) => {
+        btn.addEventListener("click", closeAllModals);
+      });
+
+      allClaimsFilterPills.forEach((pill) => {
+        pill.addEventListener("click", () => {
+          allClaimsFilterPills.forEach((p) => {
+            p.classList.remove("bg-forest-700", "text-white", "shadow-2xs", "active");
+            p.classList.add("bg-stone-100", "text-stone-700");
+          });
+          pill.classList.remove("bg-stone-100", "text-stone-700");
+          pill.classList.add("bg-forest-700", "text-white", "shadow-2xs", "active");
+
+          currentClaimFilter = pill.getAttribute("data-claim-filter") || "all";
+          filterClaimRows();
+        });
+      });
+
+      if (allClaimsSearchInput) {
+        allClaimsSearchInput.addEventListener("input", (e) => {
+          currentClaimQuery = e.target.value.toLowerCase().trim();
+          filterClaimRows();
+        });
+      }
+
+      // Automatically open if navigated to with #all-claims
+      if (window.location.hash === "#all-claims") {
+        openAllClaims();
+      }
+      window.addEventListener("hashchange", () => {
+        if (window.location.hash === "#all-claims") {
+          openAllClaims();
+        }
+      });
+
       // Feature 3: Open & Close Unclaimed Overdue Items Modal + Actions
       if (openUnclaimedBtn && unclaimedModal) {
         openUnclaimedBtn.addEventListener("click", () => {
@@ -1589,7 +1888,7 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       // Unclaimed Items Review: Extend and Mark for donation are real forms
       // posting to actions.custodyDecision, so nothing is faked in the browser.
       // Backdrop click dismissal & Escape key for all modals
-      [modal, intakeModal, auditModal, unclaimedModal, rejectReportModal].forEach((m) => {
+      [modal, intakeModal, auditModal, allClaimsModal, unclaimedModal, rejectReportModal].forEach((m) => {
         if (m) {
           m.addEventListener("click", (e) => {
             if (e.target === m) closeAllModals();
@@ -1604,9 +1903,14 @@ const allAuditEvents = liveAuditEvents.length > 0 ? [...liveAuditEvents, ...defa
       // Review buttons
       document.querySelectorAll(".claim-review-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
+          if (allClaimsModal) {
+            allClaimsModal.classList.add("hidden");
+            allClaimsModal.classList.remove("flex");
+          }
+
           activeClaimId = btn.getAttribute("data-claim-id") || "";
           activeClaimButton = btn;
-          activeClaimRow = btn.closest(".grid");
+          activeClaimRow = btn.closest(".grid") || btn.closest(".all-claims-row");
 
           const item = btn.getAttribute("data-claim-item") || "Item";
           const claimant = btn.getAttribute("data-claim-claimant") || "Student";

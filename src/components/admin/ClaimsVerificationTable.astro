@@ -16,6 +16,7 @@ export const adminClaims = [
     iconType: "wallet",
     claimant: "Juan D. Reyes",
     studentId: "2023-01234",
+    status: "pending",
     statusText: "At the office now",
     statusStyle: "bg-lime text-forest-900",
     time: "Today, 2:10 PM",
@@ -29,6 +30,7 @@ export const adminClaims = [
     iconType: "id-card",
     claimant: "Maria Santos",
     studentId: "2022-04871",
+    status: "pending",
     statusText: "Awaiting visit",
     statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Today, 11:42 AM",
@@ -42,6 +44,7 @@ export const adminClaims = [
     iconType: "keys",
     claimant: "Paolo Cruz",
     studentId: "2024-00318",
+    status: "pending",
     statusText: "Awaiting visit",
     statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Yesterday, 4:05 PM",
@@ -55,6 +58,7 @@ export const adminClaims = [
     iconType: "earbuds",
     claimant: "Ana Villanueva +1",
     studentId: "2 claims on this",
+    status: "pending",
     statusText: "Two claimants",
     statusStyle: "bg-danger/10 text-danger",
     time: "Yesterday, 1:30 PM",
@@ -68,10 +72,39 @@ export const adminClaims = [
     iconType: "umbrella",
     claimant: "Rico Mendoza",
     studentId: "2023-02290",
+    status: "pending",
     statusText: "Awaiting visit",
     statusStyle: "bg-[#ece5d6] text-forest-900",
     time: "Oct 8, 9:15 AM",
     privateDetails: "Automatic black umbrella with green handle strap.",
+  },
+  {
+    id: "claim-6",
+    name: "Apple AirPods Pro",
+    location: "Found at Agrivet Center",
+    iconBg: "bg-sage-200",
+    iconType: "earbuds",
+    claimant: "Paolo Santos",
+    studentId: "2024-00192",
+    status: "verified",
+    statusText: "Verified & Released",
+    statusStyle: "bg-lime text-forest-900",
+    time: "Oct 7, 3:30 PM",
+    privateDetails: "White charging case with red silicone sleeve and initials PS.",
+  },
+  {
+    id: "claim-7",
+    name: "Hydro Flask 32oz bottle",
+    location: "Found at Canteen 1F",
+    iconBg: "bg-sage-200",
+    iconType: "umbrella",
+    claimant: "Dave Bautista",
+    studentId: "2023-08819",
+    status: "denied",
+    statusText: "Denied (mismatched proof)",
+    statusStyle: "bg-danger/10 text-danger",
+    time: "Oct 6, 11:15 AM",
+    privateDetails: "Claimant could not describe distinguishing scratches or stickers.",
   },
 ];
 
@@ -144,6 +177,7 @@ const mappedLiveClaims = liveClaims && liveClaims.length > 0
       iconType: c.items?.category === "IDs, Cards & Wallets" ? "wallet" : "id-card",
       claimant: c.profiles?.full_name ?? "Student Claimant",
       studentId: c.profiles?.email ? c.profiles.email.split("@")[0] : "Verified Student",
+      status: c.status === "verified" ? "verified" : (c.status === "denied" ? "denied" : "pending"),
       statusText: c.status === "verified" ? "Verified" : (c.status === "denied" ? "Denied" : "Awaiting visit"),
       statusStyle: c.status === "verified" ? "bg-lime text-forest-900" : (c.status === "denied" ? "bg-danger/10 text-danger" : "bg-[#ece5d6] text-forest-900"),
       time: formatClaimDate(c.created_at),
@@ -156,7 +190,8 @@ const items = liveClaims !== undefined
   : (isAdmin ? adminClaims : studentClaims);
 ---
 
-<section class="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs" id="claims">
+<section class="rounded-3xl bg-white p-6 sm:p-8 border border-stone-200/60 shadow-xs relative" id="claims">
+  <span id="all-claims" class="sr-only"></span>
   <!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-5 border-b border-stone-100">
     <div>
@@ -170,12 +205,22 @@ const items = liveClaims !== undefined
       </p>
     </div>
 
-    <a
-      href={isAdmin ? "/admin#all-claims" : "/profile#all-claims"}
-      class="text-sm font-bold text-forest-900 hover:text-forest-700 underline underline-offset-4 transition-colors shrink-0"
-    >
-      {isAdmin ? "View all claims \u2192" : "View all reports \u2192"}
-    </a>
+    {isAdmin ? (
+      <button
+        type="button"
+        id="open-all-claims-btn"
+        class="text-sm font-bold text-forest-900 hover:text-forest-700 underline underline-offset-4 transition-colors shrink-0 cursor-pointer"
+      >
+        View all claims &rarr;
+      </button>
+    ) : (
+      <a
+        href="/profile#all-claims"
+        class="text-sm font-bold text-forest-900 hover:text-forest-700 underline underline-offset-4 transition-colors shrink-0"
+      >
+        View all reports &rarr;
+      </a>
+    )}
   </div>
 
   <!-- Table Header (Desktop) -->
