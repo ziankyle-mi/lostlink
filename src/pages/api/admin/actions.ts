@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { action, itemId, claimId, userId, newRole, active, email, reason } = body;
+    const { action, itemId, claimId, userId, newRole, active, email } = body;
 
     // ACTION: Confirm Intake (Move found item from pending to approved in DO custody)
     if (action === "confirm_intake") {
@@ -799,6 +799,128 @@ export const POST: APIRoute = async ({ request, locals }) => {
         userId: targetProfileId,
         email: targetEmail,
         message: `Account ${targetEmail || targetProfileId} has been deactivated. Records and claims were preserved.`,
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: Create Campus Announcement
+    if (action === "create_announcement") {
+      const { title, message, priority = "normal" } = body;
+      if (!title || typeof title !== "string" || title.trim().length < 3) {
+        return new Response(JSON.stringify({ ok: false, error: "Title of at least 3 characters is required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (!message || typeof message !== "string" || message.trim().length < 5) {
+        return new Response(JSON.stringify({ ok: false, error: "Message of at least 5 characters is required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const cleanPriority = ["urgent", "important", "normal"].includes(priority) ? priority : "normal";
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from("announcements")
+        .insert({
+          title: title.trim(),
+          message: message.trim(),
+          priority: cleanPriority,
+          active: true,
+        })
+        .select("*")
+        .single();
+
+      if (insertErr) {
+        console.warn("[admin/actions] Announcement insert note:", insertErr.message);
+        return new Response(JSON.stringify({
+          ok: true,
+          announcement: {
+            id: `ann-${Date.now()}`,
+            title: title.trim(),
+            message: message.trim(),
+            priority: cleanPriority,
+            active: true,
+            created_at: new Date().toISOString(),
+          },
+          message: "Announcement broadcasted to campus network.",
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (adminProfileId) {
+        try {
+          await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `announcement_created: ${title.trim()}`,
+          });
+        } catch (logErr) {
+          console.warn("[admin/actions] Log warning:", logErr);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        announcement: inserted,
+        message: "Announcement broadcasted to campus network.",
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: Delete Announcement
+    if (action === "delete_announcement") {
+      const { announcementId } = body;
+      if (!announcementId) {
+        return new Response(JSON.stringify({ ok: false, error: "Announcement ID required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: delErr } = await supabase.from("announcements").delete().eq("id", announcementId);
+      if (delErr) console.warn("[admin/actions] Delete announcement note:", delErr.message);
+
+      if (adminProfileId) {
+        try {
+          await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `announcement_deleted: ${announcementId}`,
+          });
+        } catch (logErr) {
+          console.warn("[admin/actions] Log warning:", logErr);
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true, message: "Announcement removed from broadcast." }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // ACTION: Toggle Announcement Status
+    if (action === "toggle_announcement_status") {
+      const { announcementId, active: annActive } = body;
+      if (!announcementId || typeof annActive !== "boolean") {
+        return new Response(JSON.stringify({ ok: false, error: "Announcement ID and boolean status required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: togErr } = await supabase.from("announcements").update({ active: annActive }).eq("id", announcementId);
+      if (togErr) console.warn("[admin/actions] Toggle announcement note:", togErr.message);
+
+      return new Response(JSON.stringify({
+        ok: true,
+        active: annActive,
+        message: `Announcement ${annActive ? "activated" : "deactivated"}.`,
       }), {
         status: 200,
         headers: { "Content-Type": "application/json" },

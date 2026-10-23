@@ -24,6 +24,24 @@ create index if not exists items_unclaimed_review
 --   where type = 'found' and status = 'approved' and created_at > now() - interval '48 days';
 
 -- ==============================================================================
+-- 2026-10-23: Campus Announcements
+-- ==============================================================================
+create table if not exists announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  message text not null,
+  priority text not null default 'normal', -- 'urgent' | 'important' | 'normal'
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table announcements enable row level security;
+create policy "Anyone can read active announcements" on announcements for select using (active = true);
+create policy "Admins can manage announcements" on announcements for all using (
+  exists (select 1 from profiles where profiles.id = auth.uid() and profiles.role = 'admin')
+);
+
+-- ==============================================================================
 -- Verify with:
 --   select column_name, data_type
 --   from information_schema.columns

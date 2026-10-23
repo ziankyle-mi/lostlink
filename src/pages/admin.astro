@@ -83,6 +83,34 @@ let liveIntake: any[] = [];
 let liveLogs: any[] = [];
 let allUsers: EnhancedCampusUser[] = [];
 
+export interface CampusAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  urgency: "info" | "warning" | "alert";
+  active: boolean;
+  starts_at?: string;
+  expires_at?: string | null;
+  created_at?: string;
+  author_name?: string;
+}
+let liveAnnouncements: CampusAnnouncement[] = [
+  {
+    id: "default-swao-custody",
+    title: "SWAO Office 30-Day Custody Policy",
+    content: "All unclaimed items from 1st Semester are transferred to university donation drives after 30 days.",
+    urgency: "info",
+    active: true,
+  },
+  {
+    id: "default-val-gate",
+    title: "Claim Verification Center",
+    content: "Present your valid DLSAU Student ID at the Student Affairs Office (AGH 2nd Floor) to inspect items.",
+    urgency: "warning",
+    active: true,
+  },
+];
+
 export interface PendingRecoveryRequest {
   email: string;
   requestedAt: string;
@@ -387,6 +415,20 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
       } catch (notifQueryErr) {
         console.warn("[admin] Recovery notifications check note:", notifQueryErr);
       }
+    }
+
+    // Query Campus Announcements
+    try {
+      const { data: annData, error: annErr } = await supabase
+        .from("announcements")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (!annErr && annData && annData.length > 0) {
+        liveAnnouncements = annData;
+      }
+    } catch (annQueryErr) {
+      console.warn("[admin] announcements query note:", annQueryErr);
     }
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
@@ -738,7 +780,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
   <div class="min-h-screen bg-canvas text-forest-900 flex flex-col justify-between selection:bg-lime">
     <div>
       <!-- Top Announcement Ticker Bar matching overview1admin.png -->
-      <AdminTicker />
+      <AdminTicker announcements={liveAnnouncements.filter((a) => a.active)} />
 
       <!-- Main Layout Container -->
       <div class={`mx-auto w-full ${currentTab === "users" ? "max-w-[1660px]" : "max-w-[1520px]"} px-4 py-6 sm:px-10 sm:py-8 lg:px-14`}>
@@ -789,6 +831,22 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
 
                     <button
                       type="button"
+                      id="open-announcements-cta-btn"
+                      class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full border border-forest-900/15 bg-white hover:bg-stone-50 active:scale-95 px-4.5 sm:px-5 py-2.5 text-sm font-bold text-forest-900 transition-all shadow-2xs cursor-pointer"
+                      title="Manage campus notices and alerts broadcast across student headers"
+                    >
+                      <svg class="size-4 text-forest-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                      </svg>
+                      <span>Broadcast</span>
+                      <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-black rounded-full bg-lime text-forest-950">
+                        {liveAnnouncements.filter((a) => a.active).length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
                       id="log-found-cta-btn"
                       class="flex min-h-[3rem] shrink-0 items-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-5 sm:px-6 py-2.5 text-sm font-bold text-white transition-all shadow-2xs cursor-pointer"
                     >
@@ -834,6 +892,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
               metrics={liveMetrics}
               unclaimedCount={unclaimedOverdue.length}
               pendingRecoveryCount={pendingRecoveryRequests.length}
+              announcementsCount={liveAnnouncements.filter((a) => a.active).length}
             />
           </div>
         </div>
@@ -1689,6 +1748,248 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
     </div>
   </div>
 
+  <!-- Modal 4: Campus Announcements & Broadcast Alerts -->
+  <div
+    id="announcements-modal"
+    class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-3 sm:p-5 backdrop-blur-sm transition-all"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="announcements-modal-title"
+  >
+    <div class="relative w-full max-w-3xl rounded-card border border-line bg-white p-6 sm:p-8 shadow-card max-h-[92dvh] overflow-y-auto custom-scrollbar transition-all">
+      <!-- Header with Megaphone lockup & Close Button -->
+      <div class="flex items-start justify-between gap-4 border-b border-line/80 pb-5">
+        <div class="flex items-center gap-3.5">
+          <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-forest-700 text-lime shadow-xs">
+            <svg class="size-5.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </div>
+          <div>
+            <span class="inline-block rounded-full bg-forest-700/10 px-3 py-0.5 text-xs font-black tracking-widest text-forest-700 uppercase">
+              Broadcast System
+            </span>
+            <h3 id="announcements-modal-title" class="mt-0.5 font-serif text-2xl sm:text-[1.75rem] font-black text-forest-900 tracking-tight leading-tight">
+              Campus <span class="italic font-bold text-forest-700">Announcements &amp; Alerts</span>
+            </h3>
+            <p class="mt-1 text-xs sm:text-sm text-stone-500 leading-normal">
+              Publish university notices displayed in the live header ticker, student top alert banners, and the official DLSAU bulletin.
+            </p>
+          </div>
+        </div>
+
+        <!-- Close button -->
+        <button
+          type="button"
+          class="close-announcements-modal flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-stone-50 text-stone-500 hover:bg-forest-700 hover:text-white hover:border-forest-700 transition-all cursor-pointer shadow-2xs active:scale-95"
+          aria-label="Close dialog"
+        >
+          <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- New Announcement Form Section -->
+      <div class="mt-5 rounded-2xl bg-stone-50/80 border border-line p-5 shadow-2xs">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-black tracking-widest uppercase text-forest-900 flex items-center gap-2">
+            <span>📢</span>
+            <span>Publish New Announcement</span>
+          </h4>
+          <span class="text-[11px] font-semibold text-stone-500">Live across all campus sessions</span>
+        </div>
+
+        <form id="create-announcement-form" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label for="ann-title-input" class="block text-xs font-bold text-forest-900 mb-1">
+                Announcement Title <span class="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                id="ann-title-input"
+                name="title"
+                required
+                minlength="5"
+                maxlength="120"
+                placeholder="e.g. SWAO Office Extended Custody Hours"
+                class="w-full min-h-[2.75rem] px-3.5 py-2 text-sm bg-white rounded-xl border border-line focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 outline-none transition-all placeholder:text-stone-400 font-medium text-forest-900"
+              />
+            </div>
+
+            <div>
+              <label for="ann-urgency-select" class="block text-xs font-bold text-forest-900 mb-1">
+                Urgency Level
+              </label>
+              <select
+                id="ann-urgency-select"
+                name="urgency"
+                class="w-full min-h-[2.75rem] px-3 py-2 text-sm bg-white rounded-xl border border-line focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 outline-none transition-all font-semibold text-forest-900 cursor-pointer"
+              >
+                <option value="info">ℹ️ General Notice (Info)</option>
+                <option value="warning">⚠️ Important / Warning</option>
+                <option value="alert">🚨 Urgent Alert</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="ann-content-input" class="block text-xs font-bold text-forest-900 mb-1">
+              Notice Content &amp; Instructions <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="ann-content-input"
+              name="content"
+              required
+              minlength="10"
+              maxlength="500"
+              rows="3"
+              placeholder="e.g. All unclaimed items from the 1st semester are currently held at the Student Affairs Office (AGH 2nd Floor). Please present your valid DLSAU ID card before the Friday cutoff."
+              class="w-full p-3.5 text-sm bg-white rounded-xl border border-line focus:border-forest-700 focus:ring-2 focus:ring-forest-700/20 outline-none transition-all placeholder:text-stone-400 font-medium text-forest-900 resize-y"
+            ></textarea>
+          </div>
+
+          <div id="create-ann-error" class="hidden text-xs font-semibold text-danger bg-danger/10 p-2.5 rounded-xl border border-danger/20"></div>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-stone-500 font-medium">Broadcasts immediately upon publishing</span>
+            <button
+              type="submit"
+              id="create-ann-submit-btn"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-forest-700 hover:bg-forest-900 active:scale-95 px-6 py-2 text-xs font-bold text-white transition-all shadow-xs cursor-pointer"
+            >
+              <span>Broadcast Announcement</span>
+              <svg class="size-4 text-lime" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Active Broadcasts Registry Section -->
+      <div class="mt-6">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-black tracking-widest uppercase text-forest-900 flex items-center gap-2">
+            <span>📡</span>
+            <span>Current Announcements ({liveAnnouncements.length})</span>
+          </h4>
+          <span class="text-xs font-semibold text-stone-500">
+            {liveAnnouncements.filter((a) => a.active).length} live on student feed
+          </span>
+        </div>
+
+        <div class="space-y-3" id="announcements-list-container">
+          {liveAnnouncements.length === 0 ? (
+            <div class="rounded-2xl border border-stone-200/80 bg-canvas/40 p-8 text-center">
+              <p class="text-sm font-bold text-forest-900">No announcements yet</p>
+              <p class="mt-1 text-xs text-stone-500">
+                Use the form above to broadcast campus notices to all students.
+              </p>
+            </div>
+          ) : (
+            liveAnnouncements.map((ann) => {
+              const urgencyStyle =
+                ann.urgency === "alert"
+                  ? "bg-danger/10 text-danger border-danger/30"
+                  : ann.urgency === "warning"
+                    ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                    : "bg-forest-700/10 text-forest-700 border-forest-700/30";
+              const urgencyEmoji = ann.urgency === "alert" ? "🚨" : ann.urgency === "warning" ? "⚠️" : "ℹ️";
+              const isDatabaseRecord = !ann.id.startsWith("default-");
+
+              return (
+                <div
+                  class={`announcement-row rounded-2xl border p-4.5 transition-all shadow-2xs ${
+                    ann.active ? "bg-white border-line hover:border-forest-700/40" : "bg-stone-50/70 border-stone-200 opacity-60"
+                  }`}
+                  data-ann-id={ann.id}
+                  data-ann-active={ann.active ? "true" : "false"}
+                >
+                  <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span class={`rounded-full px-2.5 py-0.5 text-xs font-bold border ${urgencyStyle}`}>
+                          {urgencyEmoji} {ann.urgency.toUpperCase()}
+                        </span>
+                        <span class={`rounded-full px-2 py-0.5 text-[11px] font-black uppercase tracking-wider ${
+                          ann.active ? "bg-lime text-forest-900 border border-lime-600/30" : "bg-stone-200 text-stone-600"
+                        }`}>
+                          {ann.active ? "Live Broadcast" : "Hidden"}
+                        </span>
+                        {ann.created_at && (
+                          <span class="text-xs text-stone-400 font-medium tabular-nums">
+                            {new Date(ann.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
+                      <h5 class="text-sm sm:text-base font-bold text-forest-900 leading-snug">
+                        {ann.title}
+                      </h5>
+                      <p class="mt-1 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                        {ann.content}
+                      </p>
+                    </div>
+
+                    <div class="flex items-center sm:flex-col sm:items-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
+                      {isDatabaseRecord ? (
+                        <>
+                          <button
+                            type="button"
+                            class="toggle-ann-btn inline-flex min-h-9 items-center justify-center rounded-full border border-line bg-white hover:bg-stone-50 active:scale-95 px-3.5 py-1 text-xs font-bold text-forest-900 transition-all shadow-2xs cursor-pointer"
+                            data-ann-id={ann.id}
+                            data-ann-active={ann.active ? "true" : "false"}
+                          >
+                            {ann.active ? "Pause notice" : "Activate notice"}
+                          </button>
+                          <button
+                            type="button"
+                            class="delete-ann-btn inline-flex min-h-9 items-center justify-center gap-1 rounded-full bg-stone-100 hover:bg-danger/10 hover:text-danger active:scale-95 px-3 py-1 text-xs font-bold text-stone-600 transition-all cursor-pointer"
+                            data-ann-id={ann.id}
+                            data-ann-title={ann.title}
+                          >
+                            <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            <span>Delete</span>
+                          </button>
+                        </>
+                      ) : (
+                        <span class="inline-block text-[11px] font-semibold text-stone-400 px-2.5 py-1 rounded-full bg-stone-100">
+                          System default
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="mt-6 flex items-center justify-between gap-3 pt-4 border-t border-line/80">
+        <div class="flex items-center gap-1.5 text-xs text-stone-500 font-medium hidden sm:flex">
+          <svg class="size-4 text-forest-700 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>De La Salle Araneta University &bull; Official Campus Broadcast Network</span>
+        </div>
+        <button
+          type="button"
+          class="close-announcements-modal min-h-10 rounded-full border border-line bg-white hover:bg-stone-50 active:scale-95 px-6 py-2 text-xs font-bold text-forest-900 transition-all shadow-2xs cursor-pointer ml-auto"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Quick Toast Notification -->
   <div
     id="toast-notification"
@@ -1743,6 +2044,13 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
       const openAllClaimsBtn = document.getElementById("open-all-claims-btn");
       const sidebarAuditLink = document.getElementById("sidebar-activity-log-link");
       const openUnclaimedBtn = document.getElementById("open-unclaimed-modal-btn");
+      const announcementsModal = document.getElementById("announcements-modal");
+      const openAnnouncementsBtn = document.getElementById("open-announcements-cta-btn");
+      const sidebarAnnouncementsBtn = document.getElementById("open-announcements-modal-btn");
+      const closeAnnouncementsBtns = document.querySelectorAll(".close-announcements-modal");
+      const createAnnForm = document.getElementById("create-announcement-form");
+      const createAnnError = document.getElementById("create-ann-error");
+      const createAnnSubmit = document.getElementById("create-ann-submit-btn");
 
       const modalItemName = document.getElementById("modal-item-name");
       const modalClaimant = document.getElementById("modal-claimant-name");
@@ -1760,7 +2068,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
       }
 
       function closeAllModals() {
-        [modal, intakeModal, auditModal, allClaimsModal, unclaimedModal, rejectReportModal].forEach((m) => {
+        [modal, intakeModal, auditModal, allClaimsModal, unclaimedModal, rejectReportModal, announcementsModal].forEach((m) => {
           if (m) {
             m.classList.add("hidden");
             m.classList.remove("flex");
@@ -2290,6 +2598,152 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
           window.location.href = "/";
         });
       }
+
+      // Announcements Modal and Action Handlers
+      function openAnnouncements() {
+        closeAllModals();
+        if (announcementsModal) {
+          announcementsModal.classList.remove("hidden");
+          announcementsModal.classList.add("flex");
+          document.getElementById("ann-title-input")?.focus();
+        }
+      }
+
+      if (openAnnouncementsBtn) openAnnouncementsBtn.addEventListener("click", openAnnouncements);
+      if (sidebarAnnouncementsBtn) sidebarAnnouncementsBtn.addEventListener("click", openAnnouncements);
+      closeAnnouncementsBtns.forEach((btn) => btn.addEventListener("click", closeAllModals));
+
+      if (createAnnForm) {
+        createAnnForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const title = (document.getElementById("ann-title-input")?.value || "").trim();
+          const urgency = document.getElementById("ann-urgency-select")?.value || "info";
+          const content = (document.getElementById("ann-content-input")?.value || "").trim();
+
+          if (title.length < 5 || content.length < 10) {
+            if (createAnnError) {
+              createAnnError.textContent = "Title must be at least 5 characters and notice content at least 10 characters.";
+              createAnnError.classList.remove("hidden");
+            }
+            return;
+          }
+
+          if (createAnnError) createAnnError.classList.add("hidden");
+          if (createAnnSubmit) {
+            createAnnSubmit.disabled = true;
+            createAnnSubmit.textContent = "Publishing broadcast...";
+          }
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "create_announcement", title, urgency, content }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.ok) {
+              if (createAnnError) {
+                createAnnError.textContent = data.error || "Failed to publish announcement.";
+                createAnnError.classList.remove("hidden");
+              }
+              return;
+            }
+
+            showToast("📢 Announcement broadcast live across campus!");
+            setTimeout(() => {
+              window.location.reload();
+            }, 900);
+          } catch (err) {
+            if (createAnnError) {
+              createAnnError.textContent = "Network error. Failed to broadcast announcement.";
+              createAnnError.classList.remove("hidden");
+            }
+          } finally {
+            if (createAnnSubmit) {
+              createAnnSubmit.disabled = false;
+              createAnnSubmit.textContent = "Broadcast Announcement";
+            }
+          }
+        });
+      }
+
+      // Toggle announcement live broadcast status
+      document.querySelectorAll(".toggle-ann-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const annId = btn.getAttribute("data-ann-id");
+          const currentActive = btn.getAttribute("data-ann-active") === "true";
+          const nextActive = !currentActive;
+          btn.disabled = true;
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "toggle_announcement_status", id: annId, active: nextActive }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+              btn.setAttribute("data-ann-active", String(nextActive));
+              btn.textContent = nextActive ? "Pause notice" : "Activate notice";
+              const row = btn.closest(".announcement-row");
+              if (row) {
+                row.setAttribute("data-ann-active", String(nextActive));
+                if (nextActive) {
+                  row.classList.remove("bg-stone-50/70", "opacity-60");
+                  row.classList.add("bg-white");
+                } else {
+                  row.classList.add("bg-stone-50/70", "opacity-60");
+                  row.classList.remove("bg-white");
+                }
+              }
+              showToast(nextActive ? "Announcement broadcast activated!" : "Announcement paused from broadcast.");
+            } else {
+              showToast(data.error || "Failed to update announcement.");
+            }
+          } catch {
+            showToast("Network error updating announcement.");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+
+      // Delete announcement
+      document.querySelectorAll(".delete-ann-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const annId = btn.getAttribute("data-ann-id");
+          const annTitle = btn.getAttribute("data-ann-title") || "Announcement";
+          if (!confirm(`Are you sure you want to delete "${annTitle}"? This cannot be undone.`)) {
+            return;
+          }
+          btn.disabled = true;
+
+          try {
+            const res = await fetch("/api/admin/actions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "delete_announcement", id: annId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+              const row = btn.closest(".announcement-row");
+              if (row) {
+                row.style.transition = "all 0.3s ease-out";
+                row.style.opacity = "0";
+                row.style.transform = "scale(0.95)";
+                setTimeout(() => row.remove(), 300);
+              }
+              showToast("Announcement deleted.");
+            } else {
+              showToast(data.error || "Failed to delete announcement.");
+            }
+          } catch {
+            showToast("Network error deleting announcement.");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     })();
   </script>
 </Base>
