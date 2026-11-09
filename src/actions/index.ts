@@ -21,7 +21,9 @@ import {
 import {
   ensureProfileRow,
   fetchUser,
+  isStudentIdTaken,
   mustChangePassword,
+  recordLoginActivity,
   revokeUserSession,
   signInWithPassword,
   signUpWithPassword,
@@ -158,6 +160,19 @@ export const server = {
 
       setSessionCookies(context.cookies, result.session, remember);
 
+      // Record login activity audit log
+      const userAgent = context.request.headers.get("user-agent") || undefined;
+      const loggedUser = await fetchUser(context.locals.env, result.session.access_token);
+      if (loggedUser?.id) {
+        await recordLoginActivity(context.locals.env, {
+          userId: loggedUser.id,
+          userEmail: loggedUser.email || email,
+          ipAddress: clientIp,
+          userAgent,
+          authMethod: "password",
+        });
+      }
+
       // Security Office issued a temp password: block the dashboard until a
       // new password is chosen.
       if (result.session.access_token) {
@@ -218,6 +233,14 @@ export const server = {
         maxFailures: 5,
         lockoutDurationMs: 60 * 60 * 1000,
       });
+
+      // Prevent duplicate Student IDs for students
+      if (studentId && (await isStudentIdTaken(context.locals.env, studentId))) {
+        throw new ActionError({
+          code: "CONFLICT",
+          message: "This Student ID is already registered. Please sign in or contact the Security Office if this is an error.",
+        });
+      }
 
       const result = await signUpWithPassword(
         context.locals.env,

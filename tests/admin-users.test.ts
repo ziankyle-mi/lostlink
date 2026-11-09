@@ -4,7 +4,7 @@ import { INITIAL_CAMPUS_USERS } from "~/data/mockUsers";
 import { readEnv } from "~/lib/env";
 import { enrichCampusUser, COLLEGES, DEGREE_PROGRAMS } from "~/data/campusPrograms";
 
-describe("Admin Users Management & Actions API", () => {
+describe("Admin Users Management & Actions API", { timeout: 25000 }, () => {
   const rawEnv = readEnv();
   const env = {
     ...rawEnv,

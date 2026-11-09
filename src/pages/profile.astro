@@ -40,6 +40,7 @@ const dateEyebrow = today.toLocaleDateString("en-US", {
 const env = Astro.locals.env || readEnv();
 let myReports: any[] = [];
 let myClaims: any[] = [];
+let recentLogins: any[] = [];
 let profileName = userEmail.split("@")[0].replace(/[._]/g, " ");
 let userProgramCode: string | undefined = undefined;
 let userStudentId: string | undefined = undefined;
@@ -102,6 +103,16 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
         .order("created_at", { ascending: false });
 
       if (claims) myClaims = claims;
+
+      // 4. Fetch My Recent Login Activity
+      const { data: logins } = await supabase
+        .from("login_activity")
+        .select("id, ip_address, device_summary, created_at, auth_method")
+        .eq("user_id", profileId)
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (logins) recentLogins = logins;
     }
   } catch (err) {
     console.warn("[profile] Data fetch note:", err);
@@ -544,6 +555,50 @@ function parsePhotos(photoPath?: string | null): string[] {
               })}
             </div>
           )}
+        </section>
+
+        <!-- Section 3: Security & Recent Sign-In Activity Card -->
+        <section class="rounded-3xl bg-white border border-stone-200/60 shadow-xs p-6 sm:p-8 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-stone-100 flex-wrap gap-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="size-2 rounded-full bg-forest-700 animate-pulse"></span>
+                <span class="text-xs font-bold uppercase tracking-wider text-forest-900/60">Account Security</span>
+              </div>
+              <h3 class="font-serif text-xl sm:text-2xl font-bold text-forest-900 mt-1">
+                Recent Sign-in Activity
+              </h3>
+            </div>
+            <span class="text-xs font-medium text-stone-500 bg-canvas/80 px-3 py-1.5 rounded-full border border-stone-200/70">
+              Audit logging active
+            </span>
+          </div>
+
+          <div class="space-y-2.5">
+            {recentLogins.length > 0 ? (
+              recentLogins.map((login) => (
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50/80 border border-stone-200/70 text-xs text-stone-700 flex-wrap gap-2">
+                  <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-full bg-forest-700/10 text-forest-900 flex items-center justify-center font-bold">
+                      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </div>
+                    <div>
+                      <span class="font-bold text-forest-900">{login.device_summary || "Active Device"}</span>
+                      <span class="text-stone-400 mx-1.5">&bull;</span>
+                      <span class="font-mono text-stone-500">{login.ip_address || "Network Verified"}</span>
+                    </div>
+                  </div>
+                  <span class="text-stone-500 font-medium">
+                    {new Date(login.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div class="p-4 rounded-2xl bg-canvas/60 border border-dashed border-stone-200 text-xs text-stone-500 text-center">
+                Current active session verified. Sign-in events are safely logged into the university audit record.
+              </div>
+            )}
+          </div>
         </section>
       </main>
     </div>

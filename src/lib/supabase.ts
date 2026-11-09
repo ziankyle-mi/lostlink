@@ -250,6 +250,31 @@ export async function ensureProfileRow(
   return true;
 }
 
+/** Checks whether a student ID is already registered in the profiles table. */
+export async function isStudentIdTaken(
+  env: Env,
+  studentId: string,
+): Promise<boolean> {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) return false;
+
+  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
+    auth: { persistSession: false },
+  });
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("student_id", studentId.trim())
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[register] isStudentIdTaken check error:", error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
 export { randomToken };
 
 /**
@@ -332,6 +357,76 @@ export async function mustChangePassword(env: Env, accessToken: string): Promise
     .eq("id", user.id)
     .maybeSingle();
   return Boolean(data?.must_change_password);
+}
+
+/**
+ * Parses a User-Agent header into a clean, human-readable device/browser summary.
+ * e.g., "Windows · Chrome", "iOS · Safari", "Android · Chrome", "macOS · Safari"
+ */
+export function parseDeviceSummary(userAgent?: string): string {
+  if (!userAgent || typeof userAgent !== "string") return "Unknown Device";
+  const ua = userAgent.toLowerCase();
+
+  let os = "Desktop";
+  if (ua.includes("iphone") || ua.includes("ipad")) os = "iOS";
+  else if (ua.includes("android")) os = "Android";
+  else if (ua.includes("windows")) os = "Windows";
+  else if (ua.includes("macintosh") || ua.includes("mac os")) os = "macOS";
+  else if (ua.includes("linux")) os = "Linux";
+
+  let browser = "Browser";
+  if (ua.includes("edg/")) browser = "Edge";
+  else if (ua.includes("chrome") || ua.includes("crios")) browser = "Chrome";
+  else if (ua.includes("firefox") || ua.includes("fxios")) browser = "Firefox";
+  else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari";
+
+  return `${os} · ${browser}`;
+}
+
+export interface LoginActivityEntry {
+  userId: string;
+  userEmail?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  deviceSummary?: string;
+  authMethod?: string;
+}
+
+/**
+ * Records a successful login activity event in login_activity and mirrors to admin_log.
+ */
+export async function recordLoginActivity(
+  env: Env,
+  entry: LoginActivityEntry,
+): Promise<void> {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) return;
+
+  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
+    auth: { persistSession: false },
+  });
+
+  const deviceSummary = entry.deviceSummary || parseDeviceSummary(entry.userAgent);
+  const ip = entry.ipAddress || "Unknown IP";
+
+  try {
+    // 1. Insert into dedicated login_activity table
+    await supabase.from("login_activity").insert({
+      user_id: entry.userId,
+      ip_address: ip,
+      user_agent: entry.userAgent || null,
+      device_summary: deviceSummary,
+      auth_method: entry.authMethod || "password",
+    });
+
+    // 2. Mirror into admin_log so it surfaces in the administrative audit log immediately
+    await supabase.from("admin_log").insert({
+      admin_id: entry.userId,
+      action: `user_login: ${entry.userEmail || "user"} from ${ip} (${deviceSummary})`,
+    });
+  } catch (err) {
+    console.warn("[auth] recordLoginActivity note:", err);
+  }
 }
 
 async function safeJson(response: Response): Promise<AuthErrorBody | null> {

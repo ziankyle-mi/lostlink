@@ -639,6 +639,23 @@ function parseAuditEvent(
     };
   }
 
+  // 7b. User Login Activity
+  if (action.startsWith("user_login:")) {
+    const detail = action.replace(/^user_login:\s*/i, "").trim();
+    return {
+      title: "User Sign-In Activity",
+      badgeText: "User Login",
+      badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+      iconType: "shield",
+      iconBg: "bg-blue-50 text-blue-700 border-blue-200",
+      description: detail,
+      target: detail.split(" ")[0] || "User",
+      operator: "Security Log",
+      category: "login",
+      time: formattedTime,
+    };
+  }
+
   // 8. General fallback
   const cleanTitle = action
     .replace(/^System log:\s*/i, "")
@@ -1522,6 +1539,9 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
         </button>
         <button type="button" class="audit-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="user">
           User moderation
+        </button>
+        <button type="button" class="audit-filter-pill min-h-11 rounded-full bg-stone-100 hover:bg-stone-200/80 px-4 py-2 text-sm font-semibold text-stone-700 transition-all active:scale-95 cursor-pointer" data-audit-filter="login">
+          User logins
         </button>
       </div>
 

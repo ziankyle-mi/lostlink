@@ -30,6 +30,11 @@ alter table profiles add column if not exists program text;
 alter table profiles add column if not exists student_id text;
 alter table profiles add column if not exists year_level text;
 
+-- Enforce strict unique constraint and official DLSAU format for Student IDs
+create unique index if not exists profiles_student_id_unique on profiles (student_id) where student_id is not null;
+alter table profiles drop constraint if exists profiles_student_id_format_check;
+alter table profiles add constraint profiles_student_id_format_check check (student_id is null or student_id ~ '^[0-9]{4}-00-[0-9]{6}$');
+
 create table items (
   id uuid primary key default gen_random_uuid(),
   type item_type not null,
@@ -80,11 +85,25 @@ create table notifications (
 create table admin_log (
   id uuid primary key default gen_random_uuid(),
   admin_id uuid not null references profiles(id),
-  action text not null,   -- approved, rejected, claim_verified, claim_denied, marked_claimed
+  action text not null,   -- approved, rejected, claim_verified, claim_denied, marked_claimed, user_login
   item_id uuid references items(id),
   claim_id uuid references claims(id),
   created_at timestamptz default now()
 );
+
+-- User Login Activity Logging
+create table if not exists login_activity (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  ip_address text,
+  user_agent text,
+  device_summary text,
+  auth_method text not null default 'password',
+  created_at timestamptz default now()
+);
+
+create index if not exists login_activity_user_idx on login_activity (user_id, created_at desc);
+create index if not exists login_activity_created_idx on login_activity (created_at desc);
 
 create extension if not exists pg_trgm;
 create index items_name_trgm on items using gin (name gin_trgm_ops);
@@ -99,12 +118,14 @@ alter table items enable row level security;
 alter table claims enable row level security;
 alter table notifications enable row level security;
 alter table admin_log enable row level security;
+alter table login_activity enable row level security;
 
 alter table profiles force row level security;
 alter table items force row level security;
 alter table claims force row level security;
 alter table notifications force row level security;
 alter table admin_log force row level security;
+alter table login_activity force row level security;
 
 -- Admin helper function with isolated search_path
 create or replace function public.is_admin(user_id uuid)
@@ -248,4 +269,15 @@ create policy "admin_log_read"
   on admin_log for select
   to authenticated
   using (public.is_admin(auth.uid()));
+
+-- LOGIN_ACTIVITY
+-- Read: users read their own login activity; admins read all
+create policy "login_activity_read_own"
+  on login_activity for select
+  to authenticated
+  using (
+    user_id = auth.uid() or
+    public.is_admin(auth.uid())
+  );
+
 

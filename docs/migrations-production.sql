@@ -346,3 +346,36 @@ grant execute on function public.ll_check_rate_limit(text) to service_role;
 grant execute on function public.ll_record_failed_attempt(text, integer, integer) to service_role;
 grant execute on function public.ll_clear_rate_limit(text) to service_role;
 
+-- ---------------------------------------------------------------------------
+-- 10. Student ID format and uniqueness hardening
+-- ---------------------------------------------------------------------------
+-- Enforce official DLSAU format (YYYY-00-XXXXXX) and ensure no duplicate IDs exist.
+create unique index if not exists profiles_student_id_unique on public.profiles (student_id) where student_id is not null;
+alter table public.profiles drop constraint if exists profiles_student_id_format_check;
+alter table public.profiles add constraint profiles_student_id_format_check check (student_id is null or student_id ~ '^[0-9]{4}-00-[0-9]{6}$');
+
+-- ---------------------------------------------------------------------------
+-- 11. User Login Activity Logging table and RLS
+-- ---------------------------------------------------------------------------
+create table if not exists public.login_activity (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  ip_address text,
+  user_agent text,
+  device_summary text,
+  auth_method text not null default 'password',
+  created_at timestamptz default now()
+);
+
+create index if not exists login_activity_user_idx on public.login_activity (user_id, created_at desc);
+create index if not exists login_activity_created_idx on public.login_activity (created_at desc);
+
+alter table public.login_activity enable row level security;
+alter table public.login_activity force row level security;
+
+create policy "login_activity_read_own" on public.login_activity
+  for select to authenticated
+  using (user_id = auth.uid() or public.is_admin(auth.uid()));
+
+
+

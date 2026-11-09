@@ -181,15 +181,17 @@ const turnstileSiteKey = Astro.locals.env.TURNSTILE_SITE_KEY;
           id="studentId"
           type="text"
           name="studentId"
-          class="field"
-          placeholder="e.g. 2024-10144"
+          class="field uppercase"
+          placeholder="e.g. 2024-00-000920"
+          pattern="[0-9]{4}-00-[0-9]{6}"
+          maxlength="14"
           autocomplete="off"
           required
           aria-invalid={fieldError("studentId") ? true : undefined}
           aria-describedby={fieldError("studentId") ? "studentId-error" : "studentId-hint"}
         />
         <p id="studentId-hint" class="mt-1.5 text-xs text-sage-600 leading-relaxed">
-          Official DLSAU student ID number found on your campus ID card.
+          Official DLSAU student ID number found on your campus ID card (format: YYYY-00-XXXXXX).
         </p>
         {
           fieldError("studentId") && (

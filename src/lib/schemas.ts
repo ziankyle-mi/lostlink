@@ -41,6 +41,8 @@ export const DVM_YEAR_LEVELS = [
 export const ALL_YEAR_LEVELS = DVM_YEAR_LEVELS;
 export const YEAR_LEVELS = ALL_YEAR_LEVELS;
 
+export const STUDENT_ID_REGEX = /^[0-9]{4}-00-[0-9]{6}$/;
+
 export const registerSchema = z
   .object({
     name: z
@@ -65,7 +67,13 @@ export const registerSchema = z
       if (!data.studentId || data.studentId.trim().length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Enter your Student ID (e.g. 2024-10144).",
+          message: "Enter your Student ID (format: YYYY-00-XXXXXX, e.g. 2024-00-000920).",
+          path: ["studentId"],
+        });
+      } else if (!STUDENT_ID_REGEX.test(data.studentId.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Student ID must follow format YYYY-00-XXXXXX (e.g. 2024-00-000920).",
           path: ["studentId"],
         });
       }

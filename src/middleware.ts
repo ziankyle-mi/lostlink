@@ -1,5 +1,4 @@
 import { defineMiddleware } from "astro:middleware";
-import { env as cloudflareEnv } from "cloudflare:workers";
 import { readEnv } from "~/lib/env";
 import {
   clearSessionCookies,
@@ -61,7 +60,7 @@ function isPublic(pathname: string): boolean {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const env = readEnv(cloudflareEnv as unknown as Record<string, unknown>);
+  const env = readEnv(context.locals.runtime?.env as Record<string, unknown> | undefined);
   context.locals.env = env;
 
   const pathname = context.url.pathname;

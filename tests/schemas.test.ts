@@ -57,13 +57,13 @@ describe("registerSchema", () => {
       password: "hunter2pass",
       agree: "on",
       program: "BSCS",
-      studentId: "2024-10144",
+      studentId: "2024-00-000920",
       yearLevel: "3rd Year",
       role: "student",
     });
     expect(parsed.agree).toBe(true);
     expect(parsed.program).toBe("BSCS");
-    expect(parsed.studentId).toBe("2024-10144");
+    expect(parsed.studentId).toBe("2024-00-000920");
     expect(parsed.yearLevel).toBe("3rd Year");
   });
 
@@ -74,7 +74,7 @@ describe("registerSchema", () => {
         email: "a.b@dlsau.edu.ph",
         password: "hunter2pass",
         program: "BSCS",
-        studentId: "2024-10144",
+        studentId: "2024-00-000920",
         yearLevel: "3rd Year",
       }).success,
     ).toBe(false);
@@ -86,7 +86,7 @@ describe("registerSchema", () => {
         name: "Zian Piangco",
         email: "a.b@dlsau.edu.ph",
         password: "hunter2pass",
-        studentId: "2024-10144",
+        studentId: "2024-00-000920",
         yearLevel: "3rd Year",
       }).success,
     ).toBe(false);
@@ -105,7 +105,7 @@ describe("registerSchema", () => {
     ).toBe(false);
   });
 
-  it("requires a year level when role is student", () => {
+  it("rejects student ID that does not match YYYY-00-XXXXXX format", () => {
     expect(
       registerSchema.safeParse({
         name: "Zian Piangco",
@@ -113,6 +113,32 @@ describe("registerSchema", () => {
         password: "hunter2pass",
         program: "BSCS",
         studentId: "2024-10144",
+        yearLevel: "3rd Year",
+        role: "student",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      registerSchema.safeParse({
+        name: "Zian Piangco",
+        email: "a.b@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        studentId: "invalid-id",
+        yearLevel: "3rd Year",
+        role: "student",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires a year level when role is student", () => {
+    expect(
+      registerSchema.safeParse({
+        name: "Zian Piangco",
+        email: "a.b@dlsau.edu.ph",
+        password: "hunter2pass",
+        program: "BSCS",
+        studentId: "2024-00-000920",
         role: "student",
       }).success,
     ).toBe(false);
@@ -153,7 +179,7 @@ describe("registerSchema", () => {
       password: "hunter2pass",
       agree: "on",
       program: "DVM",
-      studentId: "2024-55555",
+      studentId: "2024-00-000555",
       yearLevel: "5th Year",
       role: "student",
     });
@@ -165,7 +191,7 @@ describe("registerSchema", () => {
       password: "hunter2pass",
       agree: "on",
       program: "DVM",
-      studentId: "2024-66666",
+      studentId: "2024-00-000666",
       yearLevel: "6th Year",
       role: "student",
     });
@@ -179,7 +205,7 @@ describe("registerSchema", () => {
         email: "cs.student@dlsau.edu.ph",
         password: "hunter2pass",
         program: "BSCS",
-        studentId: "2024-11111",
+        studentId: "2024-00-000111",
         yearLevel: "5th Year",
         role: "student",
       }).success,
@@ -191,7 +217,7 @@ describe("registerSchema", () => {
         email: "psych.student@dlsau.edu.ph",
         password: "hunter2pass",
         program: "AB Psych",
-        studentId: "2024-22222",
+        studentId: "2024-00-000222",
         yearLevel: "6th Year",
         role: "student",
       }).success,
@@ -205,7 +231,7 @@ describe("registerSchema", () => {
         email: "a@b.ph",
         password: "short",
         program: "BSCS",
-        studentId: "2024-10144",
+        studentId: "2024-00-000920",
         yearLevel: "3rd Year",
       }).success,
     ).toBe(false);
@@ -218,7 +244,7 @@ describe("registerSchema", () => {
         email: "a@b.ph",
         password: "hunter2pass",
         program: "BSCS",
-        studentId: "2024-10144",
+        studentId: "2024-00-000920",
         yearLevel: "3rd Year",
       }).agree,
     ).toBe(false);
