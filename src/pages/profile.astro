@@ -7,7 +7,12 @@ import Icon from "~/components/Icon.astro";
 import { createClient } from "@supabase/supabase-js";
 import { readEnv } from "~/lib/env";
 import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
-import { DEGREE_PROGRAMS } from "~/data/campusPrograms";
+import { DEGREE_PROGRAMS, enrichCampusUser } from "~/data/campusPrograms";
+import {
+  DEMO_REGISTERED_COOKIE,
+  INITIAL_CAMPUS_USERS,
+  getCombinedDemoRegisteredUsers,
+} from "~/data/mockUsers";
 
 const logoutResult = Astro.getActionResult(actions.logout);
 if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
@@ -117,6 +122,25 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   } catch (err) {
     console.warn("[profile] Data fetch note:", err);
   }
+}
+
+// Fallback to demo registered users / campus directory if profile metadata wasn't fetched from DB
+if (!userProgramCode || !userStudentId) {
+  const demoRegistered = getCombinedDemoRegisteredUsers(
+    Astro.cookies.get(DEMO_REGISTERED_COOKIE)?.value,
+  );
+  const matchedDemo = [...demoRegistered, ...INITIAL_CAMPUS_USERS].find(
+    (u) => u.email.toLowerCase().trim() === userEmail.toLowerCase().trim(),
+  );
+  const enriched = enrichCampusUser(
+    matchedDemo || { id: user.id, email: userEmail, role: user.role },
+  );
+  if (matchedDemo?.full_name || enriched.full_name) {
+    profileName = matchedDemo?.full_name || enriched.full_name;
+  }
+  if (!userProgramCode) userProgramCode = enriched.programCode;
+  if (!userStudentId && !enriched.isFaculty) userStudentId = enriched.studentId;
+  if (!userYearLevel) userYearLevel = enriched.yearLevel;
 }
 
 const totalReports = myReports.length;

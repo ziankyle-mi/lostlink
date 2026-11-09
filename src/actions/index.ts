@@ -29,7 +29,12 @@ import {
   signUpWithPassword,
   updateUserPassword,
 } from "~/lib/supabase";
-import { recordDemoRegisteredUser } from "~/data/mockUsers";
+import {
+  DEMO_REGISTERED_COOKIE,
+  getCombinedDemoRegisteredUsers,
+  recordDemoRegisteredUser,
+  serializeDemoRegisteredCookie,
+} from "~/data/mockUsers";
 import {
   clearSessionCookies,
   devBypassEnabled,
@@ -243,14 +248,28 @@ export const server = {
         });
       }
 
-      // Record in demo registration cache so it immediately surfaces in admin Users directory
-      recordDemoRegisteredUser({
+      // Record in demo registration cache and persist in browser cookie so it survives across Cloudflare Workers isolates and sign-outs
+      const newDemoUser = recordDemoRegisteredUser({
         fullName: name,
         email,
         program,
         studentId,
         yearLevel,
       });
+      const existingCookieUsers = getCombinedDemoRegisteredUsers(
+        context.cookies.get(DEMO_REGISTERED_COOKIE)?.value,
+      );
+      const updatedCookieUsers = [
+        newDemoUser,
+        ...existingCookieUsers.filter(
+          (u) => u.email.toLowerCase().trim() !== newDemoUser.email.toLowerCase().trim(),
+        ),
+      ];
+      context.cookies.set(
+        DEMO_REGISTERED_COOKIE,
+        serializeDemoRegisteredCookie(updatedCookieUsers),
+        sessionCookieOptions(60 * 60 * 24 * 30),
+      );
 
       const result = await signUpWithPassword(
         context.locals.env,

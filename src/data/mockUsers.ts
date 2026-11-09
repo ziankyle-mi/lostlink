@@ -13,8 +13,35 @@ export interface CampusUser {
   claims_count?: number;
 }
 
+export const DEMO_REGISTERED_COOKIE = "ll_demo_registered_users";
+
 // In-memory store for newly registered accounts in demo / offline fallback mode
 export const REGISTERED_CAMPUS_USERS: CampusUser[] = [];
+
+export function parseDemoRegisteredCookie(rawCookie?: string): CampusUser[] {
+  if (!rawCookie) return [];
+  try {
+    const decoded = decodeURIComponent(rawCookie);
+    const parsed = JSON.parse(decoded);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((u) => u && typeof u.email === "string" && typeof u.full_name === "string");
+    }
+  } catch {
+    try {
+      const parsed = JSON.parse(rawCookie);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((u) => u && typeof u.email === "string" && typeof u.full_name === "string");
+      }
+    } catch {
+      // Ignore malformed cookie
+    }
+  }
+  return [];
+}
+
+export function serializeDemoRegisteredCookie(users: CampusUser[]): string {
+  return encodeURIComponent(JSON.stringify(users.slice(0, 15)));
+}
 
 export function recordDemoRegisteredUser(user: {
   fullName: string;
@@ -46,6 +73,20 @@ export function recordDemoRegisteredUser(user: {
   }
 
   return entry;
+}
+
+export function getCombinedDemoRegisteredUsers(rawCookie?: string): CampusUser[] {
+  const cookieUsers = parseDemoRegisteredCookie(rawCookie);
+  const combined: CampusUser[] = [...cookieUsers];
+  const seen = new Set(combined.map((u) => u.email.toLowerCase().trim()));
+  for (const memUser of REGISTERED_CAMPUS_USERS) {
+    const em = memUser.email.toLowerCase().trim();
+    if (!seen.has(em)) {
+      seen.add(em);
+      combined.push(memUser);
+    }
+  }
+  return combined;
 }
 
 export const INITIAL_CAMPUS_USERS: CampusUser[] = [
@@ -145,6 +186,20 @@ export const INITIAL_CAMPUS_USERS: CampusUser[] = [
     active: false,
     created_at: "2023-11-19T13:10:00Z",
     department: "BS Animal Husbandry",
+    reports_count: 0,
+    claims_count: 0,
+  },
+  {
+    id: "user-student-7",
+    full_name: "Marcelino Zapanta",
+    email: "marcelino.zapanta@dlsau.edu.ph",
+    role: "user",
+    active: true,
+    created_at: new Date().toISOString(),
+    department: "BS Agriculture",
+    program: "BSA",
+    student_id: "2024-00-003221",
+    year_level: "1st Year",
     reports_count: 0,
     claims_count: 0,
   },

@@ -9,7 +9,11 @@ import RecentActivity from "~/components/admin/RecentActivity.astro";
 import UsersManagement from "~/components/admin/UsersManagement.astro";
 import DashboardFooter from "~/components/DashboardFooter.astro";
 import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
-import { INITIAL_CAMPUS_USERS, REGISTERED_CAMPUS_USERS } from "~/data/mockUsers";
+import {
+  DEMO_REGISTERED_COOKIE,
+  INITIAL_CAMPUS_USERS,
+  getCombinedDemoRegisteredUsers,
+} from "~/data/mockUsers";
 import { actions } from "astro:actions";
 import {
   CUSTODY_EXTENSION_DAYS,
@@ -349,17 +353,6 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
       });
     }
 
-    if (allUsers.length === 0) {
-      allUsers = [...REGISTERED_CAMPUS_USERS, ...INITIAL_CAMPUS_USERS].map((u: any) => enrichCampusUser(u));
-    } else if (REGISTERED_CAMPUS_USERS.length > 0) {
-      // Prepend any new in-session registrations that haven't yet reached or synced to DB
-      const existingEmails = new Set(allUsers.map((u) => u.email.toLowerCase().trim()));
-      const newOnly = REGISTERED_CAMPUS_USERS.filter((u) => !existingEmails.has(u.email.toLowerCase().trim()));
-      if (newOnly.length > 0) {
-        allUsers = [...newOnly.map((u: any) => enrichCampusUser(u)), ...allUsers];
-      }
-    }
-
     // Process Password Recovery Requests from admin_log
     if (recoveryLogsRes?.data && recoveryLogsRes.data.length > 0) {
       const emailStatusMap = new Map<string, { status: "requested" | "issued"; requestedAt: string }>();
@@ -447,11 +440,22 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   }
 }
 
+const demoRegisteredUsers = getCombinedDemoRegisteredUsers(
+  Astro.cookies.get(DEMO_REGISTERED_COOKIE)?.value,
+);
+
 if (allUsers.length === 0) {
-  allUsers = [...REGISTERED_CAMPUS_USERS, ...INITIAL_CAMPUS_USERS].map((u: any) => enrichCampusUser(u));
-} else if (REGISTERED_CAMPUS_USERS.length > 0) {
+  const seenEmails = new Set<string>();
+  const combinedRaw = [...demoRegisteredUsers, ...INITIAL_CAMPUS_USERS].filter((u) => {
+    const em = u.email.toLowerCase().trim();
+    if (seenEmails.has(em)) return false;
+    seenEmails.add(em);
+    return true;
+  });
+  allUsers = combinedRaw.map((u: any) => enrichCampusUser(u));
+} else if (demoRegisteredUsers.length > 0) {
   const existingEmails = new Set(allUsers.map((u) => u.email.toLowerCase().trim()));
-  const newOnly = REGISTERED_CAMPUS_USERS.filter((u) => !existingEmails.has(u.email.toLowerCase().trim()));
+  const newOnly = demoRegisteredUsers.filter((u) => !existingEmails.has(u.email.toLowerCase().trim()));
   if (newOnly.length > 0) {
     allUsers = [...newOnly.map((u: any) => enrichCampusUser(u)), ...allUsers];
   }
