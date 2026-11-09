@@ -29,6 +29,7 @@ import {
   signUpWithPassword,
   updateUserPassword,
 } from "~/lib/supabase";
+import { recordDemoRegisteredUser } from "~/data/mockUsers";
 import {
   clearSessionCookies,
   devBypassEnabled,
@@ -241,6 +242,15 @@ export const server = {
           message: "This Student ID is already registered. Please sign in or contact the Security Office if this is an error.",
         });
       }
+
+      // Record in demo registration cache so it immediately surfaces in admin Users directory
+      recordDemoRegisteredUser({
+        fullName: name,
+        email,
+        program,
+        studentId,
+        yearLevel,
+      });
 
       const result = await signUpWithPassword(
         context.locals.env,

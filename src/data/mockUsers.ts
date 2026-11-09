@@ -6,8 +6,46 @@ export interface CampusUser {
   active: boolean;
   created_at: string;
   department?: string;
+  program?: string;
+  student_id?: string;
+  year_level?: string;
   reports_count?: number;
   claims_count?: number;
+}
+
+// In-memory store for newly registered accounts in demo / offline fallback mode
+export const REGISTERED_CAMPUS_USERS: CampusUser[] = [];
+
+export function recordDemoRegisteredUser(user: {
+  fullName: string;
+  email: string;
+  program?: string;
+  studentId?: string;
+  yearLevel?: string;
+}): CampusUser {
+  const cleanEmail = user.email.toLowerCase().trim();
+  const existingIndex = REGISTERED_CAMPUS_USERS.findIndex((u) => u.email.toLowerCase().trim() === cleanEmail);
+  const entry: CampusUser = {
+    id: `reg-${Date.now()}-${cleanEmail.split("@")[0]}`,
+    full_name: user.fullName,
+    email: cleanEmail,
+    role: "user",
+    active: true,
+    created_at: new Date().toISOString(),
+    program: user.program,
+    student_id: user.studentId,
+    year_level: user.yearLevel,
+    reports_count: 0,
+    claims_count: 0,
+  };
+
+  if (existingIndex >= 0) {
+    REGISTERED_CAMPUS_USERS[existingIndex] = entry;
+  } else {
+    REGISTERED_CAMPUS_USERS.unshift(entry);
+  }
+
+  return entry;
 }
 
 export const INITIAL_CAMPUS_USERS: CampusUser[] = [
