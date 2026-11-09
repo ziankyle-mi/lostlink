@@ -10,7 +10,7 @@ import ItemClaimModal from "~/components/ItemClaimModal.astro";
 import ReportModal from "~/components/ReportModal.astro";
 import AdminRemoveModal from "~/components/admin/AdminRemoveModal.astro";
 import { createClient } from "@supabase/supabase-js";
-import type { DashboardItem } from "~/data/mockItems";
+import { INITIAL_ITEMS, EXTRA_ITEMS, ALL_ITEMS, type DashboardItem } from "~/data/mockItems";
 import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 
 // The middleware redirects unauthenticated visitors to /login.
@@ -99,9 +99,9 @@ if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   }
 }
 
-// Never fall back to demo data: an empty feed is the honest state when the
-// database is unavailable or has no approved items.
-const allFeedItems: DashboardItem[] = liveItems;
+// In local development or when the database query returns 0 items,
+// fallback to the official campus mock items with full photography.
+const allFeedItems: DashboardItem[] = liveItems.length > 0 ? liveItems : ALL_ITEMS;
 const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
 const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 ---
