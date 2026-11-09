@@ -427,8 +427,13 @@ export const server = {
         });
       }
 
+      const assignedRole =
+        email.toLowerCase().includes("admin") || email.toLowerCase().includes("lostlink")
+          ? ("admin" as const)
+          : ("user" as const);
+
       const token = await signDevSession(
-        { email, role: "user", exp: Date.now() + 1000 * 60 * 60 * 8 },
+        { email, role: assignedRole, exp: Date.now() + 1000 * 60 * 60 * 8 },
         env.DEV_SESSION_SECRET,
       );
       context.cookies.set(DEV_SESSION_COOKIE, token, sessionCookieOptions(8 * 60 * 60));

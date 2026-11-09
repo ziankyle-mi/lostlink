@@ -135,18 +135,32 @@ const devOpen = devBypassEnabled(env);
 
   {
     devOpen && (
-      <div class="mt-8 flex flex-col items-center gap-2 border-t border-line pt-6">
-        <form method="POST" action={actions.devLogin}>
-          <input type="hidden" name="next" value={nextPath} />
-          <button
-            type="submit"
-            class="text-xs font-medium text-sage-600 underline underline-offset-4 hover:text-forest-700"
-          >
-            Test login (dev)
-          </button>
-        </form>
+      <div class="mt-8 flex flex-col items-center gap-3 border-t border-line pt-6">
+        <p class="text-xs font-bold text-forest-900 tracking-wide uppercase">Quick Dev Test Logins</p>
+        <div class="flex items-center gap-2 flex-wrap justify-center">
+          <form method="POST" action={actions.devLogin}>
+            <input type="hidden" name="email" value="dlsau.lostlink@dlsau.edu.ph" />
+            <input type="hidden" name="next" value="/admin" />
+            <button
+              type="submit"
+              class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-forest-700 text-white hover:bg-forest-900 transition-all shadow-2xs cursor-pointer"
+            >
+              Sign in as Admin
+            </button>
+          </form>
+          <form method="POST" action={actions.devLogin}>
+            <input type="hidden" name="email" value="juan.reyes@dlsau.edu.ph" />
+            <input type="hidden" name="next" value="/" />
+            <button
+              type="submit"
+              class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-stone-100 text-stone-700 hover:bg-stone-200 transition-all border border-stone-200 shadow-2xs cursor-pointer"
+            >
+              Sign in as Student
+            </button>
+          </form>
+        </div>
         {devError && (
-          <p role="alert" class="field-error">
+          <p role="alert" class="field-error mt-1">
             {devError}
           </p>
         )}
