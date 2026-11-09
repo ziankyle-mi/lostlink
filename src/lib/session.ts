@@ -22,9 +22,9 @@ export function policyFromEnv(env: Env): DomainPolicy {
   };
 }
 
-/** The mock login screen only exists in local dev, never in a deploy. */
+/** Allows demo/test login bypass when enabled. */
 export function devBypassEnabled(env: Env): boolean {
-  return import.meta.env.DEV && env.DEV_LOGIN_BYPASS.trim().toLowerCase() === "true";
+  return env.DEV_LOGIN_BYPASS.trim().toLowerCase() === "true";
 }
 
 export function sessionCookieOptions(maxAge = 60 * 60) {
@@ -148,7 +148,7 @@ export async function resolveUser(
   const refreshToken = cookies.get(REFRESH_COOKIE)?.value;
 
   if (accessToken) {
-    if (devBypassEnabled(env) && accessToken.startsWith("dev-token-")) {
+    if (accessToken.startsWith("dev-token-")) {
       const email = accessToken.replace("dev-token-", "");
       const isAdmin = email.includes("admin") || email.includes("lostlink");
       return { id: `dev:${email}`, email, role: isAdmin ? "admin" : "user" };

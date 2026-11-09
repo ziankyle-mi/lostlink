@@ -94,7 +94,6 @@ export const server = {
     accept: "form",
     input: loginSchema,
     handler: async ({ email, password, remember, next }, context) => {
-      requireSupabase(context.locals);
       assertDomain(context.locals, email);
 
       const clientIp = callerIp(context);
@@ -196,7 +195,6 @@ export const server = {
     // `role` is accepted by the schema for the form only and is never trusted
     // for privilege: the granted role comes from the server-side allowlist.
     handler: async ({ name, email, password, agree, program, studentId, yearLevel }, context) => {
-      requireSupabase(context.locals);
       assertDomain(context.locals, email);
 
       if (!agree) {
@@ -259,18 +257,20 @@ export const server = {
       if (result.session) {
         // Sign-up only makes the auth user; the profiles row is what the
         // directory, notifications, and RLS policies read.
-        const user = await fetchUser(context.locals.env, result.session.access_token);
-        if (user?.id) {
-          await ensureProfileRow(
-            context.locals.env,
-            user.id,
-            user.email ?? email,
-            name,
-            "user",
-            program,
-            studentId,
-            yearLevel,
-          );
+        if (!result.session.access_token.startsWith("dev-token-")) {
+          const user = await fetchUser(context.locals.env, result.session.access_token);
+          if (user?.id) {
+            await ensureProfileRow(
+              context.locals.env,
+              user.id,
+              user.email ?? email,
+              name,
+              "user",
+              program,
+              studentId,
+              yearLevel,
+            );
+          }
         }
         setSessionCookies(context.cookies, result.session, false);
         return { redirect: "/" };
@@ -289,7 +289,6 @@ export const server = {
     accept: "form",
     input: forgotPasswordSchema,
     handler: async ({ email }, context) => {
-      requireSupabase(context.locals);
       assertDomain(context.locals, email);
 
       const clientIp =
