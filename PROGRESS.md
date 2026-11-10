@@ -2,6 +2,13 @@
 
 The agent updates this file after every step. Keep it short.
 
+## Installed Workspace Skills from Skilled Catalog (2026-11-10)
+
+Done: Added the 3 selected verified agent skills into `.agents/skills/` for database optimization, Cloudflare edge deployment, and Playwright end-to-end verification.
+- **Supabase Postgres Best Practices (`.agents/skills/supabase-postgres-best-practices/SKILL.md`):** Query performance, indexing, RLS policy optimization, and safe migrations.
+- **Cloudflare Deploy (`.agents/skills/cloudflare-deploy/SKILL.md`):** Cloudflare Pages/Workers deployment workflows, Wrangler config, KV bindings, and edge diagnostics.
+- **Playwright Skill (`.agents/skills/playwright-skill/SKILL.md`):** Automated end-to-end browser testing and verification across login, report, approval, claim, and resolution flows.
+
 ## Admin Role & Account Status Persistence Across Reloads and Logins (2026-11-10)
 
 Done: Completed admin role/status persistence and session propagation for both Supabase-backed profiles and demo/fallback campus accounts.
