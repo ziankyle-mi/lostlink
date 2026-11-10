@@ -8,6 +8,7 @@ Done: Added the 3 selected verified agent skills into `.agents/skills/` for data
 - **Supabase Postgres Best Practices (`.agents/skills/supabase-postgres-best-practices/SKILL.md`):** Query performance, indexing, RLS policy optimization, and safe migrations.
 - **Cloudflare Deploy (`.agents/skills/cloudflare-deploy/SKILL.md`):** Cloudflare Pages/Workers deployment workflows, Wrangler config, KV bindings, and edge diagnostics.
 - **Playwright Skill (`.agents/skills/playwright-skill/SKILL.md`):** Automated end-to-end browser testing and verification across login, report, approval, claim, and resolution flows.
+- **Tailwind Design System (`.agents/skills/tailwind-design-system/SKILL.md`):** Tailwind CSS v4 CSS-first `@theme` design tokens, component variant patterns, and responsive UI consistency.
 
 ## Admin Role & Account Status Persistence Across Reloads and Logins (2026-11-10)
 
