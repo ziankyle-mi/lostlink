@@ -14,6 +14,12 @@ export interface CampusUser {
 }
 
 export const DEMO_REGISTERED_COOKIE = "ll_demo_registered_users";
+/**
+ * Role/status changes applied to demo accounts that have no Supabase profile
+ * row (the campus directory falls back to mockUsers when the database is
+ * unreachable). Kept in a cookie so the change survives the next page load.
+ */
+export const DEMO_USER_STATE_COOKIE = "ll_demo_user_state";
 
 // In-memory store for newly registered accounts in demo / offline fallback mode
 export const REGISTERED_CAMPUS_USERS: CampusUser[] = [];
@@ -87,6 +93,72 @@ export function getCombinedDemoRegisteredUsers(rawCookie?: string): CampusUser[]
     }
   }
   return combined;
+}
+
+export interface DemoUserState {
+  role?: "admin" | "user";
+  active?: boolean;
+}
+
+export type DemoUserStateMap = Record<string, DemoUserState>;
+
+/** Reads the demo state cookie, tolerating malformed or stale values. */
+export function parseDemoUserState(rawCookie?: string): DemoUserStateMap {
+  if (!rawCookie) return {};
+
+  const read = (raw: string): DemoUserStateMap => {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    const clean: DemoUserStateMap = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      const email = key.toLowerCase().trim();
+      if (!email || !value || typeof value !== "object") continue;
+
+      const candidate = value as Record<string, unknown>;
+      const entry: DemoUserState = {};
+      if (candidate.role === "admin" || candidate.role === "user") entry.role = candidate.role;
+      if (typeof candidate.active === "boolean") entry.active = candidate.active;
+      if (Object.keys(entry).length > 0) clean[email] = entry;
+    }
+    return clean;
+  };
+
+  try {
+    return read(decodeURIComponent(rawCookie));
+  } catch {
+    try {
+      return read(rawCookie);
+    } catch {
+      return {};
+    }
+  }
+}
+
+export function serializeDemoUserState(state: DemoUserStateMap): string {
+  return encodeURIComponent(JSON.stringify(state));
+}
+
+/** Overlays demo role/status changes onto the fallback campus directory. */
+export function withDemoUserState<T extends { email: string; role: "admin" | "user"; active: boolean }>(
+  users: T[],
+  state: DemoUserStateMap,
+): T[] {
+  return users.map((user) => {
+    const entry = state[user.email.toLowerCase().trim()];
+    if (!entry) return user;
+    return { ...user, role: entry.role ?? user.role, active: entry.active ?? user.active };
+  });
+}
+
+/** True when the email belongs to the mock/fallback directory (no DB profile expected). */
+export function isKnownDemoUser(email: string, rawRegisteredCookie?: string): boolean {
+  const clean = email.toLowerCase().trim();
+  if (!clean) return false;
+  if (INITIAL_CAMPUS_USERS.some((u) => u.email.toLowerCase().trim() === clean)) return true;
+  return getCombinedDemoRegisteredUsers(rawRegisteredCookie).some(
+    (u) => u.email.toLowerCase().trim() === clean,
+  );
 }
 
 export const INITIAL_CAMPUS_USERS: CampusUser[] = [

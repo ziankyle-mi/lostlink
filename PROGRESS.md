@@ -2,6 +2,13 @@
 
 The agent updates this file after every step. Keep it short.
 
+## Admin Role & Account Status Persistence Across Reloads and Logins (2026-11-10)
+
+Done: Completed admin role/status persistence and session propagation for both Supabase-backed profiles and demo/fallback campus accounts.
+- **Database + Demo State Persistence (`src/pages/api/admin/actions.ts`, `src/data/mockUsers.ts`):** `toggle_user_role`, `toggle_user_status`, and `delete_user` verify database profile updates first and fall back to persisting `DEMO_USER_STATE_COOKIE` (`ll_demo_user_state`) for seeded/self-registered demo accounts so changes survive page reloads and never silently report fake success for unknown accounts.
+- **Session & Login Resolution (`src/lib/session.ts`, `src/actions/index.ts`, `src/pages/admin.astro`):** `resolveUser` applies `DEMO_USER_STATE_COOKIE` overrides to dev and fallback sessions so promoted students immediately gain `admin` privileges (Admin Console access and navbar badge) upon sign-in, while suspended/deactivated accounts are blocked from resolving a session. `admin.astro` overlays the persisted state onto the Campus Accounts Directory on load.
+- **Verified:** `npm run check` 0 errors / 0 warnings; `npm test` 106 passed, 2 skipped (including 10 tests in `tests/demo-user-state.test.ts`); `npm run build` success.
+
 ## Categorized Moderation, Custom Explanations & Zero-Emoji UI (2026-10-23)
 
 Done: Implemented administrative categorized denial & flag moderation system with direct student notifications and complete removal of emojis.

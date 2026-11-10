@@ -11,8 +11,11 @@ import DashboardFooter from "~/components/DashboardFooter.astro";
 import { enrichCampusUser, type EnhancedCampusUser } from "~/data/campusPrograms";
 import {
   DEMO_REGISTERED_COOKIE,
+  DEMO_USER_STATE_COOKIE,
   INITIAL_CAMPUS_USERS,
   getCombinedDemoRegisteredUsers,
+  parseDemoUserState,
+  withDemoUserState,
 } from "~/data/mockUsers";
 import { actions } from "astro:actions";
 import {
@@ -460,6 +463,14 @@ if (allUsers.length === 0) {
     allUsers = [...newOnly.map((u: any) => enrichCampusUser(u)), ...allUsers];
   }
 }
+
+// Demo accounts have no Supabase profile row to update, so role/status changes
+// for them are kept in a cookie and overlaid here. Without this the "Make
+// admin" button reported success but the directory reverted on reload.
+allUsers = withDemoUserState(
+  allUsers,
+  parseDemoUserState(Astro.cookies.get(DEMO_USER_STATE_COOKIE)?.value),
+);
 
 // Helper function to turn raw system logs into friendly, plain English for university staff
 function parseAuditEvent(

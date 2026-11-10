@@ -31,7 +31,9 @@ import {
 } from "~/lib/supabase";
 import {
   DEMO_REGISTERED_COOKIE,
+  DEMO_USER_STATE_COOKIE,
   getCombinedDemoRegisteredUsers,
+  parseDemoUserState,
   recordDemoRegisteredUser,
   serializeDemoRegisteredCookie,
 } from "~/data/mockUsers";
@@ -189,7 +191,15 @@ export const server = {
         }
       }
 
-      const defaultPath = email.toLowerCase().includes("admin") || email.toLowerCase().includes("lostlink") ? "/admin" : "/";
+      const demoLoginRole = parseDemoUserState(
+        context.cookies.get(DEMO_USER_STATE_COOKIE)?.value,
+      )[email.toLowerCase().trim()]?.role;
+      const defaultPath =
+        demoLoginRole === "admin" ||
+        email.toLowerCase().includes("admin") ||
+        email.toLowerCase().includes("lostlink")
+          ? "/admin"
+          : "/";
       const targetPath = next && next !== "/" ? safeNextPath(next) : defaultPath;
       return { redirect: targetPath };
     },
@@ -458,9 +468,12 @@ export const server = {
       }
 
       const assignedRole =
-        email.toLowerCase().includes("admin") || email.toLowerCase().includes("lostlink")
+        parseDemoUserState(context.cookies.get(DEMO_USER_STATE_COOKIE)?.value)[
+          email.toLowerCase().trim()
+        ]?.role ??
+        (email.toLowerCase().includes("admin") || email.toLowerCase().includes("lostlink")
           ? ("admin" as const)
-          : ("user" as const);
+          : ("user" as const));
 
       const token = await signDevSession(
         { email, role: assignedRole, exp: Date.now() + 1000 * 60 * 60 * 8 },

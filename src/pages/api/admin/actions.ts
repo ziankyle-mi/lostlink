@@ -1,6 +1,15 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, AstroCookies } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
+import { sessionCookieOptions } from "~/lib/session";
+import {
+  DEMO_REGISTERED_COOKIE,
+  DEMO_USER_STATE_COOKIE,
+  isKnownDemoUser,
+  parseDemoUserState,
+  serializeDemoUserState,
+  type DemoUserState,
+} from "~/data/mockUsers";
 
 function getAdminClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key";
@@ -20,7 +29,25 @@ function generateTempPassword(): string {
   return `Lk-${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+/**
+ * Demo accounts shown in the campus directory have no Supabase profile row.
+ * Their changes live in a cookie so the UI keeps them after a reload.
+ */
+function saveDemoUserState(
+  cookies: AstroCookies | undefined,
+  email: string,
+  patch: DemoUserState,
+): void {
+  if (!cookies || !email) return;
+  const state = parseDemoUserState(cookies.get(DEMO_USER_STATE_COOKIE)?.value);
+  state[email.toLowerCase().trim()] = {
+    ...state[email.toLowerCase().trim()],
+    ...patch,
+  };
+  cookies.set(DEMO_USER_STATE_COOKIE, serializeDemoUserState(state), sessionCookieOptions(60 * 60 * 24 * 30));
+}
+
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -538,8 +565,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Query target user profile if email not already provided
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+      const isUuid = UUID_RE.test(userId);
       let targetEmail = email ? String(email).toLowerCase().trim() : "";
       if (!targetEmail && isUuid) {
         const { data: targetProf } = await supabase.from("profiles").select("id, email, role").eq("id", userId).maybeSingle();
@@ -554,21 +580,49 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      if (isUuid) {
-        const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
-        if (updateErr) {
-          console.error("[admin/actions] Role update error:", updateErr.message);
-          return new Response(JSON.stringify({ ok: false, error: "Could not update the user role." }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
+      // Update the database and confirm a row actually changed. Updating by a
+      // mock id used to report success without touching anything.
+      let persisted = false;
+      let dbError: string | null = null;
+      try {
+        if (isUuid) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .update({ role: newRole })
+            .eq("id", userId)
+            .select("id")
+            .maybeSingle();
+          if (error) dbError = error.message;
+          else persisted = Boolean(data);
         }
-      } else if (targetEmail && !userId.startsWith("user-") && !userId.startsWith("demo-")) {
-        const { error: updateErr } = await supabase.from("profiles").update({ role: newRole }).eq("email", targetEmail);
-        if (updateErr) {
-          console.error("[admin/actions] Profile role update by email error:", updateErr.message);
-          return new Response(JSON.stringify({ ok: false, error: "Could not update the user role." }), {
-            status: 500,
+        if (!persisted && targetEmail) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .update({ role: newRole })
+            .eq("email", targetEmail)
+            .select("id")
+            .maybeSingle();
+          if (error) dbError = error.message;
+          else persisted = Boolean(data);
+        }
+      } catch (err: any) {
+        dbError = err?.message ?? "Database request failed.";
+      }
+
+      // Fallback directory accounts (mockUsers) have no profile row. Persist
+      // their new role in the demo cookie so the directory keeps it on reload.
+      if (!persisted) {
+        if (targetEmail && isKnownDemoUser(targetEmail, cookies?.get(DEMO_REGISTERED_COOKIE)?.value)) {
+          saveDemoUserState(cookies, targetEmail, { role: newRole });
+        } else {
+          console.error("[admin/actions] Role update failed:", dbError || "no matching profile");
+          return new Response(JSON.stringify({
+            ok: false,
+            error: dbError
+              ? "Could not update the user role. The database is unavailable."
+              : "No matching campus account was found to update.",
+          }), {
+            status: dbError ? 500 : 404,
             headers: { "Content-Type": "application/json" },
           });
         }
@@ -605,8 +659,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Query target user profile if email not already provided
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+      const isUuid = UUID_RE.test(userId);
       let targetEmail = email ? String(email).toLowerCase().trim() : "";
       if (!targetEmail && isUuid) {
         const { data: targetProf } = await supabase.from("profiles").select("id, email").eq("id", userId).maybeSingle();
@@ -621,18 +674,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      if (isUuid) {
-        const { error: statusErr } = await supabase.from("profiles").update({ active }).eq("id", userId);
-        if (statusErr) {
-          console.error("[admin/actions] Status update error:", statusErr.message);
-          return new Response(JSON.stringify({ ok: false, error: "Could not update the account status." }), {
-            status: 500,
+      let persisted = false;
+      let dbError: string | null = null;
+      try {
+        if (isUuid) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .update({ active })
+            .eq("id", userId)
+            .select("id")
+            .maybeSingle();
+          if (error) dbError = error.message;
+          else persisted = Boolean(data);
+        }
+        if (!persisted && targetEmail) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .update({ active })
+            .eq("email", targetEmail)
+            .select("id")
+            .maybeSingle();
+          if (error) dbError = error.message;
+          else persisted = Boolean(data);
+        }
+      } catch (err: any) {
+        dbError = err?.message ?? "Database request failed.";
+      }
+
+      if (!persisted) {
+        if (targetEmail && isKnownDemoUser(targetEmail, cookies?.get(DEMO_REGISTERED_COOKIE)?.value)) {
+          saveDemoUserState(cookies, targetEmail, { active });
+        } else {
+          console.error("[admin/actions] Status update failed:", dbError || "no matching profile");
+          return new Response(JSON.stringify({
+            ok: false,
+            error: dbError
+              ? "Could not update the account status. The database is unavailable."
+              : "No matching campus account was found to update.",
+          }), {
+            status: dbError ? 500 : 404,
             headers: { "Content-Type": "application/json" },
           });
         }
+      }
 
-        // Mirror the app-level flag into Supabase Auth so a suspended user
-        // cannot keep a direct Supabase session on another device.
+      // Mirror the app-level flag into Supabase Auth so a suspended user
+      // cannot keep a direct Supabase session on another device.
+      if (isUuid && persisted) {
         const { error: banErr } = await supabase.auth.admin.updateUserById(userId, {
           ban_duration: active ? "none" : "876000h",
         });
@@ -757,65 +845,94 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      let targetProfileId = userId;
-      let targetEmail = email;
+      let targetProfileId = userId ? String(userId).trim() : "";
+      let targetEmail = email ? String(email).toLowerCase().trim() : "";
+      const isUuid = UUID_RE.test(targetProfileId);
 
-      if (!targetProfileId && targetEmail) {
-        const { data: p } = await supabase.from("profiles").select("id, email").eq("email", targetEmail.toLowerCase().trim()).maybeSingle();
-        targetProfileId = p?.id;
-      } else if (targetProfileId && !targetEmail) {
-        const { data: p } = await supabase.from("profiles").select("id, email").eq("id", targetProfileId).maybeSingle();
-        targetEmail = p?.email;
+      try {
+        if (!isUuid && targetEmail) {
+          const { data: p } = await supabase.from("profiles").select("id, email").eq("email", targetEmail).maybeSingle();
+          if (p?.id) targetProfileId = p.id;
+        } else if (isUuid && !targetEmail) {
+          const { data: p } = await supabase.from("profiles").select("id, email").eq("id", targetProfileId).maybeSingle();
+          if (p?.email) targetEmail = p.email.toLowerCase().trim();
+        }
+      } catch {
+        // Ignore lookup error and fall through to demo user check if applicable
       }
 
-      if (targetProfileId === user.id || (targetEmail && targetEmail.toLowerCase() === userEmail.toLowerCase())) {
+      if (targetProfileId === user.id || (targetEmail && targetEmail === userEmail)) {
         return new Response(JSON.stringify({ ok: false, error: "Administrators cannot deactivate their own active account." }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      if (!targetProfileId || !UUID_RE.test(targetProfileId)) {
-        return new Response(JSON.stringify({ ok: false, error: "No matching account found." }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+      let persisted = false;
+      let dbError: string | null = null;
+      if (targetProfileId && UUID_RE.test(targetProfileId)) {
+        try {
+          const { data, error: statusErr } = await supabase
+            .from("profiles")
+            .update({ active: false })
+            .eq("id", targetProfileId)
+            .select("id")
+            .maybeSingle();
+          if (statusErr) {
+            dbError = statusErr.message;
+          } else {
+            persisted = Boolean(data);
+          }
+        } catch (err: any) {
+          dbError = err?.message ?? "Database request failed.";
+        }
       }
 
-      // 1. Audit first, so the action is recorded even if a later call fails.
+      if (!persisted) {
+        if (targetEmail && isKnownDemoUser(targetEmail, cookies?.get(DEMO_REGISTERED_COOKIE)?.value)) {
+          saveDemoUserState(cookies, targetEmail, { active: false });
+        } else {
+          if (dbError) console.error("[admin/actions] Deactivate profile failed:", dbError);
+          return new Response(JSON.stringify({
+            ok: false,
+            error: dbError ? "Could not deactivate the account." : "No matching account found.",
+          }), {
+            status: dbError ? 500 : 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // 1. Audit trail (best effort)
       if (adminProfileId) {
-        const { error: auditErr } = await supabase.from("admin_log").insert({
-          admin_id: adminProfileId,
-          action: `user_deactivated: ${targetEmail || targetProfileId}`,
-        });
-        if (auditErr) console.error("[admin/actions] Audit log failed:", auditErr.message);
+        try {
+          const { error: auditErr } = await supabase.from("admin_log").insert({
+            admin_id: adminProfileId,
+            action: `user_deactivated: ${targetEmail || targetProfileId}`,
+          });
+          if (auditErr) console.error("[admin/actions] Audit log failed:", auditErr.message);
+        } catch {
+          // Ignore audit error when offline
+        }
       }
 
-      // 2. Block the app session and any direct Supabase session.
-      const { error: statusErr } = await supabase
-        .from("profiles")
-        .update({ active: false })
-        .eq("id", targetProfileId);
-      if (statusErr) {
-        console.error("[admin/actions] Deactivate profile failed:", statusErr.message);
-        return new Response(JSON.stringify({ ok: false, error: "Could not deactivate the account." }), {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      const { error: banErr } = await supabase.auth.admin.updateUserById(targetProfileId, {
-        ban_duration: "876000h",
-      });
-      if (banErr) {
-        // The app-level `active=false` check still blocks this account, so
-        // report success but surface the weaker auth-layer state in logs.
-        console.warn("[admin/actions] Auth ban failed:", banErr.message);
+      // 2. Block any direct Supabase Auth session when backed by a real auth user
+      if (persisted && targetProfileId && UUID_RE.test(targetProfileId)) {
+        try {
+          const { error: banErr } = await supabase.auth.admin.updateUserById(targetProfileId, {
+            ban_duration: "876000h",
+          });
+          if (banErr) {
+            console.warn("[admin/actions] Auth ban failed:", banErr.message);
+          }
+        } catch {
+          // Ignore auth mirror failure when offline
+        }
       }
 
       return new Response(JSON.stringify({
         ok: true,
-        userId: targetProfileId,
+        userId: targetProfileId || targetEmail,
         email: targetEmail,
         message: `Account ${targetEmail || targetProfileId} has been deactivated. Records and claims were preserved.`,
       }), {

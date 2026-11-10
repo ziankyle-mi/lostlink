@@ -12,6 +12,7 @@ import {
   verifyDevSession,
 } from "./auth";
 import { fetchUser, refreshSession } from "./supabase";
+import { DEMO_USER_STATE_COOKIE, parseDemoUserState } from "~/data/mockUsers";
 
 export function policyFromEnv(env: Env): DomainPolicy {
   return {
@@ -131,6 +132,14 @@ export async function resolveUser(
   env: Env,
 ): Promise<SessionUser | null> {
   const policy = policyFromEnv(env);
+  const demoState = parseDemoUserState(cookies.get(DEMO_USER_STATE_COOKIE)?.value);
+
+  /** Directory role/status changes for demo accounts (no DB profile row). */
+  const applyDemoState = (email: string, fallbackRole: "admin" | "user") => {
+    const entry = demoState[email.toLowerCase().trim()];
+    if (!entry) return { role: fallbackRole, active: true };
+    return { role: entry.role ?? fallbackRole, active: entry.active ?? true };
+  };
 
   if (devBypassEnabled(env)) {
     const dev = await verifyDevSession(
@@ -140,7 +149,9 @@ export async function resolveUser(
     // The action already enforced the domain policy when it signed this token;
     // an unset ALLOWED_EMAIL_DOMAIN only happens in local setup.
     if (dev && (isAllowedEmail(dev.email, policy) || policy.allowedDomain.trim() === "")) {
-      return { id: `dev:${dev.email}`, email: dev.email, role: dev.role };
+      const state = applyDemoState(dev.email, dev.role);
+      if (!state.active) return null;
+      return { id: `dev:${dev.email}`, email: dev.email, role: state.role };
     }
   }
 
@@ -151,7 +162,9 @@ export async function resolveUser(
     if (accessToken.startsWith("dev-token-")) {
       const email = accessToken.replace("dev-token-", "");
       const isAdmin = email.includes("admin") || email.includes("lostlink");
-      return { id: `dev:${email}`, email, role: isAdmin ? "admin" : "user" };
+      const state = applyDemoState(email, isAdmin ? "admin" : "user");
+      if (!state.active) return null;
+      return { id: `dev:${email}`, email, role: state.role };
     }
     const user = await fetchUser(env, accessToken);
     if (user?.email && isAllowedEmail(user.email, policy) && user.email_confirmed_at) {
