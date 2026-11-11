@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createFastClient } from "./supabase";
 import type { Env } from "./env";
 
 export const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -209,9 +209,7 @@ export function getStorageClient(env: Env) {
   if (!key) {
     throw new Error("Supabase service role key is not configured.");
   }
-  return createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
+  return createFastClient(env.PUBLIC_SUPABASE_URL, key);
 }
 
 const PUBLIC_MARKER = `/storage/v1/object/public/${STORAGE_BUCKET}/`;

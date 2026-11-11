@@ -1,6 +1,14 @@
 ---
-import { createClient } from "@supabase/supabase-js";
+import { createFastClient, isFallbackUser, isHostInUnreachableCooldown } from "~/lib/supabase";
 import { readEnv } from "~/lib/env";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { devBypassEnabled } from "~/lib/session";
+import {
+  DEFAULT_ANNOUNCEMENTS,
+  DEMO_ANNOUNCEMENTS_COOKIE,
+  parseDemoAnnouncements,
+} from "~/data/demoAnnouncements";
+import { DEMO_NOTIFS_COOKIE, parseDemoNotifications } from "~/data/demoStore";
 
 interface Props {
   userEmail?: string;
@@ -22,11 +30,15 @@ interface LiveNotif {
 let liveNotifications: LiveNotif[] = [];
 let unreadNotifCount = 0;
 
-if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+const accessToken = Astro.cookies.get(ACCESS_COOKIE)?.value;
+const useDemoFallback =
+  devBypassEnabled(env) ||
+  isFallbackUser(Astro.locals.user, accessToken) ||
+  isHostInUnreachableCooldown(env.PUBLIC_SUPABASE_URL);
+
+if (!useDemoFallback && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
-    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
+    const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: prof } = await supabase
       .from("profiles")
       .select("id, role")
@@ -52,6 +64,23 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
     }
   } catch (err) {
     console.warn("[navbar] Notifs fetch notice:", err);
+  }
+}
+
+if (liveNotifications.length === 0) {
+  const demoNotifs = parseDemoNotifications(Astro.cookies.get(DEMO_NOTIFS_COOKIE)?.value)
+    .filter((n) => n.userEmail.toLowerCase().trim() === userEmail.toLowerCase().trim())
+    .slice(0, 8)
+    .map((n) => ({
+      id: n.id,
+      message: n.message,
+      read: n.read,
+      link: n.link,
+      created_at: n.createdAt,
+    }));
+  if (demoNotifs.length > 0) {
+    liveNotifications = demoNotifs;
+    unreadNotifCount = demoNotifs.filter((n) => !n.read).length;
   }
 }
 
@@ -91,11 +120,9 @@ interface AnnouncementItem {
 
 let activeAnnouncements: AnnouncementItem[] = [];
 
-if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+if (!useDemoFallback && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
-    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
+    const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: annData } = await supabase
       .from("announcements")
       .select("id, title, message, priority, created_at")
@@ -111,30 +138,30 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   }
 }
 
+const demoAnnouncements = parseDemoAnnouncements(
+  Astro.cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value,
+)
+  .filter((a) => a.active)
+  .map((a) => ({
+    id: a.id,
+    title: a.title,
+    message: a.message,
+    priority: a.priority,
+    created_at: a.created_at,
+  }));
+
+if (demoAnnouncements.length > 0) {
+  activeAnnouncements = [...demoAnnouncements, ...activeAnnouncements];
+}
+
 if (activeAnnouncements.length === 0) {
-  activeAnnouncements = [
-    {
-      id: "default-ann-1",
-      title: "Disciplinary Office Schedule",
-      message: "Item turnover and claims verification are processed Monday to Friday, 8:00 AM – 5:00 PM at Admin Bldg Rm 102.",
-      priority: "important",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "default-ann-2",
-      title: "Custodial Claim Window",
-      message: "Items unclaimed for more than 30 days are scheduled for custodial turnover or semester donation.",
-      priority: "normal",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "default-ann-3",
-      title: "DLSAU Lost & Found Network",
-      message: "Report lost and found valuables in under a minute to protect the Lasallian community.",
-      priority: "normal",
-      created_at: new Date().toISOString(),
-    },
-  ];
+  activeAnnouncements = DEFAULT_ANNOUNCEMENTS.filter((a) => a.active).map((a) => ({
+    id: a.id,
+    title: a.title,
+    message: a.message,
+    priority: a.priority,
+    created_at: a.created_at,
+  }));
 }
 
 const initials = getInitials(userEmail);

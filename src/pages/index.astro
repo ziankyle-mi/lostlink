@@ -9,7 +9,10 @@ import DashboardFooter from "~/components/DashboardFooter.astro";
 import ItemClaimModal from "~/components/ItemClaimModal.astro";
 import ReportModal from "~/components/ReportModal.astro";
 import AdminRemoveModal from "~/components/admin/AdminRemoveModal.astro";
-import { createClient } from "@supabase/supabase-js";
+import { createFastClient, isFallbackUser, isHostInUnreachableCooldown } from "~/lib/supabase";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { devBypassEnabled } from "~/lib/session";
+import { DEMO_ITEMS_COOKIE, getMergedDemoItems } from "~/data/demoStore";
 import { INITIAL_ITEMS, EXTRA_ITEMS, ALL_ITEMS, type DashboardItem } from "~/data/mockItems";
 import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 
@@ -23,14 +26,18 @@ if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
 }
 
 const env = Astro.locals.env;
+const accessToken = Astro.cookies.get(ACCESS_COOKIE)?.value;
+const useDemoFallback =
+  (env ? devBypassEnabled(env) : false) ||
+  isFallbackUser(user, accessToken) ||
+  (env?.PUBLIC_SUPABASE_URL ? isHostInUnreachableCooldown(env.PUBLIC_SUPABASE_URL) : false);
 let liveItems: DashboardItem[] = [];
 
-if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+if (!useDemoFallback && env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
-    const supabase = createClient(
+    const supabase = createFastClient(
       env.PUBLIC_SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
     );
     const { data: dbItems } = await supabase
       .from("items")
@@ -100,8 +107,13 @@ if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 // In local development or when the database query returns 0 items,
-// fallback to the official campus mock items with full photography.
-const allFeedItems: DashboardItem[] = liveItems.length > 0 ? liveItems : ALL_ITEMS;
+// fallback to merged demo items (custom submitted + campus sample items).
+const allFeedItems: DashboardItem[] =
+  liveItems.length > 0
+    ? liveItems
+    : getMergedDemoItems(Astro.cookies.get(DEMO_ITEMS_COOKIE)?.value).filter(
+        (item) => item.status === "approved",
+      );
 const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
 const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 ---
@@ -1014,6 +1026,15 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 
       const topPostBtn = document.getElementById("top-post-item-btn");
       if (topPostBtn) topPostBtn.addEventListener("click", () => openReport("found"));
+
+      // Deep-link support (e.g. /admin "Log a found item" button -> /?report=found)
+      const requestedReport = new URLSearchParams(window.location.search).get("report");
+      if (requestedReport === "found" || requestedReport === "lost") {
+        openReport(requestedReport);
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete("report");
+        window.history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+      }
 
       const foundChoice = document.getElementById("report-choice-found");
       if (foundChoice) foundChoice.addEventListener("click", () => openReport("found"));

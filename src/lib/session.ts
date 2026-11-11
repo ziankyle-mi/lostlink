@@ -1,5 +1,4 @@
 import type { AstroCookies } from "astro";
-import { createClient } from "@supabase/supabase-js";
 import type { Env } from "./env";
 import {
   ACCESS_COOKIE,
@@ -11,7 +10,7 @@ import {
   isAllowedEmail,
   verifyDevSession,
 } from "./auth";
-import { fetchUser, refreshSession } from "./supabase";
+import { createFastClient, fetchUser, refreshSession } from "./supabase";
 import { DEMO_USER_STATE_COOKIE, parseDemoUserState } from "~/data/mockUsers";
 
 export function policyFromEnv(env: Env): DomainPolicy {
@@ -86,9 +85,7 @@ async function resolveProfileState(
   }
 
   try {
-    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
+    const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
     let { data } = await supabase
       .from("profiles")

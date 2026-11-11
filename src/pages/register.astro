@@ -184,6 +184,7 @@ const turnstileSiteKey = Astro.locals.env.TURNSTILE_SITE_KEY;
           class="field uppercase"
           placeholder="e.g. 2024-00-000920"
           pattern="[0-9]{4}-00-[0-9]{6}"
+          title="Format: YYYY-00-XXXXXX (e.g. 2024-00-000920)"
           maxlength="14"
           autocomplete="off"
           required
@@ -429,6 +430,11 @@ const turnstileSiteKey = Astro.locals.env.TURNSTILE_SITE_KEY;
           syncRoleUI(role);
         });
       });
+
+      const firstAlert = document.querySelector("[role='alert']");
+      if (firstAlert) {
+        firstAlert.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     })();
   </script>
 </AuthShell>

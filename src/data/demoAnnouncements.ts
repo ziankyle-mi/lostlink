@@ -1,9 +1,8 @@
 /**
- * Dev-only announcement store. When Supabase is unreachable (local demo), a
- * published notice is kept in this cookie so it survives the reload the admin
- * console performs. Production never reads or writes it: the callers gate every
- * use behind `devBypassEnabled`, and a real database failure is reported as an
- * error instead of being faked.
+ * Demo/fallback campus announcements store.
+ * Shares the canonical default notices between the student navbar and admin
+ * console, and persists announcements created/toggled/deleted in fallback
+ * sessions when the Supabase database is unreachable.
  */
 export const DEMO_ANNOUNCEMENTS_COOKIE = "ll_demo_announcements";
 
@@ -16,8 +15,38 @@ export interface DemoAnnouncement {
   created_at: string;
 }
 
+export const DEFAULT_ANNOUNCEMENTS: DemoAnnouncement[] = [
+  {
+    id: "default-do-schedule",
+    title: "Disciplinary Office Schedule",
+    message:
+      "Item turnover and claims verification are processed Monday to Friday, 8:00 AM - 5:00 PM at Admin Bldg Rm 102.",
+    priority: "important",
+    active: true,
+    created_at: "2026-10-01T08:00:00.000Z",
+  },
+  {
+    id: "default-custody-window",
+    title: "Custodial Claim Window",
+    message:
+      "Items unclaimed for more than 30 days are forwarded to the DLSAU University Warehouse.",
+    priority: "normal",
+    active: true,
+    created_at: "2026-10-01T08:00:00.000Z",
+  },
+  {
+    id: "default-id-verification",
+    title: "ID Verification Reminder",
+    message:
+      "Bring your physical DLSAU Student ID card when claiming valuables or electronics.",
+    priority: "urgent",
+    active: true,
+    created_at: "2026-10-01T08:00:00.000Z",
+  },
+];
+
 const MAX_ITEMS = 8;
-const MAX_COOKIE_CHARS = 3800;
+const MAX_COOKIE_CHARS = 3600;
 
 export function parseDemoAnnouncements(raw?: string): DemoAnnouncement[] {
   if (!raw) return [];

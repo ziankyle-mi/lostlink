@@ -29,10 +29,18 @@ import {
 import { readEnv } from "~/lib/env";
 import { devBypassEnabled } from "~/lib/session";
 import {
+  DEFAULT_ANNOUNCEMENTS,
   DEMO_ANNOUNCEMENTS_COOKIE,
   parseDemoAnnouncements,
 } from "~/data/demoAnnouncements";
-import { createClient } from "@supabase/supabase-js";
+import {
+  DEMO_CLAIMS_COOKIE,
+  DEMO_ITEMS_COOKIE,
+  getMergedDemoItems,
+  parseDemoClaims,
+} from "~/data/demoStore";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { createFastClient, isFallbackUser, isHostInUnreachableCooldown } from "~/lib/supabase";
 
 const logoutResult = Astro.getActionResult(actions.logout);
 if (logoutResult && !logoutResult.error && logoutResult.data?.redirect) {
@@ -49,12 +57,17 @@ if (!user) {
   return Astro.redirect("/login?next=/admin", 302);
 }
 
-// Fallback check against database in case role was not populated in session cookie
-if (!isRealAdmin && user?.email && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+// Fallback check against database in case role was not populated in session cookie.
+// Skip immediately for dev/fallback sessions so non-admins redirect without stalling.
+if (
+  !isRealAdmin &&
+  !isFallbackUser(user) &&
+  user?.email &&
+  env.PUBLIC_SUPABASE_URL &&
+  env.SUPABASE_SERVICE_ROLE_KEY
+) {
   try {
-    const supabase = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
+    const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
     const { data: prof } = await supabase
       .from("profiles")
       .select("role")
@@ -107,22 +120,15 @@ export interface CampusAnnouncement {
   created_at?: string;
   author_name?: string;
 }
-let liveAnnouncements: CampusAnnouncement[] = [
-  {
-    id: "default-swao-custody",
-    title: "SWAO Office 30-Day Custody Policy",
-    content: "All unclaimed items from 1st Semester are transferred to university donation drives after 30 days.",
-    urgency: "info",
-    active: true,
-  },
-  {
-    id: "default-val-gate",
-    title: "Claim Verification Center",
-    content: "Present your valid DLSAU Student ID at the Student Affairs Office (AGH 2nd Floor) to inspect items.",
-    urgency: "warning",
-    active: true,
-  },
-];
+let liveAnnouncements: CampusAnnouncement[] = DEFAULT_ANNOUNCEMENTS.map((row) => ({
+  id: row.id,
+  title: row.title,
+  content: row.message,
+  urgency:
+    row.priority === "urgent" ? "alert" : row.priority === "important" ? "warning" : "info",
+  active: row.active,
+  created_at: row.created_at,
+}));
 
 export interface PendingRecoveryRequest {
   email: string;
@@ -158,12 +164,18 @@ const custodyNoticeOk = Boolean(custodyResult?.data?.ok);
 // Keep the modal open after a decision so the officer can continue working.
 const custodyModalReopen = Boolean(custodyResult);
 
-if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+const accessToken = Astro.cookies.get(ACCESS_COOKIE)?.value;
+const useDemoFallback =
+  devBypassEnabled(env) ||
+  isFallbackUser(user, accessToken) ||
+  isHostInUnreachableCooldown(env.PUBLIC_SUPABASE_URL);
+let hasLiveDatabaseData = false;
+
+if (!useDemoFallback && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
-    const supabase = createClient(
+    const supabase = createFastClient(
       env.PUBLIC_SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } },
     );
 
     // Admin View: Live stats and records from entire campus
@@ -256,6 +268,10 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
       claimsToVerify: claimsRes.count ?? 0,
       returnedThisMonth: returnedRes.count ?? 0,
     };
+
+    if (profilesRes.data) {
+      hasLiveDatabaseData = true;
+    }
 
     if (claimsListRes.data) liveClaims = claimsListRes.data;
     if (intakeListRes.data) liveIntake = intakeListRes.data;
@@ -454,30 +470,28 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
       console.warn("[admin] announcements query note:", annQueryErr);
     }
 
-    // Local demo fallback: announcements published while Supabase was
-    // unreachable live in a cookie. Only honored when the dev bypass is on.
-    if (devBypassEnabled(env)) {
-      const demoAnnouncements = parseDemoAnnouncements(
-        Astro.cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value,
-      );
-      if (demoAnnouncements.length > 0) {
-        liveAnnouncements = [
-          ...demoAnnouncements.map((row): CampusAnnouncement => ({
-            id: row.id,
-            title: row.title,
-            content: row.message,
-            urgency:
-              row.priority === "urgent" ? "alert" : row.priority === "important" ? "warning" : "info",
-            active: row.active,
-            created_at: row.created_at,
-          })),
-          ...liveAnnouncements,
-        ];
-      }
-    }
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
   }
+}
+
+// Merge demo/fallback announcements outside the Supabase guard so fallback sessions work cleanly.
+const demoAnnouncements = parseDemoAnnouncements(
+  Astro.cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value,
+);
+if (demoAnnouncements.length > 0 && (useDemoFallback || !hasLiveDatabaseData)) {
+  liveAnnouncements = [
+    ...demoAnnouncements.map((row): CampusAnnouncement => ({
+      id: row.id,
+      title: row.title,
+      content: row.message,
+      urgency:
+        row.priority === "urgent" ? "alert" : row.priority === "important" ? "warning" : "info",
+      active: row.active,
+      created_at: row.created_at,
+    })),
+    ...liveAnnouncements,
+  ];
 }
 
 const demoRegisteredUsers = getCombinedDemoRegisteredUsers(
@@ -508,6 +522,75 @@ allUsers = withDemoUserState(
   allUsers,
   parseDemoUserState(Astro.cookies.get(DEMO_USER_STATE_COOKIE)?.value),
 );
+
+// Populate Overview metrics, Intake Queue, and Claims Verification from demo store when DB is unavailable.
+if (!hasLiveDatabaseData || useDemoFallback) {
+  const demoItems = getMergedDemoItems(Astro.cookies.get(DEMO_ITEMS_COOKIE)?.value);
+  const demoClaims = parseDemoClaims(Astro.cookies.get(DEMO_CLAIMS_COOKIE)?.value);
+
+  const userByEmail = new Map(
+    allUsers.map((u) => [(u.email || "").toLowerCase().trim(), u]),
+  );
+
+  liveIntake = demoItems
+    .filter((item) => item.status === "pending")
+    .map((item) => {
+      const reporter = userByEmail.get(item.reporterEmail.toLowerCase().trim());
+      return {
+        id: item.id,
+        type: item.type,
+        name: item.name,
+        category: item.category,
+        location: item.location,
+        reference_code: item.referenceCode ?? null,
+        description: item.description,
+        created_at: item.createdAt,
+        profiles: {
+          full_name: reporter?.full_name ?? item.reporterEmail.split("@")[0],
+          email: item.reporterEmail,
+        },
+      };
+    });
+
+  if (demoClaims.length > 0) {
+    liveClaims = demoClaims.map((claim) => {
+      const claimant = userByEmail.get(claim.claimantEmail.toLowerCase().trim());
+      const matchedItem = demoItems.find((i) => i.id === claim.itemId);
+      return {
+        id: claim.id,
+        proof_description: claim.proofDescription,
+        status: claim.status,
+        created_at: claim.createdAt,
+        items: {
+          name: matchedItem?.name ?? claim.itemName,
+          location: matchedItem?.location ?? claim.itemLocation ?? "Campus",
+          category: matchedItem?.category ?? "Personal Care & Miscellaneous",
+        },
+        profiles: {
+          full_name: claimant?.full_name ?? claim.claimantEmail.split("@")[0],
+          email: claim.claimantEmail,
+        },
+      };
+    });
+  }
+
+  const pendingClaimCount =
+    demoClaims.length > 0
+      ? demoClaims.filter((c) => c.status === "pending").length
+      : 0;
+  const verifiedThisMonth =
+    demoClaims.filter((c) => c.status === "verified").length +
+    demoItems.filter((i) => i.status === "claimed" || i.status === "resolved").length;
+
+  liveMetrics = {
+    itemsInCustody: demoItems.filter((i) => i.type === "found" && i.status === "approved").length,
+    activeLostReports: demoItems.filter(
+      (i) => i.type === "lost" && (i.status === "approved" || i.status === "pending"),
+    ).length,
+    claimsToVerify: pendingClaimCount,
+    returnedThisMonth: verifiedThisMonth,
+  };
+}
 
 // Helper function to turn raw system logs into friendly, plain English for university staff
 function parseAuditEvent(
@@ -890,7 +973,7 @@ const mappedAdminClaims = liveClaims && liveClaims.length > 0
       time: c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recently",
       privateDetails: c.proof_description ?? "Proof details provided during claim verification.",
     }))
-  : adminClaims;
+  : (useDemoFallback || !hasLiveDatabaseData ? [] : adminClaims);
 
 const allClaimsForModal = mappedAdminClaims;
 const pendingClaimsCount = allClaimsForModal.filter((c: any) => c.status === "pending").length;
@@ -3139,11 +3222,11 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
         });
       }
 
-      // Log CTA button
+      // Log CTA button -> open Found item modal directly on Campus Feed
       const logBtn = document.getElementById("log-found-cta-btn");
       if (logBtn) {
         logBtn.addEventListener("click", () => {
-          window.location.href = "/";
+          window.location.href = "/?report=found";
         });
       }
 

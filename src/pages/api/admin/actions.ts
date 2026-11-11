@@ -1,6 +1,7 @@
 import type { APIRoute, AstroCookies } from "astro";
-import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
+import { createFastClient, isFallbackUser, isHostInUnreachableCooldown } from "~/lib/supabase";
+import { ACCESS_COOKIE } from "~/lib/auth";
 import { sessionCookieOptions, devBypassEnabled } from "~/lib/session";
 import {
   DEMO_ANNOUNCEMENTS_COOKIE,
@@ -8,6 +9,19 @@ import {
   serializeDemoAnnouncements,
   type DemoAnnouncement,
 } from "~/data/demoAnnouncements";
+import {
+  DEMO_CLAIMS_COOKIE,
+  DEMO_ITEMS_COOKIE,
+  DEMO_NOTIFS_COOKIE,
+  appendDemoNotification,
+  getMergedDemoItems,
+  isDemoClaimId,
+  isDemoItemId,
+  parseDemoClaims,
+  parseDemoItemState,
+  serializeDemoClaims,
+  serializeDemoItemState,
+} from "~/data/demoStore";
 import {
   DEMO_REGISTERED_COOKIE,
   DEMO_USER_STATE_COOKIE,
@@ -20,9 +34,7 @@ import {
 function getAdminClient(env: Env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key";
   const url = env.PUBLIC_SUPABASE_URL || "https://dummy-project.supabase.co";
-  return createClient(url, key, {
-    auth: { persistSession: false },
-  });
+  return createFastClient(url, key);
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -71,6 +83,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     });
   }
 
+  const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
+  const allowDemoFallback =
+    devBypassEnabled(locals.env) || isFallbackUser(user, accessToken);
+
   const supabase = getAdminClient(locals.env);
 
   // Resolve the acting admin's real profile id for the audit trail. Never fall
@@ -78,7 +94,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   let adminProfileId: string | null = null;
   if (UUID_RE.test(user.id)) {
     adminProfileId = user.id;
-  } else if (!user.id.startsWith("admin-") && !user.id.startsWith("user-") && !user.id.startsWith("demo-")) {
+  } else if (
+    !isFallbackUser(user, accessToken) &&
+    !user.id.startsWith("admin-") &&
+    !user.id.startsWith("user-") &&
+    !user.id.startsWith("demo-")
+  ) {
     try {
       const { data: adminProf } = await supabase
         .from("profiles")
@@ -102,6 +123,48 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           status: 400,
           headers: { "Content-Type": "application/json" },
         });
+      }
+
+      if (isDemoItemId(String(itemId)) && (allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL))) {
+        const merged = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const item = merged.find((i) => i.id === itemId);
+        if (!item) {
+          return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (item.status !== "pending") {
+          return new Response(JSON.stringify({ ok: false, error: "This report is not waiting for review." }), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const state = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        state.statuses[itemId] = { status: "approved" };
+        cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(state), sessionCookieOptions(60 * 60 * 24 * 7));
+        const isLostReport = item.type === "lost";
+        cookies?.set(
+          DEMO_NOTIFS_COOKIE,
+          appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+            userEmail: item.reporterEmail,
+            message: isLostReport
+              ? `Your lost item report for "${item.name}" was approved and is now visible on the campus feed.`
+              : `Your found item report for "${item.name}" was confirmed in custody and is now public.`,
+            link: "/",
+          }),
+          sessionCookieOptions(60 * 60 * 24 * 7),
+        );
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            status: "approved",
+            message: isLostReport
+              ? "Lost report approved and published to Campus Feed."
+              : "Intake confirmed in custody.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       if (!UUID_RE.test(itemId)) {
@@ -181,7 +244,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const reason = typeof body.reason === "string" ? body.reason.trim() : "";
       const category = typeof body.category === "string" ? body.category.trim() : "Incomplete Description";
 
-      if (!itemId || !UUID_RE.test(String(itemId))) {
+      if (!itemId || (!UUID_RE.test(String(itemId)) && !isDemoItemId(String(itemId)))) {
         return new Response(JSON.stringify({ ok: false, error: "A valid item ID is required." }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
@@ -193,6 +256,46 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           JSON.stringify({ ok: false, error: "A rejection reason of 5 to 600 characters is required." }),
           { status: 400, headers: { "Content-Type": "application/json" } },
         );
+      }
+
+      if (isDemoItemId(String(itemId)) && (allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL))) {
+        const merged = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const item = merged.find((i) => i.id === itemId);
+        if (!item) {
+          return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (item.status !== "pending") {
+          return new Response(JSON.stringify({ ok: false, error: "Only a report awaiting review can be rejected." }), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const state = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        state.statuses[String(itemId)] = { status: "rejected", rejectReason: reason };
+        cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(state), sessionCookieOptions(60 * 60 * 24 * 7));
+        cookies?.set(
+          DEMO_NOTIFS_COOKIE,
+          appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+            userEmail: item.reporterEmail,
+            message: `[Report Rejected: ${category}] For your ${item.type} report "${item.name}": ${reason}`,
+            link: "/profile",
+          }),
+          sessionCookieOptions(60 * 60 * 24 * 7),
+        );
+        return new Response(
+          JSON.stringify({ ok: true, status: "rejected", message: "Report rejected and student notified." }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (!UUID_RE.test(String(itemId))) {
+        return new Response(JSON.stringify({ ok: false, error: "A valid item ID is required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
       const { data: item } = await supabase
@@ -256,6 +359,59 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       if (!claimId) {
         return new Response(JSON.stringify({ ok: false, error: "Claim ID required." }), {
           status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (isDemoClaimId(String(claimId)) && (allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL))) {
+        const claims = parseDemoClaims(cookies?.get(DEMO_CLAIMS_COOKIE)?.value);
+        const claim = claims.find((c) => c.id === claimId);
+        if (!claim) {
+          return new Response(JSON.stringify({ ok: false, error: "Claim not found." }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (claim.status !== "pending") {
+          return new Response(JSON.stringify({ ok: false, error: "This claim was already decided." }), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const itemState = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const merged = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const targetItem = merged.find((i) => i.id === claim.itemId);
+        if (targetItem?.status !== "approved") {
+          return new Response(JSON.stringify({ ok: false, error: "This item is no longer available to claim." }), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        let notifCookie = cookies?.get(DEMO_NOTIFS_COOKIE)?.value;
+        const updatedClaims = claims.map((c) => {
+          if (c.id === claimId) return { ...c, status: "verified" as const };
+          if (c.itemId === claim.itemId && c.status === "pending") {
+            notifCookie = appendDemoNotification(notifCookie, {
+              userEmail: c.claimantEmail,
+              message: "This item was claimed and verified for another claimant.",
+              link: "/",
+            });
+            return { ...c, status: "denied" as const };
+          }
+          return c;
+        });
+        itemState.statuses[claim.itemId] = { status: "claimed" };
+        const refCode = targetItem.referenceCode || claim.itemReferenceCode || "LL-Item";
+        notifCookie = appendDemoNotification(notifCookie, {
+          userEmail: claim.claimantEmail,
+          message: `Your claim was verified! Visit the security office with reference code ${refCode} for handover.`,
+          link: "/profile",
+        });
+        cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(itemState), sessionCookieOptions(60 * 60 * 24 * 7));
+        cookies?.set(DEMO_CLAIMS_COOKIE, serializeDemoClaims(updatedClaims), sessionCookieOptions(60 * 60 * 24 * 7));
+        cookies?.set(DEMO_NOTIFS_COOKIE, notifCookie, sessionCookieOptions(60 * 60 * 24 * 7));
+        return new Response(JSON.stringify({ ok: true, status: "verified", itemId: claim.itemId }), {
+          status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
@@ -396,7 +552,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         });
       }
 
-      if (!UUID_RE.test(claimId)) {
+      if (!UUID_RE.test(claimId) && !isDemoClaimId(String(claimId))) {
         return new Response(JSON.stringify({ ok: false, error: "Claim ID is invalid." }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
@@ -411,6 +567,47 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           JSON.stringify({ ok: false, error: "A specific explanation of 5 to 600 characters is required." }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
+      }
+
+      if (isDemoClaimId(String(claimId)) && (allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL))) {
+        const claims = parseDemoClaims(cookies?.get(DEMO_CLAIMS_COOKIE)?.value);
+        const claim = claims.find((c) => c.id === claimId);
+        if (!claim) {
+          return new Response(JSON.stringify({ ok: false, error: "Claim not found." }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (claim.status !== "pending") {
+          return new Response(JSON.stringify({ ok: false, error: "This claim was already decided." }), {
+            status: 409,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const updated = claims.map((c) =>
+          c.id === claimId ? { ...c, status: "denied" as const, denialReason: reason } : c,
+        );
+        cookies?.set(DEMO_CLAIMS_COOKIE, serializeDemoClaims(updated), sessionCookieOptions(60 * 60 * 24 * 7));
+        cookies?.set(
+          DEMO_NOTIFS_COOKIE,
+          appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+            userEmail: claim.claimantEmail,
+            message: `[Claim Denied: ${category}] For item "${claim.itemName}": ${reason}`,
+            link: "/profile#all-claims",
+          }),
+          sessionCookieOptions(60 * 60 * 24 * 7),
+        );
+        return new Response(JSON.stringify({ ok: true, status: "denied", message: "Claim denied and claimant notified." }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (!UUID_RE.test(claimId)) {
+        return new Response(JSON.stringify({ ok: false, error: "Claim ID is invalid." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
       const { data: claim } = await supabase
@@ -486,6 +683,45 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           status: 400,
           headers: { "Content-Type": "application/json" },
         });
+      }
+
+      if (isDemoItemId(String(itemId)) && (allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL))) {
+        const merged = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const item = merged.find((i) => i.id === itemId);
+        if (!item) {
+          return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (item.status === "claimed" || item.status === "resolved") {
+          return new Response(
+            JSON.stringify({ ok: false, error: "Completed items are kept as records and cannot be removed." }),
+            { status: 409, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        const state = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        state.statuses[String(itemId)] = { status: "rejected", rejectReason: "Removed by admin" };
+        cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(state), sessionCookieOptions(60 * 60 * 24 * 7));
+        cookies?.set(
+          DEMO_NOTIFS_COOKIE,
+          appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+            userEmail: item.reporterEmail,
+            message: `Your report for "${item.name}" was removed by the Disciplinary Office.`,
+            link: "/",
+          }),
+          sessionCookieOptions(60 * 60 * 24 * 7),
+        );
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            status: "removed",
+            itemId,
+            name: item.name,
+            message: `Post "${item.name}" has been removed.`,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       if (!UUID_RE.test(itemId)) {
@@ -986,10 +1222,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         .single();
 
       if (insertErr) {
-        // Local demo fallback: keep the notice in a cookie so it survives the
-        // reload the client performs after publishing. Production never takes
-        // this path; a real database failure is reported honestly.
-        if (!devBypassEnabled(locals.env)) {
+        if (!allowDemoFallback && !isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)) {
           console.error("[admin/actions] Announcement insert failed:", insertErr.message);
           return new Response(
             JSON.stringify({ ok: false, error: "Could not publish the announcement. Try again." }),
@@ -1010,7 +1243,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         cookies?.set(
           DEMO_ANNOUNCEMENTS_COOKIE,
           serializeDemoAnnouncements([announcement, ...demoList]),
-          { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 },
+          sessionCookieOptions(60 * 60 * 24 * 7),
         );
         return new Response(JSON.stringify({
           ok: true,
@@ -1056,14 +1289,13 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const { error: delErr } = await supabase.from("announcements").delete().eq("id", announcementId);
       if (delErr) console.warn("[admin/actions] Delete announcement note:", delErr.message);
 
-      // Keep the dev-only cookie store in step when the DB is unreachable.
-      if (devBypassEnabled(locals.env) && cookies) {
+      if ((allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)) && cookies) {
         const demoList = parseDemoAnnouncements(cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value);
         if (demoList.some((row) => row.id === announcementId)) {
           cookies.set(
             DEMO_ANNOUNCEMENTS_COOKIE,
             serializeDemoAnnouncements(demoList.filter((row) => row.id !== announcementId)),
-            { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 },
+            sessionCookieOptions(60 * 60 * 24 * 7),
           );
         }
       }
@@ -1099,8 +1331,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const { error: togErr } = await supabase.from("announcements").update({ active: annActive }).eq("id", announcementId);
       if (togErr) console.warn("[admin/actions] Toggle announcement note:", togErr.message);
 
-      // Keep the dev-only cookie store in step when the DB is unreachable.
-      if (devBypassEnabled(locals.env) && cookies) {
+      if ((allowDemoFallback || isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)) && cookies) {
         const demoList = parseDemoAnnouncements(cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value);
         if (demoList.some((row) => row.id === announcementId)) {
           cookies.set(
@@ -1110,7 +1341,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
                 row.id === announcementId ? { ...row, active: annActive } : row,
               ),
             ),
-            { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 },
+            sessionCookieOptions(60 * 60 * 24 * 7),
           );
         }
       }

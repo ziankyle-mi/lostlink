@@ -7,6 +7,99 @@ const USER_PATH = "/auth/v1/user";
 const SIGNUP_PATH = "/auth/v1/signup";
 const ADMIN_USERS_PATH = "/auth/v1/admin/users";
 
+const SUPABASE_TIMEOUT_MS = 2500;
+const UNREACHABLE_COOLDOWN_MS = 30_000;
+const unreachableUntilByHost = new Map<string, number>();
+
+export function isFallbackUser(
+  user?: { id?: string | null } | null,
+  accessToken?: string | null,
+): boolean {
+  return Boolean(
+    user?.id?.startsWith("dev:") ||
+      (accessToken && accessToken.startsWith("dev-token-")),
+  );
+}
+
+function hostKey(input: RequestInfo | URL | string): string {
+  try {
+    const raw = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    return new URL(raw).host.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+export function isHostInUnreachableCooldown(url: string): boolean {
+  const host = hostKey(url);
+  if (!host) return false;
+  const until = unreachableUntilByHost.get(host);
+  return Boolean(until && Date.now() < until);
+}
+
+export function markHostUnreachable(url: string): void {
+  const host = hostKey(url);
+  if (host) unreachableUntilByHost.set(host, Date.now() + UNREACHABLE_COOLDOWN_MS);
+}
+
+export function clearUnreachableHost(url: string): void {
+  const host = hostKey(url);
+  if (host) unreachableUntilByHost.delete(host);
+}
+
+/**
+ * Bounded-timeout fetch wrapper for Supabase requests. Prevents dead or paused
+ * Supabase hosts from hanging SSR pages or API routes for 7-47 seconds.
+ */
+export async function fastSupabaseFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const host = hostKey(input);
+  const until = host ? unreachableUntilByHost.get(host) : undefined;
+  if (until && Date.now() < until) {
+    throw new TypeError("Supabase host temporarily skipped (unreachable cooldown).");
+  }
+
+  const controller = new AbortController();
+  const upstreamSignal = init?.signal;
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) {
+      controller.abort(upstreamSignal.reason);
+    } else {
+      upstreamSignal.addEventListener("abort", () => controller.abort(upstreamSignal.reason), { once: true });
+    }
+  }
+  const timer = setTimeout(() => controller.abort(new Error("Supabase request timeout")), SUPABASE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(input, { ...init, signal: controller.signal });
+    if (host) unreachableUntilByHost.delete(host);
+    return res;
+  } catch (err) {
+    if (host && !upstreamSignal?.aborted) {
+      unreachableUntilByHost.set(host, Date.now() + UNREACHABLE_COOLDOWN_MS);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function createFastClient(
+  url: string,
+  key: string,
+  options?: { headers?: Record<string, string> },
+) {
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    global: {
+      headers: options?.headers,
+      fetch: fastSupabaseFetch,
+    },
+  });
+}
+
 function base(env: Env): string {
   return `${env.PUBLIC_SUPABASE_URL.replace(/\/$/, "")}`;
 }
@@ -66,7 +159,7 @@ export async function signInWithPassword(
   }
 
   try {
-    const response = await fetch(`${base(env)}${TOKEN_PATH}?grant_type=password`, {
+    const response = await fastSupabaseFetch(`${base(env)}${TOKEN_PATH}?grant_type=password`, {
       method: "POST",
       headers: jsonHeaders(env),
       body: JSON.stringify({ email, password, grant_type: "password" }),
@@ -108,7 +201,7 @@ export async function signUpWithPassword(
   }
 
   try {
-    const response = await fetch(`${base(env)}${AUTH_USERS}`, {
+    const response = await fastSupabaseFetch(`${base(env)}${AUTH_USERS}`, {
       method: "POST",
       headers: jsonHeaders(env),
       body: JSON.stringify({
@@ -150,15 +243,19 @@ export async function adminSetUserPassword(
 ): Promise<{ ok: boolean; error?: string }> {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return { ok: false, error: "Service role key is not configured." };
-  const response = await fetch(`${base(env)}${ADMIN_USERS_PATH}/${authUserId}`, {
-    method: "PUT",
-    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ password: newPassword }),
-  });
-  if (!response.ok) {
-    return { ok: false, error: plainAuthError(await safeJson(response)) };
+  try {
+    const response = await fastSupabaseFetch(`${base(env)}${ADMIN_USERS_PATH}/${authUserId}`, {
+      method: "PUT",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    if (!response.ok) {
+      return { ok: false, error: plainAuthError(await safeJson(response)) };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not reach authentication service." };
   }
-  return { ok: true };
 }
 
 export async function exchangeCodeForSession(
@@ -166,18 +263,22 @@ export async function exchangeCodeForSession(
   code: string,
   verifier: string,
 ): Promise<SupabaseSession | null> {
-  const response = await fetch(`${base(env)}${TOKEN_PATH}?grant_type=pkce`, {
-    method: "POST",
-    headers: jsonHeaders(env),
-    body: JSON.stringify({
-      client_id: env.PUBLIC_SUPABASE_ANON_KEY,
-      code,
-      code_verifier: verifier,
-      grant_type: "pkce",
-    }),
-  });
-  if (!response.ok) return null;
-  return (await response.json()) as SupabaseSession;
+  try {
+    const response = await fastSupabaseFetch(`${base(env)}${TOKEN_PATH}?grant_type=pkce`, {
+      method: "POST",
+      headers: jsonHeaders(env),
+      body: JSON.stringify({
+        client_id: env.PUBLIC_SUPABASE_ANON_KEY,
+        code,
+        code_verifier: verifier,
+        grant_type: "pkce",
+      }),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as SupabaseSession;
+  } catch {
+    return null;
+  }
 }
 
 /** Saves the new password for the signed-in (recovery) session. */
@@ -186,15 +287,19 @@ export async function updateUserPassword(
   accessToken: string,
   password: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const response = await fetch(`${base(env)}${USER_PATH}`, {
-    method: "PUT",
-    headers: { apikey: env.PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ password }),
-  });
-  if (!response.ok) {
-    return { ok: false, error: plainAuthError(await safeJson(response)) };
+  try {
+    const response = await fastSupabaseFetch(`${base(env)}${USER_PATH}`, {
+      method: "PUT",
+      headers: { apikey: env.PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ password }),
+    });
+    if (!response.ok) {
+      return { ok: false, error: plainAuthError(await safeJson(response)) };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not reach authentication service." };
   }
-  return { ok: true };
 }
 
 /** Exchanges a refresh token for a fresh session. */
@@ -202,17 +307,21 @@ export async function refreshSession(
   env: Env,
   refreshToken: string,
 ): Promise<SupabaseSession | null> {
-  const response = await fetch(`${base(env)}${TOKEN_PATH}?grant_type=refresh_token`, {
-    method: "POST",
-    headers: jsonHeaders(env),
-    body: JSON.stringify({
-      client_id: env.PUBLIC_SUPABASE_ANON_KEY,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-  if (!response.ok) return null;
-  return (await response.json()) as SupabaseSession;
+  try {
+    const response = await fastSupabaseFetch(`${base(env)}${TOKEN_PATH}?grant_type=refresh_token`, {
+      method: "POST",
+      headers: jsonHeaders(env),
+      body: JSON.stringify({
+        client_id: env.PUBLIC_SUPABASE_ANON_KEY,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as SupabaseSession;
+  } catch {
+    return null;
+  }
 }
 
 /** Verifies the access token with Supabase and returns the user behind it. */
@@ -220,12 +329,16 @@ export async function fetchUser(
   env: Env,
   accessToken: string,
 ): Promise<SupabaseUser | null> {
-  const response = await fetch(`${base(env)}${USER_PATH}`, {
-    headers: { apikey: env.PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) return null;
-  const user = (await response.json()) as SupabaseUser;
-  return user?.id ? user : null;
+  try {
+    const response = await fastSupabaseFetch(`${base(env)}${USER_PATH}`, {
+      headers: { apikey: env.PUBLIC_SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return null;
+    const user = (await response.json()) as SupabaseUser;
+    return user?.id ? user : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -254,9 +367,7 @@ export async function ensureProfileRow(
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!env.PUBLIC_SUPABASE_URL || !key) return false;
 
-  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
+  const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, key);
   const row: Record<string, unknown> = {
     id: userId,
     email: email.toLowerCase().trim(),
@@ -306,21 +417,23 @@ export async function isStudentIdTaken(
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!env.PUBLIC_SUPABASE_URL || !key) return false;
 
-  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
+  try {
+    const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, key);
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("student_id", studentId.trim())
-    .maybeSingle();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("student_id", studentId.trim())
+      .maybeSingle();
 
-  if (error) {
-    console.warn("[register] isStudentIdTaken check error:", error.message);
+    if (error) {
+      console.warn("[register] isStudentIdTaken check error:", error.message);
+      return false;
+    }
+    return Boolean(data);
+  } catch {
     return false;
   }
-  return Boolean(data);
 }
 
 export { randomToken };
@@ -339,9 +452,8 @@ export function getUserClient(env: Env, accessToken?: string) {
   if (accessToken) {
     globalHeaders.Authorization = `Bearer ${accessToken}`;
   }
-  return createClient(env.PUBLIC_SUPABASE_URL, anonKey, {
-    auth: { persistSession: false },
-    global: { headers: globalHeaders },
+  return createFastClient(env.PUBLIC_SUPABASE_URL, anonKey, {
+    headers: globalHeaders,
   });
 }
 
@@ -354,9 +466,7 @@ export function getServiceClient(env: Env, justification: string) {
   if (!env.PUBLIC_SUPABASE_URL || !key) {
     throw new Error(`Supabase service role key is not configured (required for: ${justification}).`);
   }
-  return createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
+  return createFastClient(env.PUBLIC_SUPABASE_URL, key);
 }
 
 /**
@@ -366,11 +476,11 @@ export async function revokeUserSession(
   env: Env,
   accessToken: string,
 ): Promise<boolean> {
-  if (!accessToken || !env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) {
+  if (!accessToken || accessToken.startsWith("dev-token-") || !env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) {
     return false;
   }
   try {
-    const response = await fetch(`${base(env)}/auth/v1/logout`, {
+    const response = await fastSupabaseFetch(`${base(env)}/auth/v1/logout`, {
       method: "POST",
       headers: {
         apikey: env.PUBLIC_SUPABASE_ANON_KEY,
@@ -398,7 +508,7 @@ export async function mustChangePassword(env: Env, accessToken: string): Promise
     if (!env.PUBLIC_SUPABASE_URL || !key) {
       return false;
     }
-    const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, { auth: { persistSession: false } });
+    const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, key);
     const { data } = await supabase
       .from("profiles")
       .select("must_change_password")
@@ -450,12 +560,11 @@ export async function recordLoginActivity(
   env: Env,
   entry: LoginActivityEntry,
 ): Promise<void> {
+  if (!entry.userId || entry.userId.startsWith("dev:")) return;
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   if (!env.PUBLIC_SUPABASE_URL || !key) return;
 
-  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
-    auth: { persistSession: false },
-  });
+  const supabase = createFastClient(env.PUBLIC_SUPABASE_URL, key);
 
   const deviceSummary = entry.deviceSummary || parseDeviceSummary(entry.userAgent);
   const ip = entry.ipAddress || "Unknown IP";

@@ -1,8 +1,28 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, AstroCookies } from "astro";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
-import { getServiceClient, getUserClient } from "~/lib/supabase";
+import {
+  getServiceClient,
+  getUserClient,
+  isFallbackUser,
+  isHostInUnreachableCooldown,
+} from "~/lib/supabase";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { devBypassEnabled, sessionCookieOptions } from "~/lib/session";
+import {
+  DEMO_CLAIMS_COOKIE,
+  DEMO_ITEMS_COOKIE,
+  DEMO_NOTIFS_COOKIE,
+  appendDemoNotification,
+  getMergedDemoItems,
+  isDemoClaimId,
+  isDemoItemId,
+  parseDemoClaims,
+  parseDemoItemState,
+  serializeDemoClaims,
+  serializeDemoItemState,
+} from "~/data/demoStore";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,6 +31,19 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function shouldUseDemoStore(
+  user: { id: string } | null | undefined,
+  cookies: AstroCookies | undefined,
+  env: import("~/lib/env").Env,
+): boolean {
+  const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
+  return (
+    devBypassEnabled(env) ||
+    isFallbackUser(user, accessToken) ||
+    isHostInUnreachableCooldown(env.PUBLIC_SUPABASE_URL)
+  );
 }
 
 async function resolveProfileId(
@@ -33,11 +66,36 @@ export const GET: APIRoute = async ({ locals, cookies }) => {
 
   try {
     const isAdmin = user.role === "admin";
-    const accessToken = cookies?.get("ll_access_token")?.value;
-    // Non-admins query via user client to enforce Postgres RLS (claims_read policy).
-    const supabase = (!isAdmin && accessToken)
-      ? getUserClient(locals.env, accessToken)
-      : getServiceClient(locals.env, isAdmin ? "Admin view claims" : "Fallback claims query");
+    const userEmail = user.email.toLowerCase().trim();
+    const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
+
+    if (shouldUseDemoStore(user, cookies, locals.env)) {
+      const demoClaims = parseDemoClaims(cookies?.get(DEMO_CLAIMS_COOKIE)?.value);
+      const filtered = isAdmin
+        ? demoClaims
+        : demoClaims.filter((c) => c.claimantEmail.toLowerCase().trim() === userEmail);
+      const claims = filtered.map((c) => ({
+        id: c.id,
+        item_id: c.itemId,
+        proof_description: c.proofDescription,
+        status: c.status,
+        created_at: c.createdAt,
+        items: {
+          id: c.itemId,
+          name: c.itemName,
+          location: c.itemLocation ?? "Campus",
+          reference_code: isAdmin ? c.itemReferenceCode ?? null : null,
+        },
+        profiles: { full_name: c.claimantEmail.split("@")[0], email: c.claimantEmail },
+      }));
+      return json({ ok: true, claims, demo: true });
+    }
+
+    // Non-admins with a real JWT query via user client to enforce Postgres RLS.
+    const supabase =
+      !isAdmin && accessToken && !accessToken.startsWith("dev-token-")
+        ? getUserClient(locals.env, accessToken)
+        : getServiceClient(locals.env, isAdmin ? "Admin view claims" : "Fallback claims query");
 
 
     let query = supabase
@@ -75,13 +133,16 @@ export const GET: APIRoute = async ({ locals, cookies }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) return json({ ok: false, error: "Authentication required." }, 401);
 
-  const supabase = getServiceClient(locals.env, "Claim mutations (withdraw, verify, submit)");
   const userEmail = user.email.toLowerCase().trim();
   const isAdmin = user.role === "admin";
+  const demoActive = shouldUseDemoStore(user, cookies, locals.env);
+  const supabase = demoActive
+    ? null
+    : getServiceClient(locals.env, "Claim mutations (withdraw, verify, submit)");
 
   try {
     const body = await request.json();
@@ -89,9 +150,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // ACTION: Student withdraws their own pending claim
     if (action === "withdraw") {
-      if (!claimId || !UUID_RE.test(claimId)) {
+      if (!claimId || (!UUID_RE.test(claimId) && !isDemoClaimId(claimId))) {
         return json({ ok: false, error: "Claim ID required." }, 400);
       }
+
+      if (isDemoClaimId(claimId) && demoActive) {
+        const claims = parseDemoClaims(cookies?.get(DEMO_CLAIMS_COOKIE)?.value);
+        const idx = claims.findIndex(
+          (c) => c.id === claimId && c.claimantEmail.toLowerCase().trim() === userEmail,
+        );
+        if (idx === -1) return json({ ok: false, error: "Claim not found." }, 404);
+        if (claims[idx].status !== "pending") {
+          return json({ ok: false, error: "Only a pending claim can be withdrawn." }, 400);
+        }
+        claims[idx] = { ...claims[idx], status: "withdrawn" };
+        cookies?.set(DEMO_CLAIMS_COOKIE, serializeDemoClaims(claims), sessionCookieOptions(60 * 60 * 24 * 7));
+        return json({ ok: true, status: "withdrawn", demo: true });
+      }
+
+      if (!supabase) return json({ ok: false, error: "Claim not found." }, 404);
       const claimantId = await resolveProfileId(supabase, user.id, userEmail);
       if (!claimantId) return json({ ok: false, error: "Claim not found." }, 404);
 
@@ -126,10 +203,69 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!isAdmin) {
         return json({ ok: false, error: "Admin authorization required." }, 403);
       }
-      if (!claimId || !UUID_RE.test(claimId)) {
+      if (!claimId || (!UUID_RE.test(claimId) && !isDemoClaimId(claimId))) {
         return json({ ok: false, error: "Claim ID required." }, 400);
       }
 
+      if (isDemoClaimId(claimId) && demoActive) {
+        const claims = parseDemoClaims(cookies?.get(DEMO_CLAIMS_COOKIE)?.value);
+        const idx = claims.findIndex((c) => c.id === claimId);
+        if (idx === -1) return json({ ok: false, error: "Claim not found." }, 404);
+        const target = claims[idx];
+        if (target.status !== "pending") {
+          return json({ ok: false, error: "This claim was already decided." }, 409);
+        }
+
+        const itemState = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const mergedItems = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+        const targetItem = mergedItems.find((i) => i.id === target.itemId);
+        if (action === "verify" && targetItem?.status !== "approved") {
+          return json({ ok: false, error: "This item is no longer available to claim." }, 409);
+        }
+
+        const newStatus = action === "verify" ? "verified" : "denied";
+        let updatedClaims = claims.map((c) =>
+          c.id === claimId ? { ...c, status: newStatus as "verified" | "denied" } : c,
+        );
+
+        let notifCookie = cookies?.get(DEMO_NOTIFS_COOKIE)?.value;
+        if (action === "verify") {
+          itemState.statuses[target.itemId] = { status: "claimed" };
+          cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(itemState), sessionCookieOptions(60 * 60 * 24 * 7));
+          updatedClaims = updatedClaims.map((c) => {
+            if (c.itemId === target.itemId && c.id !== claimId && c.status === "pending") {
+              notifCookie = appendDemoNotification(notifCookie, {
+                userEmail: c.claimantEmail,
+                message: `Your claim for "${target.itemName}" was closed because another claim was verified.`,
+                link: "/profile",
+              });
+              return { ...c, status: "denied" };
+            }
+            return c;
+          });
+          const refCode = targetItem?.referenceCode ?? target.itemReferenceCode ?? "N/A";
+          notifCookie = appendDemoNotification(notifCookie, {
+            userEmail: target.claimantEmail,
+            message: `Your claim was verified. Visit the Security Office with code ${refCode}.`,
+            link: "/profile",
+          });
+        } else {
+          notifCookie = appendDemoNotification(notifCookie, {
+            userEmail: target.claimantEmail,
+            message: `Your claim for "${target.itemName}" was not verified.`,
+            link: "/profile",
+          });
+        }
+
+        cookies?.set(DEMO_CLAIMS_COOKIE, serializeDemoClaims(updatedClaims), sessionCookieOptions(60 * 60 * 24 * 7));
+        if (notifCookie) {
+          cookies?.set(DEMO_NOTIFS_COOKIE, notifCookie, sessionCookieOptions(60 * 60 * 24 * 7));
+        }
+
+        return json({ ok: true, status: newStatus, itemId: target.itemId, demo: true });
+      }
+
+      if (!supabase) return json({ ok: false, error: "Claim not found." }, 404);
       const { data: targetClaim } = await supabase
         .from("claims")
         .select("id, item_id, claimant_id, status, items ( id, name, reference_code, status )")
@@ -244,7 +380,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // ACTION: Student submitting a claim
-    if (!itemId || typeof itemId !== "string" || !UUID_RE.test(itemId)) {
+    const allowDemoItem = demoActive && typeof itemId === "string" && isDemoItemId(itemId);
+    if (!itemId || typeof itemId !== "string" || (!UUID_RE.test(itemId) && !allowDemoItem)) {
       return json({ ok: false, error: "A valid item ID is required." }, 400);
     }
     if (!proofDescription || typeof proofDescription !== "string" || proofDescription.trim().length < 20) {
@@ -254,12 +391,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return json({ ok: false, error: "Administrators cannot submit claims." }, 403);
     }
 
-    const claimantId = await resolveProfileId(supabase, user.id, userEmail);
-    if (!claimantId) {
-      return json({ ok: false, error: "Your account profile is missing. Contact the Security Office." }, 400);
-    }
-
-    const claimKey = `claim:user:${claimantId}`;
+    const claimKey = `claim:user:${user.id}`;
     const claimLimit = await isRateLimitedDurable(locals.env, claimKey);
     if (claimLimit.isBlocked) {
       const mins = Math.max(1, Math.ceil(claimLimit.remainingSeconds / 60));
@@ -269,6 +401,80 @@ export const POST: APIRoute = async ({ request, locals }) => {
       maxFailures: 10,
       lockoutDurationMs: 60 * 60 * 1000,
     });
+
+    if (allowDemoItem || demoActive) {
+      const mergedItems = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+      const item = mergedItems.find((i) => i.id === itemId);
+      if (!item || item.type !== "found") {
+        return json({ ok: false, error: "That item cannot be claimed." }, 400);
+      }
+      if (item.status !== "approved") {
+        return json({ ok: false, error: "That item is not available to claim." }, 400);
+      }
+      if (item.reporterEmail.toLowerCase().trim() === userEmail) {
+        return json({ ok: false, error: "You cannot claim an item you reported." }, 400);
+      }
+
+      const existingClaims = parseDemoClaims(cookies?.get(DEMO_CLAIMS_COOKIE)?.value);
+      const duplicate = existingClaims.some(
+        (c) =>
+          c.itemId === itemId &&
+          c.claimantEmail.toLowerCase().trim() === userEmail &&
+          (c.status === "pending" || c.status === "verified"),
+      );
+      if (duplicate) {
+        return json({ ok: false, error: "You already have an open claim for this item." }, 409);
+      }
+
+      const newClaim = {
+        id: `demo-claim-${crypto.randomUUID().slice(0, 8)}`,
+        itemId,
+        itemName: item.name,
+        itemReferenceCode: item.referenceCode,
+        itemLocation: item.location,
+        claimantEmail: userEmail,
+        proofDescription: proofDescription.trim(),
+        status: "pending" as const,
+        createdAt: new Date().toISOString(),
+      };
+      cookies?.set(
+        DEMO_CLAIMS_COOKIE,
+        serializeDemoClaims([newClaim, ...existingClaims]),
+        sessionCookieOptions(60 * 60 * 24 * 7),
+      );
+      cookies?.set(
+        DEMO_NOTIFS_COOKIE,
+        appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+          userEmail,
+          message: `Your verification claim for "${item.name}" was submitted to the Security Office.`,
+          link: "/profile",
+        }),
+        sessionCookieOptions(60 * 60 * 24 * 7),
+      );
+
+      return json(
+        {
+          ok: true,
+          demo: true,
+          claim: {
+            id: newClaim.id,
+            item_id: newClaim.itemId,
+            status: newClaim.status,
+            created_at: newClaim.createdAt,
+          },
+        },
+        201,
+      );
+    }
+
+    if (!supabase) {
+      return json({ ok: false, error: "Your account profile is missing. Contact the Security Office." }, 400);
+    }
+
+    const claimantId = await resolveProfileId(supabase, user.id, userEmail);
+    if (!claimantId) {
+      return json({ ok: false, error: "Your account profile is missing. Contact the Security Office." }, 400);
+    }
 
     // The claim rules live on the server, not only in the UI copy.
     const { data: item } = await supabase

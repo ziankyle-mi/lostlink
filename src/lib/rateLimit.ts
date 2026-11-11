@@ -6,7 +6,7 @@
  * The `*Durable` helpers below mirror every decision into Postgres (service
  * role) and fall back to the in-memory map if the database is unavailable.
  */
-import { createClient } from "@supabase/supabase-js";
+import { createFastClient } from "./supabase";
 import type { Env } from "./env";
 
 interface AttemptRecord {
@@ -120,9 +120,7 @@ export function resetRateLimitStore(): void {
 
 function durableClient(env: Env) {
   if (!env.PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return null;
-  return createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+  return createFastClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function normalizeKey(key: string): string {

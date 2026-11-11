@@ -1,5 +1,4 @@
 import { ActionError, defineAction } from "astro:actions";
-import { createClient } from "@supabase/supabase-js";
 import { CUSTODY_EXTENSION_DAYS, extensionDeadline } from "~/lib/custody";
 import {
   ACCESS_COOKIE,
@@ -19,6 +18,7 @@ import {
   resetPasswordSchema,
 } from "~/lib/schemas";
 import {
+  createFastClient,
   ensureProfileRow,
   fetchUser,
   isStudentIdTaken,
@@ -73,9 +73,7 @@ function serviceClient(env: import("~/lib/env").Env) {
       message: "Server database access is not configured.",
     });
   }
-  return createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+  return createFastClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 function assertDomain(locals: { env: import("~/lib/env").Env }, email: string): void {

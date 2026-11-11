@@ -1,17 +1,86 @@
-import type { APIRoute } from "astro";
+import type { APIRoute, AstroCookies } from "astro";
 import { photoPathsFromColumn } from "~/lib/storage";
 
 import { verifyTurnstile } from "~/lib/turnstile";
 import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
-import { getServiceClient, getUserClient } from "~/lib/supabase";
+import {
+  getServiceClient,
+  getUserClient,
+  isFallbackUser,
+  isHostInUnreachableCooldown,
+} from "~/lib/supabase";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { devBypassEnabled, sessionCookieOptions } from "~/lib/session";
+import {
+  DEMO_ITEMS_COOKIE,
+  DEMO_NOTIFS_COOKIE,
+  appendDemoNotification,
+  getMergedDemoItems,
+  isDemoItemId,
+  parseDemoItemState,
+  serializeDemoItemState,
+} from "~/data/demoStore";
+import type { DashboardItem } from "~/data/mockItems";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PUBLIC_STATUSES = new Set(["approved", "claimed", "resolved"]);
 
 function referenceCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  const bytes = crypto.getRandomValues(new Uint8Array(4));
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   return `LL-${hex.toUpperCase()}`;
+}
+
+function shouldUseDemoStore(
+  user: { id: string } | null | undefined,
+  cookies: AstroCookies | undefined,
+  env: import("~/lib/env").Env,
+): boolean {
+  const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
+  return (
+    devBypassEnabled(env) ||
+    isFallbackUser(user, accessToken) ||
+    isHostInUnreachableCooldown(env.PUBLIC_SUPABASE_URL)
+  );
+}
+
+function demoItemsResponse(
+  cookies: AstroCookies | undefined,
+  isAdmin: boolean,
+  typeFilter: string | null,
+  statusFilter: string | null,
+): Response {
+  let list = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+  if (typeFilter === "lost" || typeFilter === "found") {
+    list = list.filter((item) => item.type === typeFilter);
+  }
+  if (isAdmin && statusFilter === "all") {
+    // Full inventory for admins
+  } else if (isAdmin && statusFilter && PUBLIC_STATUSES.has(statusFilter)) {
+    list = list.filter((item) => item.status === statusFilter);
+  } else {
+    list = list.filter((item) => item.status === "approved");
+  }
+
+  const sanitized = list.map((item) => ({
+    id: item.id,
+    type: item.type,
+    name: item.name,
+    category: item.category,
+    location: item.location,
+    event_date: item.eventDate,
+    description: item.description,
+    photo_path: !isAdmin && item.category === "IDs, Cards & Wallets" ? null : item.images?.[0] ?? null,
+    status: item.status,
+    hide_photo: item.category === "IDs, Cards & Wallets",
+    ...(isAdmin ? { reference_code: item.referenceCode ?? null } : {}),
+    created_at: item.createdAt,
+  }));
+
+  return new Response(JSON.stringify({ ok: true, items: sanitized, demo: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 export const GET: APIRoute = async ({ url, locals, cookies }) => {
@@ -24,15 +93,19 @@ export const GET: APIRoute = async ({ url, locals, cookies }) => {
   }
 
   const isAdmin = user.role === "admin";
-  const accessToken = cookies?.get("ll_access_token")?.value;
-  // Non-admins query via user client with their access token to enforce Postgres RLS (items_read policy).
-  // Admins or dev fallbacks query via service client.
-  const supabase = (!isAdmin && accessToken)
-    ? getUserClient(locals.env, accessToken)
-    : getServiceClient(locals.env, isAdmin ? "Admin items inventory view" : "Fallback items query");
+  const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
   const typeFilter = url.searchParams.get("type"); // "lost" | "found" | null
   const statusFilter = url.searchParams.get("status");
 
+  if (shouldUseDemoStore(user, cookies, locals.env)) {
+    return demoItemsResponse(cookies, isAdmin, typeFilter, statusFilter);
+  }
+
+  // Non-admins with a real Supabase JWT query via user client to enforce Postgres RLS.
+  const supabase =
+    !isAdmin && accessToken && !accessToken.startsWith("dev-token-")
+      ? getUserClient(locals.env, accessToken)
+      : getServiceClient(locals.env, isAdmin ? "Admin items inventory view" : "Fallback items query");
 
   try {
     // Never let the browser choose arbitrary columns or arbitrary statuses.
@@ -58,6 +131,9 @@ export const GET: APIRoute = async ({ url, locals, cookies }) => {
     const { data, error } = await query;
     if (error) {
       console.error("[api/items] Query error:", error.message);
+      if (isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)) {
+        return demoItemsResponse(cookies, isAdmin, typeFilter, statusFilter);
+      }
       return new Response(JSON.stringify({ ok: false, error: "Could not load items." }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -79,6 +155,9 @@ export const GET: APIRoute = async ({ url, locals, cookies }) => {
     });
   } catch (err) {
     console.error("[api/items] Exception:", err);
+    if (shouldUseDemoStore(user, cookies, locals.env)) {
+      return demoItemsResponse(cookies, isAdmin, typeFilter, statusFilter);
+    }
     return new Response(JSON.stringify({ ok: false, error: "Could not load items." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -86,7 +165,7 @@ export const GET: APIRoute = async ({ url, locals, cookies }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -202,17 +281,91 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    const hidePhoto = category === "IDs, Cards & Wallets" || category.toLowerCase().includes("id");
+    const refCode = type === "found" ? referenceCode() : null;
+    const photoPath = allPhotos.length > 0 ? (allPhotos.length === 1 ? allPhotos[0] : JSON.stringify(allPhotos)) : null;
+    const today = new Date().toISOString().split("T")[0];
+    const itemDate = eventDate || today;
+    const userEmail = user.email.toLowerCase().trim();
+
+    const persistDemoItem = () => {
+      const demoId = `demo-item-${crypto.randomUUID().slice(0, 8)}`;
+      const createdAt = new Date().toISOString();
+      const status = user.role === "admin" ? "approved" : "pending";
+      const demoState = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+      demoState.added = [
+        {
+          id: demoId,
+          type,
+          name: name.trim(),
+          category: category.trim() as DashboardItem["category"],
+          location: location.trim(),
+          eventDate: itemDate,
+          description: description.trim(),
+          referenceCode: refCode ?? referenceCode(),
+          status,
+          reporterEmail: userEmail,
+          createdAt,
+          photoUrl: allPhotos[0],
+        },
+        ...demoState.added,
+      ];
+      cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(demoState), sessionCookieOptions(60 * 60 * 24 * 7));
+      cookies?.set(
+        DEMO_NOTIFS_COOKIE,
+        appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+          userEmail,
+          message:
+            status === "approved"
+              ? `Your found item "${name.trim()}" was logged directly to custody.`
+              : `Your ${type} report for "${name.trim()}" was submitted and is waiting for Security Office review.`,
+          link: "/profile",
+        }),
+        sessionCookieOptions(60 * 60 * 24 * 7),
+      );
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          demo: true,
+          item: {
+            id: demoId,
+            type,
+            name: name.trim(),
+            category: category.trim(),
+            location: location.trim(),
+            event_date: itemDate,
+            description: description.trim(),
+            photo_path: photoPath,
+            reference_code: refCode,
+            hide_photo: hidePhoto,
+            status,
+            created_at: createdAt,
+          },
+          images: allPhotos,
+          referenceCode: refCode,
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    };
+
+    if (shouldUseDemoStore(user, cookies, locals.env)) {
+      return persistDemoItem();
+    }
+
     const supabase = getServiceClient(locals.env, "Report item creation and reference code assignment");
 
     // Resolve the reporter profile. Never fall back to another person's row.
     let reporterId: string | null = null;
-    const userEmail = user.email.toLowerCase().trim();
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profErr } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", userEmail)
       .maybeSingle();
+
+    if (profErr && isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)) {
+      return persistDemoItem();
+    }
 
     if (profile?.id) {
       reporterId = profile.id;
@@ -226,12 +379,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
-
-    const hidePhoto = category === "IDs, Cards & Wallets" || category.toLowerCase().includes("id");
-    const refCode = type === "found" ? referenceCode() : null;
-    const photoPath = allPhotos.length > 0 ? (allPhotos.length === 1 ? allPhotos[0] : JSON.stringify(allPhotos)) : null;
-    const today = new Date().toISOString().split("T")[0];
-    const itemDate = eventDate || today;
 
     const { data: insertedItem, error: insertError } = await supabase
       .from("items")
@@ -290,7 +437,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-export const PATCH: APIRoute = async ({ request, locals }) => {
+export const PATCH: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -310,15 +457,52 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    if (!itemId || typeof itemId !== "string" || !UUID_RE.test(itemId)) {
+    if (!itemId || typeof itemId !== "string" || (!UUID_RE.test(itemId) && !isDemoItemId(itemId))) {
       return new Response(JSON.stringify({ ok: false, error: "A valid item ID is required." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const supabase = getServiceClient(locals.env, "Item report resolution by reporter");
     const userEmail = user.email.toLowerCase().trim();
+
+    if (isDemoItemId(itemId) && shouldUseDemoStore(user, cookies, locals.env)) {
+      const merged = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+      const target = merged.find((i) => i.id === itemId);
+      if (!target) {
+        return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (target.reporterEmail.toLowerCase().trim() !== userEmail) {
+        return new Response(JSON.stringify({ ok: false, error: "Only the reporter can resolve this report." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (target.type !== "lost") {
+        return new Response(JSON.stringify({ ok: false, error: "Only lost reports can be resolved." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (target.status !== "approved") {
+        return new Response(JSON.stringify({ ok: false, error: "Only an active lost report can be resolved." }), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const demoState = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+      demoState.statuses[itemId] = { status: "resolved" };
+      cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(demoState), sessionCookieOptions(60 * 60 * 24 * 7));
+      return new Response(JSON.stringify({ ok: true, status: "resolved" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = getServiceClient(locals.env, "Item report resolution by reporter");
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -395,7 +579,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ request, url, locals }) => {
+export const DELETE: APIRoute = async ({ request, url, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -428,6 +612,39 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    if (isDemoItemId(itemId) && shouldUseDemoStore(user, cookies, locals.env)) {
+      const merged = getMergedDemoItems(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+      const target = merged.find((i) => i.id === itemId);
+      if (!target) {
+        return new Response(JSON.stringify({ ok: false, error: "Item not found." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const demoState = parseDemoItemState(cookies?.get(DEMO_ITEMS_COOKIE)?.value);
+      demoState.statuses[itemId] = { status: "rejected", rejectReason: "Removed by admin" };
+      cookies?.set(DEMO_ITEMS_COOKIE, serializeDemoItemState(demoState), sessionCookieOptions(60 * 60 * 24 * 7));
+      cookies?.set(
+        DEMO_NOTIFS_COOKIE,
+        appendDemoNotification(cookies?.get(DEMO_NOTIFS_COOKIE)?.value, {
+          userEmail: target.reporterEmail,
+          message: `Your report for "${target.name}" was removed by the Disciplinary Office.`,
+          link: "/",
+        }),
+        sessionCookieOptions(60 * 60 * 24 * 7),
+      );
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          status: "removed",
+          itemId,
+          name: target.name,
+          message: `Post "${target.name}" has been removed.`,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     const supabase = getServiceClient(locals.env, "Admin item deletion and audit recording");

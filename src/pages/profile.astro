@@ -4,8 +4,16 @@ import Base from "~/layouts/Base.astro";
 import StudentNavbar from "~/components/StudentNavbar.astro";
 import DashboardFooter from "~/components/DashboardFooter.astro";
 import Icon from "~/components/Icon.astro";
-import { createClient } from "@supabase/supabase-js";
+import { createFastClient, isFallbackUser, isHostInUnreachableCooldown } from "~/lib/supabase";
 import { readEnv } from "~/lib/env";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { devBypassEnabled } from "~/lib/session";
+import {
+  DEMO_CLAIMS_COOKIE,
+  DEMO_ITEMS_COOKIE,
+  getMergedDemoItems,
+  parseDemoClaims,
+} from "~/data/demoStore";
 import { photoPathsFromColumn, signPhotoPaths } from "~/lib/storage";
 import { DEGREE_PROGRAMS, enrichCampusUser } from "~/data/campusPrograms";
 import {
@@ -51,12 +59,17 @@ let userProgramCode: string | undefined = undefined;
 let userStudentId: string | undefined = undefined;
 let userYearLevel: string | undefined = undefined;
 
-if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+const accessToken = Astro.cookies.get(ACCESS_COOKIE)?.value;
+const useDemoFallback =
+  devBypassEnabled(env) ||
+  isFallbackUser(user, accessToken) ||
+  isHostInUnreachableCooldown(env.PUBLIC_SUPABASE_URL);
+
+if (!useDemoFallback && env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   try {
-    const supabase = createClient(
+    const supabase = createFastClient(
       env.PUBLIC_SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
     );
 
     // 1. Resolve Profile ID
@@ -143,21 +156,75 @@ if (!userProgramCode || !userStudentId) {
   if (!userYearLevel) userYearLevel = enriched.yearLevel;
 }
 
+if (myReports.length === 0) {
+  const cleanEmail = userEmail.toLowerCase().trim();
+  const demoMerged = getMergedDemoItems(Astro.cookies.get(DEMO_ITEMS_COOKIE)?.value);
+  myReports = demoMerged
+    .filter((i) => i.reporterEmail.toLowerCase().trim() === cleanEmail)
+    .map((i) => ({
+      id: i.id,
+      type: i.type,
+      name: i.name,
+      category: i.category,
+      location: i.location,
+      reference_code: i.referenceCode,
+      status: i.status,
+      reject_reason: i.rejectReason,
+      photo_path: i.images?.[0] ?? null,
+      created_at: i.createdAt,
+    }));
+}
+
+if (myClaims.length === 0) {
+  const cleanEmail = userEmail.toLowerCase().trim();
+  const demoMerged = getMergedDemoItems(Astro.cookies.get(DEMO_ITEMS_COOKIE)?.value);
+  const demoClaims = parseDemoClaims(Astro.cookies.get(DEMO_CLAIMS_COOKIE)?.value);
+  myClaims = demoClaims
+    .filter((c) => c.claimantEmail.toLowerCase().trim() === cleanEmail && c.status !== "withdrawn")
+    .map((c) => {
+      const matched = demoMerged.find((i) => i.id === c.itemId);
+      return {
+        id: c.id,
+        item_id: c.itemId,
+        proof_description: c.proofDescription,
+        status: c.status,
+        created_at: c.createdAt,
+        items: {
+          id: c.itemId,
+          name: matched?.name ?? c.itemName,
+          type: matched?.type ?? "found",
+          category: matched?.category ?? "Personal Care & Miscellaneous",
+          location: matched?.location ?? c.itemLocation ?? "Campus",
+          reference_code: matched?.referenceCode ?? c.itemReferenceCode,
+          status: matched?.status ?? "approved",
+          photo_path: matched?.images?.[0] ?? null,
+        },
+      };
+    });
+}
+
 const totalReports = myReports.length;
 const activeReports = myReports.filter((r) => r.status === "pending" || r.status === "approved").length;
 const totalClaims = myClaims.length;
 const userProgramInfo = userProgramCode ? DEGREE_PROGRAMS[userProgramCode] : undefined;
 
-// Sign every report photo once, then resolve them synchronously in the template.
+// Sign every remote storage photo once, keeping static local paths (/items/...) intact.
 const profilePhotoPaths = Array.from(
-  new Set(myReports.flatMap((item) => photoPathsFromColumn(item.photo_path))),
+  new Set(
+    myReports
+      .flatMap((item) => photoPathsFromColumn(item.photo_path))
+      .filter((p) => !p.startsWith("/")),
+  ),
 );
-const profileSignedPhotos = await signPhotoPaths(env, profilePhotoPaths);
+const profileSignedPhotos =
+  !useDemoFallback && profilePhotoPaths.length > 0
+    ? await signPhotoPaths(env, profilePhotoPaths)
+    : [];
 const photoUrlByPath = new Map(profilePhotoPaths.map((path, i) => [path, profileSignedPhotos[i]]));
 
 function parsePhotos(photoPath?: string | null): string[] {
   return photoPathsFromColumn(photoPath)
-    .map((path) => photoUrlByPath.get(path) ?? "")
+    .map((path) => (path.startsWith("/") ? path : photoUrlByPath.get(path) ?? ""))
     .filter((url) => url.length > 0);
 }
 ---

@@ -1,6 +1,17 @@
 import type { APIRoute } from "astro";
-import { getServiceClient, getUserClient } from "~/lib/supabase";
-
+import {
+  getServiceClient,
+  getUserClient,
+  isFallbackUser,
+  isHostInUnreachableCooldown,
+} from "~/lib/supabase";
+import { ACCESS_COOKIE } from "~/lib/auth";
+import { devBypassEnabled, sessionCookieOptions } from "~/lib/session";
+import {
+  DEMO_NOTIFS_COOKIE,
+  parseDemoNotifications,
+  serializeDemoNotifications,
+} from "~/data/demoStore";
 
 export const GET: APIRoute = async ({ locals, cookies }) => {
   const user = locals.user;
@@ -12,12 +23,39 @@ export const GET: APIRoute = async ({ locals, cookies }) => {
   }
 
   try {
-    const accessToken = cookies?.get("ll_access_token")?.value;
-    // Scoped client with user's access token enforces notifications_read policy
-    const supabase = accessToken
-      ? getUserClient(locals.env, accessToken)
-      : getServiceClient(locals.env, "Fallback notifications query");
+    const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
     const userEmail = user.email.toLowerCase().trim();
+    const demoMode =
+      devBypassEnabled(locals.env) ||
+      isFallbackUser(user, accessToken) ||
+      isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL);
+
+    if (demoMode) {
+      const demoNotifs = parseDemoNotifications(cookies?.get(DEMO_NOTIFS_COOKIE)?.value)
+        .filter((n) => n.userEmail.toLowerCase().trim() === userEmail)
+        .map((n) => ({
+          id: n.id,
+          message: n.message,
+          link: n.link ?? "/",
+          read: n.read,
+          created_at: n.createdAt,
+        }));
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          notifications: demoNotifs,
+          unreadCount: demoNotifs.filter((n) => !n.read).length,
+          demo: true,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // Scoped client with user's access token enforces notifications_read policy
+    const supabase =
+      accessToken && !accessToken.startsWith("dev-token-")
+        ? getUserClient(locals.env, accessToken)
+        : getServiceClient(locals.env, "Fallback notifications query");
 
     // Resolve user's profile ID
     let profileId: string | null = null;
@@ -76,7 +114,7 @@ export const GET: APIRoute = async ({ locals, cookies }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -86,10 +124,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const supabase = getServiceClient(locals.env, "Mark notification as read");
     const userEmail = user.email.toLowerCase().trim();
+    const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
     const body = await request.json().catch(() => ({}));
     const { notificationId, markAllRead } = body;
+
+    if (
+      devBypassEnabled(locals.env) ||
+      isFallbackUser(user, accessToken) ||
+      isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)
+    ) {
+      const list = parseDemoNotifications(cookies?.get(DEMO_NOTIFS_COOKIE)?.value);
+      if (markAllRead) {
+        const updated = list.map((n) =>
+          n.userEmail.toLowerCase().trim() === userEmail ? { ...n, read: true } : n,
+        );
+        cookies?.set(DEMO_NOTIFS_COOKIE, serializeDemoNotifications(updated), sessionCookieOptions(60 * 60 * 24 * 7));
+        return new Response(JSON.stringify({ ok: true, message: "All marked as read." }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (notificationId) {
+        const updated = list.map((n) =>
+          n.id === notificationId && n.userEmail.toLowerCase().trim() === userEmail
+            ? { ...n, read: true }
+            : n,
+        );
+        cookies?.set(DEMO_NOTIFS_COOKIE, serializeDemoNotifications(updated), sessionCookieOptions(60 * 60 * 24 * 7));
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: false, error: "Missing action." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = getServiceClient(locals.env, "Mark notification as read");
 
     let profileId: string | null = null;
     const { data: profile } = await supabase
@@ -150,7 +224,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ request, locals }) => {
+export const DELETE: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -160,8 +234,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const supabase = getServiceClient(locals.env, "Delete notification");
     const userEmail = user.email.toLowerCase().trim();
+    const accessToken = cookies?.get(ACCESS_COOKIE)?.value;
     const url = new URL(request.url);
     const body = await request.json().catch(() => ({}));
     const notificationId = url.searchParams.get("id") || body.notificationId;
@@ -172,6 +246,24 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    if (
+      devBypassEnabled(locals.env) ||
+      isFallbackUser(user, accessToken) ||
+      isHostInUnreachableCooldown(locals.env.PUBLIC_SUPABASE_URL)
+    ) {
+      const list = parseDemoNotifications(cookies?.get(DEMO_NOTIFS_COOKIE)?.value);
+      const filtered = list.filter(
+        (n) => !(n.id === notificationId && n.userEmail.toLowerCase().trim() === userEmail),
+      );
+      cookies?.set(DEMO_NOTIFS_COOKIE, serializeDemoNotifications(filtered), sessionCookieOptions(60 * 60 * 24 * 7));
+      return new Response(JSON.stringify({ ok: true, message: "Notification deleted." }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = getServiceClient(locals.env, "Delete notification");
 
     let profileId: string | null = null;
     const { data: profile } = await supabase
