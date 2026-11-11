@@ -27,6 +27,11 @@ import {
 } from "~/lib/custody";
 
 import { readEnv } from "~/lib/env";
+import { devBypassEnabled } from "~/lib/session";
+import {
+  DEMO_ANNOUNCEMENTS_COOKIE,
+  parseDemoAnnouncements,
+} from "~/data/demoAnnouncements";
 import { createClient } from "@supabase/supabase-js";
 
 const logoutResult = Astro.getActionResult(actions.logout);
@@ -433,10 +438,42 @@ if (env.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
         .order("created_at", { ascending: false })
         .limit(30);
       if (!annErr && annData && annData.length > 0) {
-        liveAnnouncements = annData;
+        // The table stores message/priority; the console renders
+        // content/urgency. Map once here so the two never drift.
+        liveAnnouncements = annData.map((row: any): CampusAnnouncement => ({
+          id: String(row.id),
+          title: String(row.title ?? ""),
+          content: String(row.message ?? row.content ?? ""),
+          urgency:
+            row.priority === "urgent" ? "alert" : row.priority === "important" ? "warning" : "info",
+          active: Boolean(row.active),
+          created_at: row.created_at ?? undefined,
+        }));
       }
     } catch (annQueryErr) {
       console.warn("[admin] announcements query note:", annQueryErr);
+    }
+
+    // Local demo fallback: announcements published while Supabase was
+    // unreachable live in a cookie. Only honored when the dev bypass is on.
+    if (devBypassEnabled(env)) {
+      const demoAnnouncements = parseDemoAnnouncements(
+        Astro.cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value,
+      );
+      if (demoAnnouncements.length > 0) {
+        liveAnnouncements = [
+          ...demoAnnouncements.map((row): CampusAnnouncement => ({
+            id: row.id,
+            title: row.title,
+            content: row.message,
+            urgency:
+              row.priority === "urgent" ? "alert" : row.priority === "important" ? "warning" : "info",
+            active: row.active,
+            created_at: row.created_at,
+          })),
+          ...liveAnnouncements,
+        ];
+      }
     }
   } catch (err) {
     console.warn("[admin] Live data query note:", err);
@@ -2234,7 +2271,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
                     <div class="min-w-0 flex-1">
                       <div class="flex flex-wrap items-center gap-2 mb-1.5">
                         <span class={`rounded-full px-2.5 py-0.5 text-xs font-bold border ${urgencyStyle}`}>
-                          {ann.urgency.toUpperCase()}
+                          {(ann.urgency || "info").toUpperCase()}
                         </span>
                         <span class={`rounded-full px-2 py-0.5 text-[11px] font-black uppercase tracking-wider ${
                           ann.active ? "bg-lime text-forest-900 border border-lime-600/30" : "bg-stone-200 text-stone-600"
@@ -2251,7 +2288,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
                         {ann.title}
                       </h5>
                       <p class="mt-1 text-xs sm:text-sm text-stone-600 leading-relaxed">
-                        {ann.content}
+                        {ann.content || ""}
                       </p>
                     </div>
 
@@ -3149,7 +3186,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
             const res = await fetch("/api/admin/actions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "create_announcement", title, urgency, content }),
+              body: JSON.stringify({ action: "create_announcement", title, message: content, priority: urgency }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok || !data.ok) {
@@ -3190,7 +3227,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
             const res = await fetch("/api/admin/actions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "toggle_announcement_status", id: annId, active: nextActive }),
+              body: JSON.stringify({ action: "toggle_announcement_status", announcementId: annId, active: nextActive }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data.ok) {
@@ -3233,7 +3270,7 @@ const deniedClaimsCount = allClaimsForModal.filter((c: any) => c.status === "den
             const res = await fetch("/api/admin/actions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "delete_announcement", id: annId }),
+              body: JSON.stringify({ action: "delete_announcement", announcementId: annId }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.ok && data.ok) {

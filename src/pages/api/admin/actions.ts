@@ -1,7 +1,13 @@
 import type { APIRoute, AstroCookies } from "astro";
 import { createClient } from "@supabase/supabase-js";
 import type { Env } from "~/lib/env";
-import { sessionCookieOptions } from "~/lib/session";
+import { sessionCookieOptions, devBypassEnabled } from "~/lib/session";
+import {
+  DEMO_ANNOUNCEMENTS_COOKIE,
+  parseDemoAnnouncements,
+  serializeDemoAnnouncements,
+  type DemoAnnouncement,
+} from "~/data/demoAnnouncements";
 import {
   DEMO_REGISTERED_COOKIE,
   DEMO_USER_STATE_COOKIE,
@@ -943,7 +949,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // ACTION: Create Campus Announcement
     if (action === "create_announcement") {
-      const { title, message, priority = "normal" } = body;
+      // Accept both the form names (content/urgency) and the database names
+      // (message/priority) so the two layers cannot drift.
+      const { title } = body;
+      const message = body.message ?? body.content;
+      const rawPriority = body.priority ?? body.urgency ?? "normal";
       if (!title || typeof title !== "string" || title.trim().length < 3) {
         return new Response(JSON.stringify({ ok: false, error: "Title of at least 3 characters is required." }), {
           status: 400,
@@ -957,7 +967,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         });
       }
 
-      const cleanPriority = ["urgent", "important", "normal"].includes(priority) ? priority : "normal";
+      const cleanPriority =
+        rawPriority === "urgent" || rawPriority === "alert"
+          ? "urgent"
+          : rawPriority === "important" || rawPriority === "warning"
+            ? "important"
+            : "normal";
 
       const { data: inserted, error: insertErr } = await supabase
         .from("announcements")
@@ -971,17 +986,35 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         .single();
 
       if (insertErr) {
-        console.warn("[admin/actions] Announcement insert note:", insertErr.message);
+        // Local demo fallback: keep the notice in a cookie so it survives the
+        // reload the client performs after publishing. Production never takes
+        // this path; a real database failure is reported honestly.
+        if (!devBypassEnabled(locals.env)) {
+          console.error("[admin/actions] Announcement insert failed:", insertErr.message);
+          return new Response(
+            JSON.stringify({ ok: false, error: "Could not publish the announcement. Try again." }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        const demoList = parseDemoAnnouncements(
+          cookies?.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value,
+        );
+        const announcement: DemoAnnouncement = {
+          id: `demo-${crypto.randomUUID()}`,
+          title: title.trim(),
+          message: message.trim(),
+          priority: cleanPriority,
+          active: true,
+          created_at: new Date().toISOString(),
+        };
+        cookies?.set(
+          DEMO_ANNOUNCEMENTS_COOKIE,
+          serializeDemoAnnouncements([announcement, ...demoList]),
+          { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 },
+        );
         return new Response(JSON.stringify({
           ok: true,
-          announcement: {
-            id: `ann-${Date.now()}`,
-            title: title.trim(),
-            message: message.trim(),
-            priority: cleanPriority,
-            active: true,
-            created_at: new Date().toISOString(),
-          },
+          announcement,
           message: "Announcement broadcasted to campus network.",
         }), {
           status: 200,
@@ -1012,7 +1045,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // ACTION: Delete Announcement
     if (action === "delete_announcement") {
-      const { announcementId } = body;
+      const announcementId = body.announcementId ?? body.id;
       if (!announcementId) {
         return new Response(JSON.stringify({ ok: false, error: "Announcement ID required." }), {
           status: 400,
@@ -1022,6 +1055,18 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
       const { error: delErr } = await supabase.from("announcements").delete().eq("id", announcementId);
       if (delErr) console.warn("[admin/actions] Delete announcement note:", delErr.message);
+
+      // Keep the dev-only cookie store in step when the DB is unreachable.
+      if (devBypassEnabled(locals.env) && cookies) {
+        const demoList = parseDemoAnnouncements(cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value);
+        if (demoList.some((row) => row.id === announcementId)) {
+          cookies.set(
+            DEMO_ANNOUNCEMENTS_COOKIE,
+            serializeDemoAnnouncements(demoList.filter((row) => row.id !== announcementId)),
+            { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 },
+          );
+        }
+      }
 
       if (adminProfileId) {
         try {
@@ -1042,7 +1087,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // ACTION: Toggle Announcement Status
     if (action === "toggle_announcement_status") {
-      const { announcementId, active: annActive } = body;
+      const announcementId = body.announcementId ?? body.id;
+      const annActive = body.active;
       if (!announcementId || typeof annActive !== "boolean") {
         return new Response(JSON.stringify({ ok: false, error: "Announcement ID and boolean status required." }), {
           status: 400,
@@ -1052,6 +1098,22 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
       const { error: togErr } = await supabase.from("announcements").update({ active: annActive }).eq("id", announcementId);
       if (togErr) console.warn("[admin/actions] Toggle announcement note:", togErr.message);
+
+      // Keep the dev-only cookie store in step when the DB is unreachable.
+      if (devBypassEnabled(locals.env) && cookies) {
+        const demoList = parseDemoAnnouncements(cookies.get(DEMO_ANNOUNCEMENTS_COOKIE)?.value);
+        if (demoList.some((row) => row.id === announcementId)) {
+          cookies.set(
+            DEMO_ANNOUNCEMENTS_COOKIE,
+            serializeDemoAnnouncements(
+              demoList.map((row) =>
+                row.id === announcementId ? { ...row, active: annActive } : row,
+              ),
+            ),
+            { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7 },
+          );
+        }
+      }
 
       return new Response(JSON.stringify({
         ok: true,
