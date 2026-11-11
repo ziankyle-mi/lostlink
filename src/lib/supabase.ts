@@ -43,26 +43,10 @@ export async function signInWithPassword(
   email: string,
   password: string,
 ): Promise<{ session: SupabaseSession; user: SupabaseUser | null } | { error: string }> {
-  const createFallbackSession = () => {
-    const cleanEmail = email.toLowerCase().trim();
-    const isAdmin = cleanEmail.includes("admin") || cleanEmail.includes("lostlink");
-    return {
-      session: {
-        access_token: `dev-token-${cleanEmail}`,
-        refresh_token: `dev-refresh-${cleanEmail}`,
-        expires_in: 3600,
-      },
-      user: {
-        id: `dev:${cleanEmail}`,
-        email: cleanEmail,
-        role: isAdmin ? "admin" : "user",
-        email_confirmed_at: new Date().toISOString(),
-      },
-    };
-  };
-
+  // Fail closed. A missing or unreachable auth service must never mint a
+  // session for an unverified email/password pair.
   if (!env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) {
-    return createFallbackSession();
+    return { error: "Sign-in is not set up yet. Add the Supabase keys to .env." };
   }
 
   try {
@@ -72,16 +56,13 @@ export async function signInWithPassword(
       body: JSON.stringify({ email, password, grant_type: "password" }),
     });
     if (!response.ok) {
-      if (response.status >= 500) {
-        return createFallbackSession();
-      }
       return { error: plainAuthError(await safeJson(response)) };
     }
     const session = (await response.json()) as SupabaseSession;
     return { session, user: await fetchUser(env, session.access_token) };
-  } catch (err: any) {
-    // If the remote Supabase project is unreachable/paused, fallback gracefully for verified test accounts
-    return createFallbackSession();
+  } catch (err) {
+    console.warn("[auth] sign-in request failed:", err);
+    return { error: "Could not reach the sign-in service. Try again." };
   }
 }
 
@@ -97,14 +78,11 @@ export async function signUpWithPassword(
   yearLevel?: string,
 ): Promise<{ session: SupabaseSession | null; error?: string }> {
   const cleanEmail = email.toLowerCase().trim();
-  const fallbackSession: SupabaseSession = {
-    access_token: `dev-token-${cleanEmail}`,
-    refresh_token: `dev-refresh-${cleanEmail}`,
-    expires_in: 3600,
-  };
+  void cleanEmail;
 
+  // Fail closed: no account is created when the auth service is unavailable.
   if (!env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) {
-    return { session: fallbackSession };
+    return { session: null, error: "Registration is not set up yet. Add the Supabase keys to .env." };
   }
 
   try {
@@ -123,9 +101,6 @@ export async function signUpWithPassword(
       }),
     });
     if (!response.ok) {
-      if (response.status >= 500) {
-        return { session: fallbackSession };
-      }
       return { session: null, error: plainAuthError(await safeJson(response)) };
     }
     const body = (await response.json()) as { access_token?: string; refresh_token?: string };
@@ -133,8 +108,9 @@ export async function signUpWithPassword(
       return { session: { access_token: body.access_token, refresh_token: body.refresh_token, expires_in: 3600 } };
     }
     return { session: null };
-  } catch {
-    return { session: fallbackSession };
+  } catch (err) {
+    console.warn("[auth] sign-up request failed:", err);
+    return { session: null, error: "Could not reach the registration service. Try again." };
   }
 }
 
@@ -248,6 +224,7 @@ export async function ensureProfileRow(
   program?: string,
   studentId?: string,
   yearLevel?: string,
+  isFaculty = false,
 ): Promise<boolean> {
   // Profiles are written with the service role only. Falling back to the anon
   // key would silently fail under RLS or, worse, write a partial row.
@@ -267,6 +244,7 @@ export async function ensureProfileRow(
   if (program) row.program = program;
   if (studentId) row.student_id = studentId;
   if (yearLevel) row.year_level = yearLevel;
+  if (isFaculty) row.is_faculty = true;
 
   // Insert-only. A returning user must never be able to reset their own
   // role/active flags by registering again.
@@ -277,12 +255,13 @@ export async function ensureProfileRow(
   if (error) {
     // If the database does not have newly added columns yet, retry without them
     if (
-      (program || studentId || yearLevel) &&
+      (program || studentId || yearLevel || isFaculty) &&
       (error.message?.includes("column") || error.code === "PGRST204" || error.code === "42703")
     ) {
       delete row.program;
       delete row.student_id;
       delete row.year_level;
+      delete row.is_faculty;
       const { error: retryError } = await supabase
         .from("profiles")
         .upsert(row, { onConflict: "id", ignoreDuplicates: true });
@@ -324,6 +303,80 @@ export async function isStudentIdTaken(
 }
 
 export { randomToken };
+
+/**
+ * Dev-only helper: gives a mock login a real Supabase auth user + `profiles`
+ * row. `items.reporter_id` and `claims.claimant_id` are foreign keys to
+ * `profiles`, so a dev account with no profile row cannot report or claim.
+ * Returns the profile id, or null when Supabase is not configured.
+ */
+export async function ensureDemoAuthProfile(
+  env: Env,
+  email: string,
+  fullName: string,
+  isFaculty = false,
+): Promise<string | null> {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!env.PUBLIC_SUPABASE_URL || !key) return null;
+
+  const cleanEmail = email.toLowerCase().trim();
+  const supabase = createClient(env.PUBLIC_SUPABASE_URL, key, {
+    auth: { persistSession: false },
+  });
+
+  const existing = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", cleanEmail)
+    .maybeSingle();
+  if (existing.data?.id) return existing.data.id as string;
+
+  let authUserId: string | null = null;
+
+  try {
+    const { data: created, error } = await supabase.auth.admin.createUser({
+      email: cleanEmail,
+      email_confirm: true,
+      password: randomToken(24),
+      user_metadata: { full_name: fullName, dev_account: true },
+    });
+    if (!error && created.user?.id) authUserId = created.user.id;
+  } catch (err) {
+    console.warn("[demo] auth user creation skipped:", err);
+  }
+
+  if (!authUserId) {
+    // The auth user may already exist (for example from a previous dev login).
+    // Page the admin list a bounded number of times to find it.
+    try {
+      for (let page = 1; page <= 10 && !authUserId; page += 1) {
+        const { data } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        const match = data?.users?.find(
+          (candidate) => (candidate.email || "").toLowerCase().trim() === cleanEmail,
+        );
+        if (match?.id) authUserId = match.id;
+        if (!data?.users || data.users.length < 200) break;
+      }
+    } catch (err) {
+      console.warn("[demo] auth user lookup skipped:", err);
+    }
+  }
+
+  if (!authUserId) return null;
+
+  const created = await ensureProfileRow(
+    env,
+    authUserId,
+    cleanEmail,
+    fullName,
+    "user",
+    undefined,
+    undefined,
+    undefined,
+    isFaculty,
+  );
+  return created ? authUserId : null;
+}
 
 /**
  * Creates a Supabase client scoped to the authenticated user's JWT.

@@ -97,6 +97,10 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
     let isWarningOpen = false;
     let isLoggingOut = false;
     let lastRecordedActivity = Date.now();
+    // The server keeps the authoritative idle window in an httpOnly cookie.
+    // Ping it periodically so the client and server agree on the same clock.
+    let lastServerSync = Date.now();
+    const SERVER_SYNC_MS = 60 * 1000;
 
     function getStoredLastActive() {
       try {
@@ -189,12 +193,31 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
     async function keepSessionAlive() {
       recordActivity(true);
       closeWarning();
+      lastServerSync = Date.now();
       try {
         await fetch("/api/auth/ping", {
           method: "POST",
           credentials: "same-origin",
         });
       } catch {}
+    }
+
+    /** Keeps the server's idle cookie in step with local activity. */
+    async function syncWithServer() {
+      if (isLoggingOut) return;
+      if (Date.now() - lastServerSync < SERVER_SYNC_MS) return;
+      lastServerSync = Date.now();
+      try {
+        const res = await fetch("/api/auth/ping", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        if (res.status === 401) {
+          performLogout();
+        }
+      } catch {
+        // Offline: the next navigation will settle the session state.
+      }
     }
 
     // Attach user activity listeners
@@ -245,6 +268,11 @@ const { timeoutSeconds = 900, warningSeconds = 60 } = Astro.props;
         updateCountdownDisplay(remainingSeconds);
       } else if (isWarningOpen) {
         closeWarning();
+      }
+
+      // Keep the server-side idle window aligned while the user is active.
+      if (elapsedSeconds < timeoutSeconds - warningSeconds) {
+        void syncWithServer();
       }
     }, 1000);
   })();

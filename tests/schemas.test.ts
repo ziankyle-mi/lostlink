@@ -158,8 +158,10 @@ describe("registerSchema", () => {
     expect(parsed.yearLevel).toBeUndefined();
   });
 
-  it("accepts admin registration without student ID or year level", () => {
-    const parsed = registerSchema.parse({
+  it("rejects a self-registered admin role", () => {
+    // Privilege is granted only by the Security Office. The registration form
+    // must never mint an admin account.
+    const result = registerSchema.safeParse({
       name: "Security Officer Cruz",
       email: "security.cruz@dlsau.edu.ph",
       password: "hunter2pass",
@@ -167,9 +169,7 @@ describe("registerSchema", () => {
       program: "BSCS",
       role: "admin",
     });
-    expect(parsed.role).toBe("admin");
-    expect(parsed.studentId).toBeUndefined();
-    expect(parsed.yearLevel).toBeUndefined();
+    expect(result.success).toBe(false);
   });
 
   it("accepts DVM registration with 5th Year and 6th Year levels", () => {

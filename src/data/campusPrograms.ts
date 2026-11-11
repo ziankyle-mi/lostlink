@@ -1,7 +1,7 @@
 export interface DegreeProgram {
   code: string;
   name: string;
-  collegeCode: "CAST" | "CVMAS" | "CBMA" | "COED";
+  collegeCode: "CAST" | "CVMAS" | "CBMA" | "COED" | "";
   collegeName: string;
   campus: string;
   campusSubtext: string;
@@ -171,7 +171,7 @@ export interface EnhancedCampusUser {
   created_at: string;
   programCode: string;
   programName: string;
-  collegeCode: "CAST" | "CVMAS" | "CBMA" | "COED";
+  collegeCode: "CAST" | "CVMAS" | "CBMA" | "COED" | "";
   collegeName: string;
   studentId: string;
   units: number;
@@ -183,15 +183,16 @@ export interface EnhancedCampusUser {
   portalLevel: string;
 }
 
-// Deterministic hashing helper so accounts without explicit DB metadata get realistic assignments
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
+/** Shown when an account has no recorded program or department. */
+export const UNASSIGNED_PROGRAM: DegreeProgram = {
+  code: "",
+  name: "Not provided",
+  collegeCode: "",
+  collegeName: "Not provided",
+  campus: "",
+  campusSubtext: "",
+  affiliationText: "No degree program or department is recorded for this account.",
+};
 
 // Special curated mappings for known accounts matching user-feature.png and key testers
 const SPECIAL_USER_ASSIGNMENTS: Record<string, Partial<EnhancedCampusUser>> = {
@@ -278,8 +279,6 @@ const SPECIAL_USER_ASSIGNMENTS: Record<string, Partial<EnhancedCampusUser>> = {
   },
 };
 
-const PROGRAM_KEYS = Object.keys(DEGREE_PROGRAMS);
-
 export function enrichCampusUser(raw: {
   id: string;
   full_name?: string;
@@ -292,25 +291,23 @@ export function enrichCampusUser(raw: {
   studentId?: string;
   year_level?: string;
   yearLevel?: string;
+  is_faculty?: boolean;
   user_metadata?: Record<string, any>;
 }): EnhancedCampusUser {
   const emailLower = (raw.email || "").toLowerCase().trim();
   const meta = raw.user_metadata || {};
   const special = SPECIAL_USER_ASSIGNMENTS[emailLower] || {};
 
-  // Check direct DB column, auth metadata, special override, or deterministic fallback
-  const h = hashString(emailLower || raw.id);
-  const progKey = raw.program || meta.program || special.programCode || PROGRAM_KEYS[h % PROGRAM_KEYS.length];
-  const program = DEGREE_PROGRAMS[progKey] || DEGREE_PROGRAMS.BSCS;
+  // Only recorded data is used. Nothing is derived from a hash of the email:
+  // an invented program, Student ID, or faculty flag makes the directory lie.
+  const progKey = raw.program || meta.program || special.programCode || "";
+  const program = DEGREE_PROGRAMS[progKey] || UNASSIGNED_PROGRAM;
 
-  const isFaculty = meta.is_faculty !== undefined
-    ? Boolean(meta.is_faculty)
-    : (special.isFaculty ?? (h % 11 === 0)); // ~1 in 11 accounts is faculty
+  const isFaculty =
+    meta.is_faculty !== undefined
+      ? Boolean(meta.is_faculty)
+      : (special.isFaculty ?? raw.is_faculty ?? false);
 
-  const yearLevels =
-    progKey === "DVM"
-      ? ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "6th Year"]
-      : ["1st Year", "2nd Year", "3rd Year", "4th Year"];
   const yearLevel = isFaculty
     ? "Faculty Member"
     : raw.year_level ||
@@ -318,18 +315,17 @@ export function enrichCampusUser(raw: {
       meta.year_level ||
       meta.yearLevel ||
       special.yearLevel ||
-      yearLevels[h % yearLevels.length];
+      "";
 
-  const units = isFaculty ? 0 : (special.units || meta.units || (18 + (h % 7))); // 18-24 units
-  const idYear = 2022 + (h % 3);
-  const idSeq = String(10000 + (h % 90000)).slice(0, 5);
+  const units = isFaculty ? 0 : (special.units ?? meta.units ?? 0);
+
   const studentId =
     raw.student_id ||
     raw.studentId ||
     meta.student_id ||
     meta.studentId ||
     special.studentId ||
-    (isFaculty ? `${idYear}-F${idSeq.slice(0, 3)}` : `${idYear}-${idSeq}`);
+    "";
 
   const fullName = raw.full_name || special.full_name || meta.full_name || emailLower.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 

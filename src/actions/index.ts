@@ -19,6 +19,7 @@ import {
   resetPasswordSchema,
 } from "~/lib/schemas";
 import {
+  ensureDemoAuthProfile,
   ensureProfileRow,
   fetchUser,
   isStudentIdTaken,
@@ -32,6 +33,7 @@ import {
 import {
   DEMO_REGISTERED_COOKIE,
   DEMO_USER_STATE_COOKIE,
+  INITIAL_CAMPUS_USERS,
   getCombinedDemoRegisteredUsers,
   parseDemoUserState,
   recordDemoRegisteredUser,
@@ -194,12 +196,9 @@ export const server = {
       const demoLoginRole = parseDemoUserState(
         context.cookies.get(DEMO_USER_STATE_COOKIE)?.value,
       )[email.toLowerCase().trim()]?.role;
-      const defaultPath =
-        demoLoginRole === "admin" ||
-        email.toLowerCase().includes("admin") ||
-        email.toLowerCase().includes("lostlink")
-          ? "/admin"
-          : "/";
+      // Role never comes from the email string. Only an explicit demo-directory
+      // override may route a sign-in to the admin console.
+      const defaultPath = demoLoginRole === "admin" ? "/admin" : "/";
       const targetPath = next && next !== "/" ? safeNextPath(next) : defaultPath;
       return { redirect: targetPath };
     },
@@ -210,8 +209,13 @@ export const server = {
     input: registerSchema,
     // `role` is accepted by the schema for the form only and is never trusted
     // for privilege: the granted role comes from the server-side allowlist.
-    handler: async ({ name, email, password, agree, program, studentId, yearLevel }, context) => {
+    handler: async ({ name, email, password, agree, role, program, studentId, yearLevel }, context) => {
       assertDomain(context.locals, email);
+
+      // The chosen affiliation is stored as a flag, never as a privilege. The
+      // granted account role is always "user"; only the Security Office can
+      // promote an account to admin.
+      const isFaculty = role === "faculty";
 
       if (!agree) {
         throw new ActionError({
@@ -265,6 +269,7 @@ export const server = {
         program,
         studentId,
         yearLevel,
+        isFaculty,
       });
       const existingCookieUsers = getCombinedDemoRegisteredUsers(
         context.cookies.get(DEMO_REGISTERED_COOKIE)?.value,
@@ -308,6 +313,7 @@ export const server = {
               program,
               studentId,
               yearLevel,
+              isFaculty,
             );
           }
         }
@@ -467,13 +473,15 @@ export const server = {
         });
       }
 
+      const cleanEmail = email.toLowerCase().trim();
+      const directoryUser = INITIAL_CAMPUS_USERS.find(
+        (candidate) => candidate.email.toLowerCase().trim() === cleanEmail,
+      );
+      // Role comes from the demo directory, never from a substring of the email.
       const assignedRole =
-        parseDemoUserState(context.cookies.get(DEMO_USER_STATE_COOKIE)?.value)[
-          email.toLowerCase().trim()
-        ]?.role ??
-        (email.toLowerCase().includes("admin") || email.toLowerCase().includes("lostlink")
-          ? ("admin" as const)
-          : ("user" as const));
+        parseDemoUserState(context.cookies.get(DEMO_USER_STATE_COOKIE)?.value)[cleanEmail]?.role ??
+        directoryUser?.role ??
+        "user";
 
       const token = await signDevSession(
         { email, role: assignedRole, exp: Date.now() + 1000 * 60 * 60 * 8 },
@@ -481,6 +489,19 @@ export const server = {
       );
       context.cookies.set(DEV_SESSION_COOKIE, token, sessionCookieOptions(8 * 60 * 60));
       touchActivityCookie(context.cookies);
+
+      // Give the mock account a real profile row so it can report and claim.
+      // Best effort: the login itself must not fail if the database is down.
+      try {
+        await ensureDemoAuthProfile(
+          env,
+          cleanEmail,
+          directoryUser?.full_name ?? cleanEmail.split("@")[0],
+        );
+      } catch (err) {
+        console.warn("[devLogin] profile provisioning skipped:", err);
+      }
+
       return { redirect: safeNextPath(next) };
     },
   }),

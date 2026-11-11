@@ -24,7 +24,16 @@ async function resolveProfileId(
     .eq("email", email.toLowerCase().trim())
     .maybeSingle();
   if (data?.id) return data.id;
-  return UUID_RE.test(userId) ? userId : null;
+
+  // Only fall back to the auth id when a profile row actually exists. Using a
+  // bare auth id would fail the foreign key on insert.
+  if (!UUID_RE.test(userId)) return null;
+  const { data: byId } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+  return byId?.id ?? null;
 }
 
 export const GET: APIRoute = async ({ locals, cookies }) => {
@@ -229,8 +238,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       const adminProfileId =
-        (await resolveProfileId(supabase, user.id, userEmail)) ??
-        (UUID_RE.test(user.id) ? user.id : null);
+        (await resolveProfileId(supabase, user.id, userEmail)) ?? null;
       if (adminProfileId) {
         await supabase.from("admin_log").insert({
           admin_id: adminProfileId,

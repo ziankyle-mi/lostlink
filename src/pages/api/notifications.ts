@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ locals, cookies }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -86,7 +86,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const supabase = getServiceClient(locals.env, "Mark notification as read");
+    // Mutations run under the caller's own JWT so RLS (notifications_update_read)
+    // is the final gate. Accounts without a real session (dev/demo logins) have
+    // no notifications to update.
+    const accessToken = cookies?.get("ll_access_token")?.value;
+    if (!accessToken) {
+      return new Response(JSON.stringify({ ok: true, message: "Nothing to update." }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const supabase = getUserClient(locals.env, accessToken);
     const userEmail = user.email.toLowerCase().trim();
     const body = await request.json().catch(() => ({}));
     const { notificationId, markAllRead } = body;
@@ -104,8 +114,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!profileId) {
-      return new Response(JSON.stringify({ ok: false, error: "Profile not found." }), {
-        status: 404,
+      return new Response(JSON.stringify({ ok: true, message: "Nothing to update." }), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -150,7 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ request, locals }) => {
+export const DELETE: APIRoute = async ({ request, locals, cookies }) => {
   const user = locals.user;
   if (!user) {
     return new Response(JSON.stringify({ ok: false, error: "Authentication required." }), {
@@ -160,7 +170,14 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const supabase = getServiceClient(locals.env, "Delete notification");
+    const accessToken = cookies?.get("ll_access_token")?.value;
+    if (!accessToken) {
+      return new Response(JSON.stringify({ ok: true, message: "Nothing to delete." }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const supabase = getUserClient(locals.env, accessToken);
     const userEmail = user.email.toLowerCase().trim();
     const url = new URL(request.url);
     const body = await request.json().catch(() => ({}));
@@ -186,8 +203,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
     if (!profileId) {
-      return new Response(JSON.stringify({ ok: false, error: "Profile not found." }), {
-        status: 404,
+      return new Response(JSON.stringify({ ok: true, message: "Nothing to delete." }), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }

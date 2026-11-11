@@ -91,8 +91,10 @@ export function readEnv(runtimeEnv?: Record<string, unknown>): Env {
     TURNSTILE_SITE_KEY: pick("TURNSTILE_SITE_KEY"),
     TURNSTILE_SECRET_KEY: pick("TURNSTILE_SECRET_KEY"),
     RESEND_API_KEY: pick("RESEND_API_KEY"),
-    DEV_LOGIN_BYPASS: pick("DEV_LOGIN_BYPASS") || "true",
-    DEV_SESSION_SECRET: pick("DEV_SESSION_SECRET") || "lostlink-dlsau-session-secret-2026",
+    // Secure defaults: the bypass is opt-in, and there is no built-in signing
+    // key. A deploy that forgets to set these runs with the bypass off.
+    DEV_LOGIN_BYPASS: pick("DEV_LOGIN_BYPASS") || "false",
+    DEV_SESSION_SECRET: pick("DEV_SESSION_SECRET"),
   };
 }
 

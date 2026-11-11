@@ -132,16 +132,26 @@ function normalizeKey(key: string): string {
 /**
  * Checks the shared Postgres store first, then the local isolate cache.
  * A database failure never blocks a legitimate sign-in (fail open only for
- * availability; the local limiter still applies).
+ * availability; the local limiter still applies). The durable path is retried
+ * after a cooldown instead of being disabled for the life of the isolate.
  */
-let durableRpcDisabled = false;
+const DURABLE_RPC_RETRY_MS = 10 * 60 * 1000;
+let durableRpcDisabledUntil = 0;
+
+function durableRpcDisabled(): boolean {
+  return Date.now() < durableRpcDisabledUntil;
+}
+
+function disableDurableRpc(): void {
+  durableRpcDisabledUntil = Date.now() + DURABLE_RPC_RETRY_MS;
+}
 
 export async function isRateLimitedDurable(
   env: Env,
   key: string,
 ): Promise<{ isBlocked: boolean; remainingSeconds: number }> {
   const local = isRateLimited(key);
-  if (local.isBlocked || durableRpcDisabled) return local;
+  if (local.isBlocked || durableRpcDisabled()) return local;
 
   const supabase = durableClient(env);
   if (!supabase) return local;
@@ -155,7 +165,7 @@ export async function isRateLimitedDurable(
     ]);
 
     if (error?.code === "PGRST202") {
-      durableRpcDisabled = true;
+      disableDurableRpc();
       return local;
     }
 
@@ -180,7 +190,7 @@ export async function recordFailedAttemptDurable(
   const lockoutDurationMs = options.lockoutDurationMs ?? 5 * 60 * 1000;
   const local = recordFailedAttempt(key, options);
 
-  if (durableRpcDisabled) return local;
+  if (durableRpcDisabled()) return local;
 
   const supabase = durableClient(env);
   if (!supabase) return local;
@@ -198,7 +208,7 @@ export async function recordFailedAttemptDurable(
     ]);
 
     if (error?.code === "PGRST202") {
-      durableRpcDisabled = true;
+      disableDurableRpc();
       return local;
     }
 
@@ -219,7 +229,7 @@ export async function recordFailedAttemptDurable(
 
 export async function clearRateLimitDurable(env: Env, key: string): Promise<void> {
   clearRateLimit(key);
-  if (durableRpcDisabled) return;
+  if (durableRpcDisabled()) return;
 
   const supabase = durableClient(env);
   if (!supabase) return;

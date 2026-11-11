@@ -9,7 +9,7 @@ import {
   withDemoUserState,
   type CampusUser,
 } from "~/data/mockUsers";
-import { ACCESS_COOKIE, DEV_SESSION_COOKIE, signDevSession } from "~/lib/auth";
+import { DEV_SESSION_COOKIE, signDevSession } from "~/lib/auth";
 import { resolveUser } from "~/lib/session";
 import { POST as adminActionsPost } from "~/pages/api/admin/actions";
 import { readEnv } from "~/lib/env";
@@ -239,7 +239,14 @@ describe("toggle_user_role persists demo accounts", { timeout: 25000 }, () => {
 
     // 3. Suspend juan.reyes@dlsau.edu.ph -> session resolves to null (blocked)
     cookies.delete(DEV_SESSION_COOKIE);
-    cookies.set(ACCESS_COOKIE, "dev-token-juan.reyes@dlsau.edu.ph");
+    // Only signed dev sessions are trusted. An unsigned "dev-token-<email>"
+    // access token is deliberately rejected now, so use a signed one to prove
+    // the suspension overlay still blocks the account.
+    const suspendedToken = await signDevSession(
+      { email: "juan.reyes@dlsau.edu.ph", role: "admin", exp: Date.now() + 60_000 },
+      testEnv.DEV_SESSION_SECRET,
+    );
+    cookies.set(DEV_SESSION_COOKIE, suspendedToken);
     const suspendReq = new Request("http://localhost:4321/api/admin/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -12,9 +12,10 @@ import {
 } from "~/data/mockUsers";
 
 function getAdminClient(env: Env) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || "dummy-service-role-key";
-  const url = env.PUBLIC_SUPABASE_URL || "https://dummy-project.supabase.co";
-  return createClient(url, key, {
+  if (!env.PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Admin database access is not configured.");
+  }
+  return createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
 }
@@ -27,6 +28,14 @@ function generateTempPassword(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12));
   const chars = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
   return `Lk-${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
+}
+
+/** Maps both UI urgency labels and database priority labels to one column value. */
+function normalizeAnnouncementPriority(raw: unknown): "urgent" | "important" | "normal" {
+  const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (value === "urgent" || value === "alert") return "urgent";
+  if (value === "important" || value === "warning") return "important";
+  return "normal";
 }
 
 /**
@@ -63,6 +72,15 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       status: 403,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Fail closed: an admin action must never pretend to succeed against a
+  // placeholder database client.
+  if (!locals.env.PUBLIC_SUPABASE_URL || !locals.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Admin database access is not configured." }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   const supabase = getAdminClient(locals.env);
@@ -943,7 +961,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // ACTION: Create Campus Announcement
     if (action === "create_announcement") {
-      const { title, message, priority = "normal" } = body;
+      // Accept both the UI names (content/urgency) and the database names
+      // (message/priority) so the two layers cannot drift again.
+      const title = body.title;
+      const message = body.message ?? body.content;
+      const rawPriority = body.priority ?? body.urgency ?? "normal";
       if (!title || typeof title !== "string" || title.trim().length < 3) {
         return new Response(JSON.stringify({ ok: false, error: "Title of at least 3 characters is required." }), {
           status: 400,
@@ -957,7 +979,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         });
       }
 
-      const cleanPriority = ["urgent", "important", "normal"].includes(priority) ? priority : "normal";
+      const cleanPriority = normalizeAnnouncementPriority(rawPriority);
 
       const { data: inserted, error: insertErr } = await supabase
         .from("announcements")
@@ -971,22 +993,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         .single();
 
       if (insertErr) {
-        console.warn("[admin/actions] Announcement insert note:", insertErr.message);
-        return new Response(JSON.stringify({
-          ok: true,
-          announcement: {
-            id: `ann-${Date.now()}`,
-            title: title.trim(),
-            message: message.trim(),
-            priority: cleanPriority,
-            active: true,
-            created_at: new Date().toISOString(),
-          },
-          message: "Announcement broadcasted to campus network.",
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        console.error("[admin/actions] Announcement insert failed:", insertErr.message);
+        return new Response(
+          JSON.stringify({ ok: false, error: "Could not publish the announcement. Try again." }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
       }
 
       if (adminProfileId) {
@@ -1012,7 +1023,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // ACTION: Delete Announcement
     if (action === "delete_announcement") {
-      const { announcementId } = body;
+      const announcementId = body.announcementId ?? body.id;
       if (!announcementId) {
         return new Response(JSON.stringify({ ok: false, error: "Announcement ID required." }), {
           status: 400,
@@ -1021,7 +1032,13 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       }
 
       const { error: delErr } = await supabase.from("announcements").delete().eq("id", announcementId);
-      if (delErr) console.warn("[admin/actions] Delete announcement note:", delErr.message);
+      if (delErr) {
+        console.error("[admin/actions] Delete announcement failed:", delErr.message);
+        return new Response(
+          JSON.stringify({ ok: false, error: "Could not delete the announcement. Try again." }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
 
       if (adminProfileId) {
         try {
@@ -1042,7 +1059,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     // ACTION: Toggle Announcement Status
     if (action === "toggle_announcement_status") {
-      const { announcementId, active: annActive } = body;
+      const announcementId = body.announcementId ?? body.id;
+      const annActive = body.active;
       if (!announcementId || typeof annActive !== "boolean") {
         return new Response(JSON.stringify({ ok: false, error: "Announcement ID and boolean status required." }), {
           status: 400,
@@ -1051,7 +1069,13 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       }
 
       const { error: togErr } = await supabase.from("announcements").update({ active: annActive }).eq("id", announcementId);
-      if (togErr) console.warn("[admin/actions] Toggle announcement note:", togErr.message);
+      if (togErr) {
+        console.error("[admin/actions] Toggle announcement failed:", togErr.message);
+        return new Response(
+          JSON.stringify({ ok: false, error: "Could not update the announcement. Try again." }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
+      }
 
       return new Response(JSON.stringify({
         ok: true,

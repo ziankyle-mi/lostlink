@@ -9,6 +9,7 @@ export interface CampusUser {
   program?: string;
   student_id?: string;
   year_level?: string;
+  is_faculty?: boolean;
   reports_count?: number;
   claims_count?: number;
 }
@@ -55,6 +56,7 @@ export function recordDemoRegisteredUser(user: {
   program?: string;
   studentId?: string;
   yearLevel?: string;
+  isFaculty?: boolean;
 }): CampusUser {
   const cleanEmail = user.email.toLowerCase().trim();
   const existingIndex = REGISTERED_CAMPUS_USERS.findIndex((u) => u.email.toLowerCase().trim() === cleanEmail);
@@ -68,6 +70,7 @@ export function recordDemoRegisteredUser(user: {
     program: user.program,
     student_id: user.studentId,
     year_level: user.yearLevel,
+    is_faculty: user.isFaculty === true,
     reports_count: 0,
     claims_count: 0,
   };

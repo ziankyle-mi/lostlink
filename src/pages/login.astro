@@ -47,7 +47,7 @@ const fieldError = (name: "email" | "password") => loginFields?.[name]?.[0] ?? u
 const devError =
   devResult?.error && !isInputError(devResult.error) ? devResult.error.message : undefined;
 
-const devOpen = devBypassEnabled(env);
+const devOpen = import.meta.env.DEV && devBypassEnabled(env);
 ---
 
 <AuthShell

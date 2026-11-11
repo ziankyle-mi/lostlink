@@ -132,7 +132,11 @@ export async function resolveUser(
   env: Env,
 ): Promise<SessionUser | null> {
   const policy = policyFromEnv(env);
-  const demoState = parseDemoUserState(cookies.get(DEMO_USER_STATE_COOKIE)?.value);
+  // The demo directory overlay is a local-development convenience. It is an
+  // unsigned cookie, so it must never influence a production session.
+  const demoState = devBypassEnabled(env)
+    ? parseDemoUserState(cookies.get(DEMO_USER_STATE_COOKIE)?.value)
+    : {};
 
   /** Directory role/status changes for demo accounts (no DB profile row). */
   const applyDemoState = (email: string, fallbackRole: "admin" | "user") => {
@@ -159,13 +163,8 @@ export async function resolveUser(
   const refreshToken = cookies.get(REFRESH_COOKIE)?.value;
 
   if (accessToken) {
-    if (accessToken.startsWith("dev-token-")) {
-      const email = accessToken.replace("dev-token-", "");
-      const isAdmin = email.includes("admin") || email.includes("lostlink");
-      const state = applyDemoState(email, isAdmin ? "admin" : "user");
-      if (!state.active) return null;
-      return { id: `dev:${email}`, email, role: state.role };
-    }
+    // Dev sessions are signed and carried in DEV_SESSION_COOKIE. An unsigned
+    // "dev-token-<email>" access token is never trusted.
     const user = await fetchUser(env, accessToken);
     if (user?.email && isAllowedEmail(user.email, policy) && user.email_confirmed_at) {
       const profile = await resolveProfileState(env, user.id, user.email);

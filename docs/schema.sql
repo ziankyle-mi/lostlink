@@ -18,6 +18,9 @@ create table profiles (
   -- Student-specific fields: Student ID and Year Level (null for faculty and admin)
   student_id text,
   year_level text,
+  -- True when the account belongs to a faculty member. Set from the
+  -- registration affiliation choice; never grants admin privileges.
+  is_faculty boolean not null default false,
   -- Set when the Security Office issues a temporary password. The student is
   -- forced to /reset-password until they choose a new one.
   must_change_password boolean not null default false,
@@ -29,6 +32,7 @@ alter table profiles add column if not exists must_change_password boolean not n
 alter table profiles add column if not exists program text;
 alter table profiles add column if not exists student_id text;
 alter table profiles add column if not exists year_level text;
+alter table profiles add column if not exists is_faculty boolean not null default false;
 
 -- Enforce strict unique constraint and official DLSAU format for Student IDs
 create unique index if not exists profiles_student_id_unique on profiles (student_id) where student_id is not null;
@@ -69,9 +73,9 @@ create table claims (
   created_at timestamptz default now()
 );
 
--- one pending claim per user per item
+-- one open claim per user per item (pending, or already verified and awaiting pickup)
 create unique index claims_one_pending_per_user
-  on claims (item_id, claimant_id) where status = 'pending';
+  on claims (item_id, claimant_id) where status in ('pending', 'verified');
 
 create table notifications (
   id uuid primary key default gen_random_uuid(),
@@ -105,6 +109,24 @@ create table if not exists login_activity (
 create index if not exists login_activity_user_idx on login_activity (user_id, created_at desc);
 create index if not exists login_activity_created_idx on login_activity (created_at desc);
 
+-- Campus announcements broadcast by the Security Office.
+create table if not exists announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  message text not null,
+  priority text not null default 'normal' check (priority in ('urgent', 'important', 'normal')),
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Shared durable rate-limit store (see the RPCs at the end of this file).
+create table if not exists rate_limit_attempts (
+  key text primary key,
+  failures integer not null default 0,
+  locked_until timestamptz,
+  last_attempt timestamptz not null default now()
+);
+
 create extension if not exists pg_trgm;
 create index items_name_trgm on items using gin (name gin_trgm_ops);
 
@@ -119,6 +141,8 @@ alter table claims enable row level security;
 alter table notifications enable row level security;
 alter table admin_log enable row level security;
 alter table login_activity enable row level security;
+alter table announcements enable row level security;
+alter table rate_limit_attempts enable row level security;
 
 alter table profiles force row level security;
 alter table items force row level security;
@@ -279,5 +303,115 @@ create policy "login_activity_read_own"
     user_id = auth.uid() or
     public.is_admin(auth.uid())
   );
+
+-- ANNOUNCEMENTS
+-- Read: everyone sees active notices; admins manage all.
+create policy "announcements_read_active"
+  on announcements for select
+  to authenticated, anon
+  using (active = true or public.is_admin(auth.uid()));
+
+create policy "announcements_admin_all"
+  on announcements for all
+  to authenticated
+  using (public.is_admin(auth.uid()))
+  with check (public.is_admin(auth.uid()));
+
+-- RATE_LIMIT_ATTEMPTS
+-- No policies on purpose: only the service role (which bypasses RLS) touches
+-- this table through the SECURITY DEFINER functions below.
+
+-- ==============================================================================
+-- DURABLE RATE LIMITING (shared across Cloudflare isolates)
+-- ==============================================================================
+create or replace function public.ll_check_rate_limit(p_key text)
+returns table (is_blocked boolean, remaining_seconds integer)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_locked timestamptz;
+begin
+  select locked_until into v_locked
+  from public.rate_limit_attempts
+  where key = p_key;
+
+  if not found or v_locked is null or v_locked <= now() then
+    return query select false, 0;
+    return;
+  end if;
+
+  return query
+    select true, greatest(1, ceil(extract(epoch from (v_locked - now())))::integer);
+end;
+$$;
+
+create or replace function public.ll_record_failed_attempt(
+  p_key text,
+  p_max_failures integer default 5,
+  p_lock_seconds integer default 300
+)
+returns table (is_blocked boolean, remaining_seconds integer, attempts_left integer)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_failures integer;
+  v_locked timestamptz;
+begin
+  insert into public.rate_limit_attempts (key, failures, locked_until, last_attempt)
+  values (p_key, 0, null, now())
+  on conflict (key) do nothing;
+
+  select failures, locked_until into v_failures, v_locked
+  from public.rate_limit_attempts
+  where key = p_key
+  for update;
+
+  if v_locked is not null and v_locked <= now() then
+    v_failures := 0;
+  end if;
+
+  v_failures := v_failures + 1;
+
+  if v_failures >= greatest(p_max_failures, 1) then
+    v_locked := now() + make_interval(secs => greatest(p_lock_seconds, 1));
+  else
+    v_locked := null;
+  end if;
+
+  update public.rate_limit_attempts
+  set failures = v_failures,
+      locked_until = v_locked,
+      last_attempt = now()
+  where key = p_key;
+
+  delete from public.rate_limit_attempts
+  where last_attempt < now() - interval '2 days';
+
+  return query
+    select (v_failures >= greatest(p_max_failures, 1)),
+           case when v_failures >= greatest(p_max_failures, 1) then greatest(p_lock_seconds, 1) else 0 end,
+           greatest(greatest(p_max_failures, 1) - v_failures, 0);
+end;
+$$;
+
+create or replace function public.ll_clear_rate_limit(p_key text)
+returns void
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  delete from public.rate_limit_attempts where key = p_key;
+$$;
+
+revoke all on function public.ll_check_rate_limit(text) from public, anon, authenticated;
+revoke all on function public.ll_record_failed_attempt(text, integer, integer) from public, anon, authenticated;
+revoke all on function public.ll_clear_rate_limit(text) from public, anon, authenticated;
+grant execute on function public.ll_check_rate_limit(text) to service_role;
+grant execute on function public.ll_record_failed_attempt(text, integer, integer) to service_role;
+grant execute on function public.ll_clear_rate_limit(text) to service_role;
 
 

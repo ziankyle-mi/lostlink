@@ -4,6 +4,7 @@ import { photoPathsFromColumn } from "~/lib/storage";
 import { verifyTurnstile } from "~/lib/turnstile";
 import { isRateLimitedDurable, recordFailedAttemptDurable } from "~/lib/rateLimit";
 import { getServiceClient, getUserClient } from "~/lib/supabase";
+import { PHOTO_PATH_REGEX, reportSchema } from "~/lib/schemas";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PUBLIC_STATUSES = new Set(["approved", "claimed", "resolved"]);
@@ -96,7 +97,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json();
+    const rawBody = await request.json().catch(() => null);
+    if (!rawBody || typeof rawBody !== "object") {
+      return new Response(JSON.stringify({ ok: false, error: "Could not read the report." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Every field is validated on the server with the same rules the form uses.
+    const parsed = reportSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      return new Response(
+        JSON.stringify({ ok: false, error: firstIssue?.message ?? "Check the report details." }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const {
       type,
       name,
@@ -108,57 +126,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       photoUrls,
       photoPaths,
       turnstileToken,
-    } = body;
+    } = parsed.data;
 
-    // Basic Validations
-    if (!type || (type !== "lost" && type !== "found")) {
-      return new Response(JSON.stringify({ ok: false, error: "Type must be 'lost' or 'found'." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!name || typeof name !== "string" || name.trim().length < 2) {
-      return new Response(JSON.stringify({ ok: false, error: "Item name must be at least 2 characters." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!category || typeof category !== "string") {
-      return new Response(JSON.stringify({ ok: false, error: "Category is required." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!location || typeof location !== "string") {
-      return new Response(JSON.stringify({ ok: false, error: "Location is required." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!description || typeof description !== "string" || description.trim().length < 25) {
-      return new Response(JSON.stringify({
-        ok: false,
-        error: "Please provide a more complete description (at least 25 characters) detailing color, brand, condition, or unique marks to help identify the item."
-      }), {
+    const today = new Date().toISOString().split("T")[0];
+    const itemDate = eventDate || today;
+    if (itemDate > today) {
+      return new Response(JSON.stringify({ ok: false, error: "The event date cannot be in the future." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
     }
 
     // Store storage object paths, not public URLs. Photos live in a private
-    // bucket and are signed when rendered.
-    const incoming = [
-      ...(Array.isArray(photoPaths) ? photoPaths : []),
-      ...(Array.isArray(photoUrls) ? photoUrls : []),
-      ...(Array.isArray(photos) ? photos : []),
-    ];
+    // bucket and are signed when rendered. Only paths produced by the upload
+    // endpoint are accepted, so a client cannot attach arbitrary objects.
+    const incoming = [...(photoPaths ?? []), ...(photoUrls ?? []), ...(photos ?? [])];
     const allPhotos = Array.from(
       new Set(incoming.flatMap((value) => photoPathsFromColumn(String(value)))),
     );
+
+    if (allPhotos.some((path) => !PHOTO_PATH_REGEX.test(path))) {
+      return new Response(JSON.stringify({ ok: false, error: "One or more photos are invalid. Upload them again." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     if (type === "found" && allPhotos.length < 1) {
       return new Response(JSON.stringify({ ok: false, error: "Found items require at least 1 photo." }), {
@@ -227,11 +219,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    const hidePhoto = category === "IDs, Cards & Wallets" || category.toLowerCase().includes("id");
+    // Only the ID/card/wallet category hides its photo. A substring match on
+    // "id" used to hide unrelated categories.
+    const hidePhoto = category === "IDs, Cards & Wallets";
     const refCode = type === "found" ? referenceCode() : null;
     const photoPath = allPhotos.length > 0 ? (allPhotos.length === 1 ? allPhotos[0] : JSON.stringify(allPhotos)) : null;
-    const today = new Date().toISOString().split("T")[0];
-    const itemDate = eventDate || today;
 
     const { data: insertedItem, error: insertError } = await supabase
       .from("items")
@@ -441,7 +433,7 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
 
     const { data: item } = await supabase
       .from("items")
-      .select("id, name, reporter_id")
+      .select("id, name, reporter_id, status")
       .eq("id", itemId)
       .maybeSingle();
 
@@ -450,6 +442,15 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
         status: 404,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    // Completed records survive moderation, matching the admin remove_post
+    // action. Only pending/approved items can be removed.
+    if (item.status === "claimed" || item.status === "resolved") {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Completed records cannot be removed." }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     // Soft removal. The audit trail and claim history must survive moderation,

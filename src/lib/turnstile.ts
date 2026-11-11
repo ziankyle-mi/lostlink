@@ -21,9 +21,14 @@ export async function verifyTurnstile(
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
   const siteKey = env.TURNSTILE_SITE_KEY?.trim();
   if (!secret) {
-    if (!import.meta.env.DEV && siteKey) {
+    const isTest =
+      typeof process !== "undefined" &&
+      (process.env?.NODE_ENV === "test" || Boolean(process.env?.VITEST));
+    // Fail closed in every production build, even when the site key is also
+    // missing. A deploy without Turnstile keys must not silently skip the check.
+    if (!import.meta.env.DEV && !isTest) {
       console.error(
-        "[turnstile] CRITICAL: TURNSTILE_SITE_KEY is configured in production but TURNSTILE_SECRET_KEY is missing. Failing closed.",
+        `[turnstile] CRITICAL: TURNSTILE_SECRET_KEY is missing in production (site key ${siteKey ? "is" : "is not"} set). Failing closed.`,
       );
       return {
         ok: false,
@@ -31,7 +36,7 @@ export async function verifyTurnstile(
       };
     }
     console.warn(
-      "[turnstile] TURNSTILE_SECRET_KEY is not set; bot verification is disabled.",
+      "[turnstile] TURNSTILE_SECRET_KEY is not set; bot verification is disabled in development.",
     );
     return { ok: true, skipped: true };
   }

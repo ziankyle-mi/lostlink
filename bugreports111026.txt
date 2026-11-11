@@ -1,0 +1,195 @@
+LOSTLINK - BUG REPORT
+Date: November 11, 2026
+Scope: Read-only analysis of source, schema, and config. No files were changed and no commits were made.
+Findings are grouped by severity, with file:line and impact.
+
+================================================================================
+CRITICAL - AUTHENTICATION AND AUTHORIZATION BYPASSES
+================================================================================
+
+1. DEV_LOGIN_BYPASS defaults to true and ships with a public session secret
+   Location: src/lib/env.ts:94-95
+   DEV_LOGIN_BYPASS defaults to "true" and DEV_SESSION_SECRET defaults to a
+   hardcoded string committed to the repo. Any deployment that forgets to set
+   the variable runs with the bypass enabled, and anyone reading the source can
+   forge session tokens.
+
+2. dev-token-<email> is accepted even when the bypass is off
+   Location: src/lib/session.ts:162-168
+   resolveUser accepts an unsigned ll_access_token=dev-token-<email> cookie
+   regardless of the bypass flag. A single crafted cookie logs in as any email,
+   including ...admin@...
+
+3. Unsigned demo-state cookie grants admin
+   Location: src/lib/session.ts:135-142
+   ll_demo_user_state is parsed without signature verification and can set
+   role:"admin". Anyone can self-promote.
+
+4. Admin role inferred from an email substring
+   Location: src/lib/supabase.ts (role derivation) and src/lib/session.ts
+   Any email containing "admin" or "lostlink" is treated as an administrator.
+   This is an authorization decision made on attacker-controlled input.
+
+5. Password sign-in fails open
+   Location: src/lib/supabase.ts:46-85, 100-138
+   When Supabase config is missing, returns 5xx, or the network fails,
+   signInWithPassword / signUpWithPassword fall back to a success path. Any
+   email/password combination authenticates during an outage - and then
+   inherits the substring-based admin rule from bug 4.
+
+================================================================================
+HIGH - BROKEN CORE FLOWS
+================================================================================
+
+6. Temp-password reset is blocked by middleware
+   Location: src/middleware.ts:49, 102-117
+   resetPassword is missing from PUBLIC_ACTIONS, and the must_change_password
+   exemption only covers the page path /reset-password. Submitting the form
+   posts to /_actions/resetPassword, which the middleware rejects with
+   403 "Set a new password before continuing." The forced-reset flow can never
+   complete.
+
+7. Announcements are broken end-to-end
+   Location: src/pages/api/admin/actions.ts:944-1064
+             src/pages/admin.astro:2139-2164, 2217-2254, 3131-3236
+             docs/migrations.sql:29-36
+   - Create always returns 400 - the handler requires "message", the client
+     sends "content".
+   - Toggle and delete always return 400 - the handler requires
+     "announcementId", the client sends "id".
+   - The admin list renders blank content ("content" vs DB column "message").
+   - With real DB rows present, the page crashes at ann.urgency.toUpperCase()
+     (line 2237) because the schema column is "priority".
+
+8. Announcement actions report success on DB failure
+   Location: src/pages/api/admin/actions.ts:944-1064
+   Failures are swallowed and a success payload is returned, so the UI confirms
+   an action that never happened.
+
+9. Dev/demo accounts cannot report or claim
+   Location: src/pages/api/items.ts, src/pages/api/claims.ts, docs/schema.sql
+   reporterId/claimantId resolve only to a UUID or an existing profile row, and
+   reporter_id/claimant_id are FK-constrained to profiles. Every dev:<email>
+   account fails with 400 "Your account profile is missing." The documented
+   demo path does not work.
+
+10. Admin directory fabricates identity data
+    Location: src/data/campusPrograms.ts:301-332
+    enrichCampusUser derives isFaculty from h % 11 === 0, and invents student
+    ID, year, and program for legacy rows. The Students/Faculty split and every
+    dossier field are effectively random.
+
+11. Registration discards the chosen role
+    Location: src/pages/api (registration handler), src/lib/schemas.ts
+    role: "faculty" (and "admin" in the schema) passes validation and skips
+    Student ID/year checks, but the handler always persists role: "user". The
+    user's selection silently vanishes, and validation rules no longer match
+    what is stored.
+
+12. Report creation bypasses validation and trusts the client
+    Location: src/pages/api/items.ts:89-232
+    POST has no Zod schema and accepts photoPaths directly, so arbitrary
+    storage paths can be attached. hidePhoto uses a substring includes("id")
+    check (line 230), which misclassifies unrelated paths.
+
+================================================================================
+MEDIUM - DATA INTEGRITY AND INCONSISTENT BEHAVIOR
+================================================================================
+
+13. Dashboard shows mock data when the database is empty
+    Location: src/pages/index.astro:104
+    If there are zero approved items, the page falls back to the ALL_ITEMS mock
+    feed. An empty database looks populated with fake items.
+
+14. Admin "active lost reports" includes pending and rejected
+    Location: src/pages/admin.astro:181-185
+    .eq("type","lost").neq("status","resolved") counts pending and rejected,
+    inflating the active caseload.
+
+15. Two different delete semantics for the same item
+    Location: src/pages/api/items.ts:457-460 vs
+              src/pages/api/admin/actions.ts (remove_post)
+    The API lets DELETE move claimed/resolved to rejected; the admin action
+    returns 409. The same operation succeeds or fails depending on which path
+    is used.
+
+16. Competing-claim guard is incomplete
+    Location: docs/schema.sql:73-74
+    claims_one_pending_per_user only constrains pending. Once a claim leaves
+    pending, a user can open a duplicate claim on the same item.
+
+17. Rate limiting is unreliable
+    Location: src/lib/rateLimit.ts:137, 157-159
+    The in-memory fallback is per-isolate (effectively no limit under
+    Cloudflare), durableRpcDisabled latches permanently after one failure, and
+    the required RPCs exist only in docs/migrations-production.sql:258-347 -
+    not in the base schema.
+
+18. Base schema is out of sync with the app
+    Location: docs/schema.sql, docs/migrations.sql:39-42
+    No announcements table and no rate-limit RPCs in the base schema; the
+    migration's policy creation is not idempotent, so re-running it fails.
+
+19. Turnstile fails open
+    Location: src/lib/turnstile.ts:21-37
+    With both keys absent in production, verification is skipped instead of
+    failing closed.
+
+20. Claim failure message does not match the button
+    Location: src/pages/item/[id].astro:472, 484
+    The error references "Submit Claim to Security Office" while the button
+    says "Submit claim", making the error hard to attribute.
+
+21. Claim profile fallback is unchecked
+    Location: src/pages/api/claims.ts:16-28
+    Falls back to user.id without confirming the profile exists, producing FK
+    errors instead of a clear message.
+
+22. Notifications unusable for dev accounts
+    Location: src/pages/api/notifications.ts
+    POST/DELETE run with the service role, and dev accounts get
+    404 "Profile not found."
+
+23. Admin client silently degrades
+    Location: src/pages/api/admin/actions.ts:14-20
+    getAdminClient returns a dummy client when unconfigured, so admin writes
+    appear to work while doing nothing.
+
+24. Inactivity timeout disagrees with the server
+    Location: src/components/InactivityGuard.astro:81-129, 236-249
+    localStorage activity tracking diverges from the server's cookie-based
+    expiry, so the client can keep a session alive that the server has already
+    ended (or vice versa).
+
+================================================================================
+LOW - LATENT AND COSMETIC
+================================================================================
+
+25. Unescaped item name in alt
+    Location: src/pages/index.astro:1207
+    itemName is interpolated into an alt attribute without escaping. Currently
+    unreachable because newCard is never appended (void newCard, line 1278),
+    but it becomes an XSS vector the moment that code is enabled.
+
+26. Quick dev logins rendered in the UI
+    Location: src/pages/login.astro:136-169
+    The "Quick Dev Test Logins" block is rendered whenever the bypass is
+    enabled - which is the default.
+
+27. Mock user fallback in admin
+    Location: src/pages/admin.astro:450-458
+    Falls back to mockUsers when the profile query fails, masking the failure.
+
+================================================================================
+NOTES ON COVERAGE
+================================================================================
+
+- Findings come from reading src, docs/schema.sql, docs/migrations*.sql, and
+  config. npm run check and npm test were NOT run, so compile-time and test
+  failures are not reflected above.
+
+- The highest-risk cluster is bugs 1-5: together they form a complete
+  unauthenticated path to an admin session. Bugs 6-11 break the password-reset,
+  announcement, demo-account, and registration flows that the demo depends on.
+
+- Git status was clean throughout; nothing was modified.

@@ -2,6 +2,50 @@
 
 The agent updates this file after every step. Keep it short.
 
+## Bug Fix Pass: 27-Item Security & Correctness Report (2026-11-11)
+
+Done: Fixed every item in `bugreports111026.txt`, then re-ran the full suite and a live dev-server smoke test.
+
+**Critical (auth/session)**
+- `src/lib/env.ts`: `DEV_LOGIN_BYPASS` defaults to `false`; `DEV_SESSION_SECRET` has no built-in default.
+- `src/lib/session.ts`: removed the unsigned `dev-token-<email>` access-token path; the unsigned `ll_demo_user_state` overlay now applies only when the dev bypass is enabled.
+- `src/lib/supabase.ts`: `signInWithPassword` / `signUpWithPassword` fail closed (no fallback sessions, no email-substring admin inference). Added `ensureDemoAuthProfile` so dev accounts get a real auth user + `profiles` row.
+- `src/actions/index.ts`: dev/login role comes from the demo directory, never from the email string; registration persists `is_faculty` and never grants admin.
+
+**High**
+- `middleware.ts`: `resetPassword` is public so the action can run without a session.
+- `api/admin/actions.ts`: `getAdminClient` throws when unconfigured; POST returns 503; announcement create/delete/toggle return real 500s instead of fake success; accepts both `message/priority` and `content/urgency`.
+- `admin.astro`: DB announcements mapped to `content`/`urgency`; mock directory gated on the dev bypass; active lost reports now filter `status = approved`.
+- `api/items.ts`: Zod `reportSchema`, photo-path regex, future-date rejection, exact category match for photo hiding, DELETE refuses `claimed`/`resolved`.
+- `lib/schemas.ts`: added `reportSchema` and `PHOTO_PATH_REGEX`; registration role enum is `student|faculty`.
+
+**Medium/Low**
+- `api/claims.ts`: profile id must exist (no unchecked UUID fallback).
+- `api/notifications.ts`: user-scoped client for POST/DELETE; no-profile accounts get an honest 200 no-op.
+- `lib/turnstile.ts`: fails closed in every non-DEV, non-test build.
+- `lib/rateLimit.ts`: durable-RPC failure uses a 10-minute retry cooldown instead of a permanent latch.
+- `index.astro`: mock feed is DEV-only; photo `alt` is escaped.
+- `login.astro`: quick dev logins require `import.meta.env.DEV`.
+- `item/[id].astro`: restore label is "Submit claim".
+- `InactivityGuard.astro`: 60s server ping + 401 logout.
+- `campusPrograms.ts`: removed hash-fabricated programs/IDs/units; honest "Not provided" fallbacks.
+- `UsersManagement.astro`: replaced fabricated dossier defaults.
+- `docs/schema.sql` + `docs/migrations.sql`: `profiles.is_faculty`, announcements table + RLS, durable rate-limit table + RPCs, one-open-claim index includes `verified`.
+
+**Tests updated to match the hardened behavior**
+- `tests/schemas.test.ts`: now asserts a self-registered `admin` role is rejected.
+- `tests/demo-user-state.test.ts`: suspension check uses a signed dev session instead of the removed unsigned token.
+
+**Verified**
+- `npm run check`: 0 errors, 0 warnings.
+- `npm test`: 106 passed, 2 skipped (9 files).
+- `npm run build`: success (Cloudflare adapter).
+- Dev-server smoke test: public pages 200; unauthenticated `/api/*` 401 and protected pages 302; dev login sets signed session; `/`, `/profile`, `/admin` 200 as admin; student blocked from `/admin`; report validation 400 (short description, bad photo path); announcement create returns a real 500 on the dead DB (no fake success); notifications POST/DELETE 200 no-op; claim guards 400/403; reset-password reaches the action (400 validation) without a session.
+
+**Notes**
+- `/lost`, `/found`, and `/report` are not real routes in this build; the dashboard handles filtering and reporting inline. Their 404 is pre-existing, not a regression.
+- The `.env` Supabase host (`tivjvifsygayopbgrfhp.supabase.co`) still does not resolve, so DB-backed flows fail closed with honest errors. Reconnect the project to exercise report/approve/claim/resolve end to end.
+
 ## Installed Workspace Skills from Skilled Catalog (2026-11-10)
 
 Done: Added the 3 selected verified agent skills into `.agents/skills/` for database optimization, Cloudflare edge deployment, and Playwright end-to-end verification.

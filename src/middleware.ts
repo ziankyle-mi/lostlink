@@ -45,8 +45,17 @@ const PUBLIC_PREFIXES = [
   "/items",
 ];
 const ACTION_PREFIX = "/_actions";
-// Signing in, registering, and signing out have to work regardless of session validity.
-const PUBLIC_ACTIONS = new Set(["login", "register", "forgotPassword", "devLogin", "logout"]);
+// Signing in, registering, signing out, and setting a new password have to work
+// regardless of session validity. resetPassword still requires a valid access
+// cookie inside the action itself.
+const PUBLIC_ACTIONS = new Set([
+  "login",
+  "register",
+  "forgotPassword",
+  "resetPassword",
+  "devLogin",
+  "logout",
+]);
 
 function actionName(pathname: string): string {
   return pathname.slice(ACTION_PREFIX.length + 1);

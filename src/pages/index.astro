@@ -99,9 +99,9 @@ if (env?.PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
   }
 }
 
-// In local development or when the database query returns 0 items,
-// fallback to the official campus mock items with full photography.
-const allFeedItems: DashboardItem[] = liveItems.length > 0 ? liveItems : ALL_ITEMS;
+// In local development the official campus mock items keep the feed populated.
+// A production build never shows invented items: it renders the empty state.
+const allFeedItems: DashboardItem[] = liveItems.length > 0 ? liveItems : (import.meta.env.DEV ? ALL_ITEMS : []);
 const feedFoundCount = allFeedItems.filter((i) => i.type === "found").length;
 const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
 ---
@@ -1190,6 +1190,11 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         newCard.dataset.itemImages = JSON.stringify(finalPhotoUrls);
 
         // Build top graphic area with photos / slider or illustration
+        const escapeHtml = (value: unknown): string =>
+          String(value ?? "").replace(
+            /[&<>"']/g,
+            (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" } as Record<string, string>)[m],
+          );
         let topGraphicHtml = "";
         const statusBadge = `
           <span class="absolute left-4 top-4 z-20 rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
@@ -1204,7 +1209,7 @@ const feedLostCount = allFeedItems.filter((i) => i.type === "lost").length;
         if (finalPhotoUrls.length > 0) {
           const slidesHtml = finalPhotoUrls.map((src, i) => `
             <div class="slider-slide relative h-full w-full shrink-0 bg-stone-900/5">
-              <img src="${src}" alt="${itemName} - Photo ${i + 1}" loading="lazy" class="h-full w-full object-cover" />
+              <img src="${src}" alt="${escapeHtml(itemName)} - Photo ${i + 1}" loading="lazy" class="h-full w-full object-cover" />
             </div>
           `).join("");
 
